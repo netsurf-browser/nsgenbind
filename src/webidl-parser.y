@@ -30,11 +30,9 @@ int webidl_wrap()
 
 %}
 
-%output  "webidl-parser.c"
-%defines "webidl-parser.h"
-
 %locations
 %define api.pure
+%define api.prefix "webidl_"
 %name-prefix "webidl_"
 
 %union

@@ -10,8 +10,6 @@
  */
 
 /* lexer options */
-%option outfile="webidl-lexer.c"
-%option header-file="webidl-lexer.h"
 %option never-interactive
 %option yylineno
 %option bison-bridge

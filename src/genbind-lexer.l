@@ -3,8 +3,6 @@
  */
 
 /* lexer options */
-%option outfile="genbind-lexer.c"
-%option header-file="genbind-lexer.h"
 %option never-interactive
 %option bison-bridge
 %option nodefault

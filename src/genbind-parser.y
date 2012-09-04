@@ -28,10 +28,8 @@ int genbind_wrap()
 
 %}
 
-%output  "genbind-parser.c"
-%defines "genbind-parser.h"
-
 %define api.pure
+%define api.prefix "genbind_"
 %name-prefix "genbind_"
 
 %union
