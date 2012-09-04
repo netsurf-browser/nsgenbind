@@ -15,4 +15,4 @@ include $(NSBUILD)/Makefile.top
 
 # Add extra install rules for our pkg-config control file and the library itself
 #INSTALL_ITEMS := $(INSTALL_ITEMS) /lib/pkgconfig:lib$(COMPONENT).pc.in
-#INSTALL_ITEMS := $(INSTALL_ITEMS) /lib:$(BUILDDIR)/lib$(COMPONENT)$(LIBEXT)
+INSTALL_ITEMS := $(INSTALL_ITEMS) /bin:$(BUILDDIR)/$(COMPONENT)$(EXEEXT)

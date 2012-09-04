@@ -36,7 +36,7 @@
 #clean:
 #	$(RM) genjsbind genjsbind.o webidl-parser.c webidl-lexer.c webidl-lexer.h webidl-parser.h genbind-parser.c genbind-lexer.c genbind-lexer.h genbind-parser.h *.o
 
-CFLAGS+=-I$(BUILDDIR)
+CFLAGS+=-I$(BUILDDIR) -Isrc/
 
 $(BUILDDIR)/%-lexer.c $(BUILDDIR)/%-lexer.h: src/%-lexer.l
 	$(VQ)$(ECHO) "    FLEX: $<"
