@@ -16,9 +16,9 @@
 
 
 
-void webidl_error(const char *str)
+static void webidl_error(const char *str)
 {
-        fprintf(stderr,"error: %s\n",str);
+    fprintf(stderr,"error: %s\n",str);
 }
 
 int webidl_wrap()
@@ -32,6 +32,12 @@ int webidl_wrap()
 
 %locations
 %define api.pure
+
+ /* the w3c grammar results in 10 shift/reduce, 2 reduce/reduce conflicts 
+  * The reduce/reduce error are both the result of empty sequences
+  */
+ /* %expect 10 */
+ /* %expect-rr 2 */
 
 %union
 {

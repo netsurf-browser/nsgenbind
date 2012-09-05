@@ -3,7 +3,7 @@ CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/
 # Sources in this directory
 DIR_SOURCES := genjsbind.c 
 
-SOURCES := $(SOURCES) $(BUILDDIR)/genbind-parser.c $(BUILDDIR)/genbind-lexer.c $(BUILDDIR)/webidl-parser.c $(BUILDDIR)/webidl-lexer.c
+SOURCES := $(SOURCES) $(BUILDDIR)/genjsbind-parser.c $(BUILDDIR)/genjsbind-lexer.c $(BUILDDIR)/webidl-parser.c $(BUILDDIR)/webidl-lexer.c
 
 $(BUILDDIR)/%-lexer.c $(BUILDDIR)/%-lexer.h: src/%-lexer.l
 	$(VQ)$(ECHO) "    FLEX: $<"
@@ -31,7 +31,7 @@ endif
 
 $(BUILDDIR)/%-parser.c $(BUILDDIR)/%-parser.h: src/%-parser.y
 	$(VQ)$(ECHO) "   BISON: $<"
-	$(Q)bison -d -t $(BISON_DEFINES) --output=$(BUILDDIR)/$(*F)-parser.c --defines=$(BUILDDIR)/$(*F)-parser.h $<
+	$(Q)bison -d -t $(BISON_DEFINES) --report=all --output=$(BUILDDIR)/$(*F)-parser.c --defines=$(BUILDDIR)/$(*F)-parser.h $<
 
 # Grab the core makefile
 include $(NSBUILD)/Makefile.subdir

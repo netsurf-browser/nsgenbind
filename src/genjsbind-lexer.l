@@ -7,8 +7,7 @@
 %option bison-bridge
 %option nodefault
 %option warn
-%option debug
-%option prefix="genbind_"
+%option prefix="genjsbind_"
 %option nounput
 
 /* header block */
@@ -18,7 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "genbind-parser.h"
+#include "genjsbind-parser.h"
 
 %}
 

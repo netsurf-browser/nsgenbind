@@ -1,2 +1,4 @@
- struct ifmembers_s {
- };
+
+struct ifmembers_s {
+	char *name;
+};

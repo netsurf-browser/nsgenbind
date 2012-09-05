@@ -16,7 +16,6 @@
 %option bison-locations
 %option nodefault
 %option warn
-%option debug
 %option prefix="webidl_"
 %option nounput
 
