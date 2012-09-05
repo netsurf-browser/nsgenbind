@@ -29,8 +29,6 @@ int genbind_wrap()
 %}
 
 %define api.pure
-%define api.prefix "genbind_"
-%name-prefix "genbind_"
 
 %union
 {

@@ -32,8 +32,6 @@ int webidl_wrap()
 
 %locations
 %define api.pure
-%define api.prefix "webidl_"
-%name-prefix "webidl_"
 
 %union
 {
