@@ -1,4 +1,7 @@
-/* test binding docuemnt */
+/* test binding to generate htmldocument */
 
+webidlfile "eventtarget.idl";
+webidlfile "node.idl";
+webidlfile "document.idl";
 webidlfile "htmldocument.idl";
 

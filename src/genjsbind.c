@@ -13,12 +13,12 @@
 
 extern int webidl_debug;
 extern int webidl__flex_debug;
-extern FILE* webidl_in;
+extern void webidl_restart(FILE*);
 extern int webidl_parse(void);
 
 extern int genjsbind_debug;
 extern int genjsbind__flex_debug;
-extern FILE* genjsbind_in;
+extern void genjsbind_restart(FILE*);
 extern int genjsbind_parse(void);
 
 struct options {
@@ -57,8 +57,9 @@ static FILE *idlopen(const char *filename)
 int loadwebidl(char *filename)
 {
 	/* set flex to read from file */
-	webidl_in = idlopen(filename);
-	if (!webidl_in) {
+	FILE *idlfile;
+	idlfile = idlopen(filename);
+	if (!idlfile) {
 		fprintf(stderr, "Error opening %s: %s\n",
 			filename, 
 			strerror(errno));
@@ -69,6 +70,8 @@ int loadwebidl(char *filename)
 		webidl_debug = 1;
 		webidl__flex_debug = 1;
 	}
+
+	webidl_restart(idlfile);
 	
 	/* parse the file */
 	return webidl_parse();
@@ -160,13 +163,13 @@ int main(int argc, char **argv)
 		return 3;
 	}
 
-	/* set flex to read from file */
-	genjsbind_in = infile;
-
 	if (options->debug) {
 		genjsbind_debug = 1;
 		genjsbind__flex_debug = 1;
 	}
+
+	/* set flex to read from file */
+	genjsbind_restart(infile);
 	
 	parse_res = genjsbind_parse();
 	if (parse_res) {

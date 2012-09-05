@@ -1,4 +1,4 @@
-CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/
+CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/ -g
 
 # Sources in this directory
 DIR_SOURCES := genjsbind.c 

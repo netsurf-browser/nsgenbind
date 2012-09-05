@@ -41,15 +41,18 @@ int genjsbind_wrap()
 %%
 
  /* [1] start with Statements */
-Statements:
-        /* empty */
-        |
-        IdlFile
+Statements
+        : Statement 
+        | Statement Statements 
         ;
 
- /* [2] load a web IDL file */
-IdlFile:
-        TOK_IDLFILE TOK_STRING_LITERAL ';'
+Statement
+        : IdlFile
+        ;
+
+ /* [3] load a web IDL file */
+IdlFile
+        : TOK_IDLFILE TOK_STRING_LITERAL ';'
         {
           if (loadwebidl($2) != 0) {
             YYABORT;
