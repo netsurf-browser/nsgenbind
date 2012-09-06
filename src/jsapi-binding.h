@@ -1,4 +1,5 @@
-int genjsbind_outputopen(char *outfilename);
-int genjsbind_outputclose(void);
+int genjsbind_parsefile(char *infilename);
+int genjsbind_output(char *outfilename);
 int genjsbind_header_comment(char *);
-int genjsbind_output_interface(const char *);
+int genjsbind_interface(char *);
+int genjsbind_preamble(char *ccode);

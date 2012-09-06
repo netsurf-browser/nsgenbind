@@ -5,7 +5,7 @@
 #include <errno.h>
 
 #include "webidl-ast.h"
-#include "genjsbind.h"
+#include "options.h"
 
 extern int webidl_debug;
 extern int webidl__flex_debug;

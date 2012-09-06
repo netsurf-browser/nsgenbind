@@ -35,6 +35,12 @@ quotedstring            [^\"\\\n\r]
 
 other                   [^\t\n\r 0-9A-Z_a-z]
 
+cblockopen              \[\[\[
+
+cblockclose             \]\]\]
+
+%x                      cblock
+
 %%
 
 {whitespace}            /* nothing */
@@ -45,6 +51,10 @@ hdrcomment              return TOK_HDR_COMMENT;
 
 interface               return TOK_INTERFACE;
 
+preamble                return TOK_PREAMBLE;
+
+{cblockopen}            BEGIN(cblock);
+
 \"{quotedstring}*\"     yylval->text = strndup(yytext + 1,strlen(yytext+1) - 1 ); return TOK_STRING_LITERAL;
 
 {multicomment}          /* nothing */
@@ -52,5 +62,9 @@ interface               return TOK_INTERFACE;
 {other}                 return (int) yytext[0];
 
 .                       /* nothing */
+
+<cblock>[^\]]*          yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
+<cblock>{cblockclose}   BEGIN(INITIAL);
+<cblock>\]+             yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
 
 %%

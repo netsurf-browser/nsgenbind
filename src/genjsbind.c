@@ -6,16 +6,8 @@
 #include <getopt.h>
 #include <errno.h>
 
-#include "webidl-ast.h"
-#include "webidl-parser.h"
-#include "genjsbind-parser.h"
 #include "jsapi-binding.h"
-#include "genjsbind.h"
-
-extern int genjsbind_debug;
-extern int genjsbind__flex_debug;
-extern void genjsbind_restart(FILE*);
-extern int genjsbind_parse(void);
+#include "options.h"
 
 struct options *options;
 
@@ -71,7 +63,6 @@ static struct options* process_cmdline(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	FILE *infile;
 	int res;
 
 	options = process_cmdline(argc, argv);
@@ -79,58 +70,25 @@ int main(int argc, char **argv)
 		return 1; /* bad commandline */
 	}
 
-	if (options->verbose && (options->outfilename == NULL)) {
-		fprintf(stderr, "Error: outputting to stdout with verbose logging would fail\n");
+	if (options->verbose && 
+	    (options->outfilename == NULL)) {
+		fprintf(stderr, 
+			"Error: output to stdout with verbose logging would fail\n");
 		return 2;
 	}
 
-	res = genjsbind_outputopen(options->outfilename);
+	res = genjsbind_parsefile(options->infilename);
 	if (res != 0) {
+		fprintf(stderr, "Error: parse failed with code %d\n", res);
 		return res;
 	}
 
-        /* open input file */
-	if ((options->infilename[0] == '-') && 
-	    (options->infilename[1] == 0)) {
-		if (options->verbose) {
-			printf("Using stdin for input\n");
-		}
-		infile = stdin;
-	} else {
-		if (options->verbose) {
-			printf("Opening binding file %s\n", options->infilename);
-		}
-		infile = fopen(options->infilename, "r");
-	}
-	
-	if (!infile) {
-		fprintf(stderr, "Error opening %s: %s\n",
-			options->infilename, 
-			strerror(errno));
-		return 3;
-	}
-
-	if (options->debug) {
-		genjsbind_debug = 1;
-		genjsbind__flex_debug = 1;
-	}
-
-	/* set flex to read from file */
-	genjsbind_restart(infile);
-
-	/* initialise root node */
-	webidl_root = webidl_new_node(WEBIDL_NODE_TYPE_ROOT);
-
-	/* process binding */
-	res = genjsbind_parse();
-
-	genjsbind_outputclose();
-
+	res = genjsbind_output(options->outfilename);
 	if (res != 0) {
-		fprintf(stderr, "Error parse failed with code %d\n", res);
+		fprintf(stderr, "Error: output failed with code %d\n", res);
+		unlink(options->outfilename);
 		return res;
 	}
-
 
 	return 0;
 } 
