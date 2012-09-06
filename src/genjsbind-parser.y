@@ -37,11 +37,18 @@ int genjsbind_wrap()
 
 %token TOK_IDLFILE
 %token TOK_HDR_COMMENT
-%token TOK_INTERFACE
 %token TOK_PREAMBLE
+
+%token TOK_BINDING
+%token TOK_INTERFACE
+%token TOK_TYPE
+%token TOK_EXTRA
+
+%token <text> TOK_IDENTIFIER
 
 %token <text> TOK_STRING_LITERAL
 %token <text> TOK_CCODE_LITERAL
+
 
 %%
 
@@ -59,7 +66,7 @@ Statement
         |
         Preamble
         | 
-        Interface
+        Binding
         ;
 
  /* [3] load a web IDL file */
@@ -73,30 +80,22 @@ IdlFile
         ;
 
 HdrComment
-        : TOK_HDR_COMMENT Strings ';'
+        : TOK_HDR_COMMENT HdrStrings ';'
         {
           
         }
         ;
 
-Strings
+HdrStrings
         : 
         TOK_STRING_LITERAL
         {
           genjsbind_header_comment($1);
         }
         | 
-        Strings TOK_STRING_LITERAL 
+        HdrStrings TOK_STRING_LITERAL 
         {
           genjsbind_header_comment($2);
-        }
-        ;
-
-Interface
-        : 
-        TOK_INTERFACE TOK_STRING_LITERAL ';'
-        {
-          genjsbind_interface($2);
         }
         ;
 
@@ -115,6 +114,23 @@ CBlock
         CBlock TOK_CCODE_LITERAL 
         {
           genjsbind_preamble($2);
+        }
+        ;
+
+Binding
+        :
+        TOK_BINDING TOK_IDENTIFIER '{' BindingArgs '}' ';'
+        ;
+
+BindingArgs
+:
+;
+
+Interface
+        : 
+        TOK_INTERFACE TOK_STRING_LITERAL ';'
+        {
+          genjsbind_interface($2);
         }
         ;
 

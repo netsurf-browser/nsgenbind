@@ -33,6 +33,8 @@ multicomment            \/\*(([^*])|(\*[^/]))*\*\/
 
 quotedstring            [^\"\\\n\r]
 
+identifier              [A-Z_a-z][0-9A-Z_a-z]*
+
 other                   [^\t\n\r 0-9A-Z_a-z]
 
 cblockopen              \[\[\[
@@ -45,15 +47,33 @@ cblockclose             \]\]\]
 
 {whitespace}            /* nothing */
 
+ /* terminals */
+
 webidlfile              return TOK_IDLFILE;
 
 hdrcomment              return TOK_HDR_COMMENT;
 
-interface               return TOK_INTERFACE;
-
 preamble                return TOK_PREAMBLE;
 
+binding                 return TOK_BINDING;
+
+interface               return TOK_INTERFACE;
+
+type                    return TOK_TYPE;
+
+extra                   return TOK_EXTRA;
+
+%token <text> TOK_IDENTIFIER
+
 {cblockopen}            BEGIN(cblock);
+
+{identifier}        {
+                        /* A leading "_" is used to escape an identifier from 
+                         *   looking like a reserved word terminal.
+                         */
+                        yylval->text = (yytext[0] == '_') ? strdup(yytext + 1) : strdup(yytext);
+                        return TOK_IDENTIFIER;
+                    }
 
 \"{quotedstring}*\"     yylval->text = strndup(yytext + 1,strlen(yytext+1) - 1 ); return TOK_STRING_LITERAL;
 

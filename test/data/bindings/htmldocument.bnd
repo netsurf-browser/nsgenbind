@@ -51,6 +51,18 @@ static JSBool JSAPI_NATIVE(write, JSContext *cx, uintN argc, jsval *vp)
 	return JS_TRUE;
 }
 
-]]]
+]]];
 
-interface "Document";
+binding document {
+	type js_libdom {
+                node dom_document; 
+	        
+        }; /* the binding type and any instance specific extra data */
+
+        extra "struct html_content *htmlc"; /* extra parameters to constructor 
+                                             * value stored in private context 
+                                             * structure. 
+                                             */
+
+	interface Document; /* Web IDL interface to generate */
+};

@@ -87,7 +87,7 @@ escseq              {characterescseq}|0|{hexescseq}|{unicodeescseq}
 quotedstring        ([^\"\\\n\r]|\\{escseq})
 
 /* web idl identifier direct from spec */
-Identifier          [A-Z_a-z][0-9A-Z_a-z]*
+identifier          [A-Z_a-z][0-9A-Z_a-z]*
 
 /* web idl other direct from spec */
 other               [^\t\n\r 0-9A-Z_a-z]
@@ -193,8 +193,9 @@ void                return TOK_VOID;
 readonly            return TOK_READONLY;
 
 
-{Identifier}        {
-                        // A leading "_" is used to escape an identifier from looking like a reserved word terminal.
+{identifier}        {
+                        /* A leading "_" is used to escape an identifier from 
+                         *   looking like a reserved word terminal. */
                         yylval->text = (yytext[0] == '_') ? strdup(yytext + 1) : strdup(yytext);
                         return TOK_IDENTIFIER;
                     }
