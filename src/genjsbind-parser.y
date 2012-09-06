@@ -43,6 +43,7 @@ int genjsbind_wrap()
 %token TOK_INTERFACE
 %token TOK_TYPE
 %token TOK_EXTRA
+%token TOK_NODE
 
 %token <text> TOK_IDENTIFIER
 
@@ -101,7 +102,7 @@ HdrStrings
 
 Preamble
         :
-        TOK_PREAMBLE CBlock
+        TOK_PREAMBLE CBlock ';'
         ;
 
 CBlock
@@ -123,12 +124,39 @@ Binding
         ;
 
 BindingArgs
-:
-;
+        :
+        BindingArg
+        |
+        BindingArgs BindingArg
+        ;
+
+BindingArg
+        : 
+        Type
+        | 
+        Extra
+        | 
+        Interface
+        ;
+
+Type
+        :
+        TOK_TYPE TOK_IDENTIFIER '{' TypeArgs '}' ';'
+        ;
+
+TypeArgs
+        :
+        TOK_NODE TOK_IDENTIFIER ';'
+        ;
+
+Extra
+        :
+        TOK_EXTRA TOK_STRING_LITERAL ';'
+        ;
 
 Interface
         : 
-        TOK_INTERFACE TOK_STRING_LITERAL ';'
+        TOK_INTERFACE TOK_IDENTIFIER ';'
         {
           genjsbind_interface($2);
         }

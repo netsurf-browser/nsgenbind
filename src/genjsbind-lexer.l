@@ -63,7 +63,7 @@ type                    return TOK_TYPE;
 
 extra                   return TOK_EXTRA;
 
-%token <text> TOK_IDENTIFIER
+node                    return TOK_NODE;
 
 {cblockopen}            BEGIN(cblock);
 
