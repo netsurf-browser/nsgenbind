@@ -41,6 +41,10 @@ other                   [^\t\n\r 0-9A-Z_a-z]
 
 webidlfile              return TOK_IDLFILE;
 
+hdrcomment              return TOK_HDR_COMMENT;
+
+interface               return TOK_INTERFACE;
+
 \"{quotedstring}*\"     yylval->text = strndup(yytext + 1,strlen(yytext+1) - 1 ); return TOK_STRING_LITERAL;
 
 {multicomment}          /* nothing */

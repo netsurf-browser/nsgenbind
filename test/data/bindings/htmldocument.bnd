@@ -5,3 +5,9 @@ webidlfile "node.idl";
 webidlfile "document.idl";
 webidlfile "htmldocument.idl";
 
+hdrcomment "Part of NetSurf Project";
+hdrcomment "multi" 
+           "line" 
+           "comment";
+
+interface "Document";
