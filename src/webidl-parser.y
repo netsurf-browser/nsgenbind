@@ -14,11 +14,11 @@
 #include "webidl-parser.h"
 #include "webidl-lexer.h"
 
-
+char *errtxt;
 
 static void webidl_error(const char *str)
 {
-    fprintf(stderr,"error: %s\n",str);
+    errtxt = strdup(str);
 }
 
 int webidl_wrap()
@@ -26,12 +26,11 @@ int webidl_wrap()
     return 1;
 }
 
-
-
 %}
 
 %locations
 %define api.pure
+%error-verbose
 
  /* the w3c grammar results in 10 shift/reduce, 2 reduce/reduce conflicts 
   * The reduce/reduce error are both the result of empty sequences
@@ -118,6 +117,13 @@ Definitions:
         /* empty */
         |
         ExtendedAttributeList Definition Definitions
+        | 
+        error ';' 
+        { 
+            fprintf(stderr, "%d: %s\n", yylloc.first_line, errtxt);
+            free(errtxt);
+            YYABORT ;
+        }
         ;
         
  /* [2] */

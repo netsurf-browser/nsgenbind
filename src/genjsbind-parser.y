@@ -1,9 +1,8 @@
+%{
 /*
  * This is a bison parser for genbind
  *
  */
-
-%{
 
 #include <stdio.h>
 #include <string.h>
@@ -13,9 +12,11 @@
 #include "webidl-ast.h"
 #include "jsapi-binding.h"
 
+char *errtxt;
+
 static void genjsbind_error(const char *str)
 {
-    fprintf(stderr,"error: %s\n",str);
+    errtxt = strdup(str);
 }
 
 
@@ -24,11 +25,11 @@ int genjsbind_wrap()
     return 1;
 }
 
-
-
 %}
 
+%locations
 %define api.pure
+%error-verbose
 
 %union
 {
@@ -55,8 +56,17 @@ int genjsbind_wrap()
 
  /* [1] start with Statements */
 Statements
-        : Statement 
-        | Statements Statement  
+        : 
+        Statement 
+        | 
+        Statements Statement  
+        | 
+        error ';' 
+        { 
+            fprintf(stderr, "%d: %s\n", yylloc.first_line, errtxt);
+            free(errtxt);
+            YYABORT ;
+        }
         ;
 
 Statement

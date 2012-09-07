@@ -1,17 +1,8 @@
+%{
+
 /*
  * binding generator lexer
  */
-
-/* lexer options */
-%option never-interactive
-%option bison-bridge
-%option nodefault
-%option warn
-%option prefix="genjsbind_"
-%option nounput
-
-/* header block */
-%{
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -19,15 +10,38 @@
 
 #include "genjsbind-parser.h"
 
+#define YY_USER_ACTION yylloc->first_line = yylloc->last_line; \
+    yylloc->first_column = yylloc->last_column + 1; \
+    yylloc->last_column += yyleng;
+
 %}
 
- /* other Unicode “space separator” */
+/* lexer options */
+%option never-interactive
+%option yylineno
+%option bison-bridge
+%option bison-locations
+%option nodefault
+%option warn
+%option prefix="genjsbind_"
+%option nounput
+%option noinput
+
+/* other Unicode “space separator” */
 USP (\xe1\x9a\x80)|(\xe1\xa0\x8e)|(\xe2\x80[\x80-\x8a])|(\xe2\x80\xaf)|(\xe2\x81\x9f)|(\xe3\x80\x80)
 
 /* non breaking space \u00A0 */
 NBSP (\xc2\xa0)
 
-whitespace              ([ \t\v\f\n]|{NBSP}|{USP})
+/* Line separator \u2028 */
+LS (\xe2\x80\xa8)
+
+/* paragraph separator \u2029 */
+PS (\xe2\x80\xa9)
+
+whitespace              ([ \t\v\f]|{NBSP}|{USP})
+
+lineend                 ([\n\r]|{LS}|{PS})
 
 multicomment            \/\*(([^*])|(\*[^/]))*\*\/
 
@@ -45,7 +59,13 @@ cblockclose             \]\]\]
 
 %%
 
-{whitespace}            /* nothing */
+{whitespace}            ++yylloc->last_column;/* nothing */
+
+{lineend}               if (yytext[0] != '\r') {
+                            /* update position counts */
+                            ++yylloc->last_line;
+                            yylloc->last_column = 0;
+                        }
 
  /* terminals */
 
@@ -75,7 +95,7 @@ node                    return TOK_NODE;
                         return TOK_IDENTIFIER;
                     }
 
-\"{quotedstring}*\"     yylval->text = strndup(yytext + 1,strlen(yytext+1) - 1 ); return TOK_STRING_LITERAL;
+\"{quotedstring}*\"     yylval->text = strndup(yytext + 1, yyleng - 2 ); return TOK_STRING_LITERAL;
 
 {multicomment}          /* nothing */
 

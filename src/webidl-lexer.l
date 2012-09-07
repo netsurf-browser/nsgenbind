@@ -1,5 +1,7 @@
+%{
+
 /*
- * This is a unicode capable lexer for web IDL mostly derived from:
+ * This is a unicode capable lexer for web IDL derived from:
  *
  * W3C WEB IDL - http://www.w3.org/TR/WebIDL/ (especially the grammar
  * in apendix A)
@@ -8,19 +10,6 @@
  * http://ecma-international.org/ecma-262/5.1/#sec-7.2 (expecially
  * section 7.2 for unicode value handling)
  */
-
-/* lexer options */
-%option never-interactive
-%option yylineno
-%option bison-bridge
-%option bison-locations
-%option nodefault
-%option warn
-%option prefix="webidl_"
-%option nounput
-
-/* header block */
-%{
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -33,6 +22,16 @@
     yylloc->last_column += yyleng;
 
 %}
+
+
+/* lexer options */
+%option never-interactive
+%option yylineno
+%option bison-bridge
+%option bison-locations
+%option warn
+%option prefix="webidl_"
+%option nounput
 
 /* regular definitions */
 
@@ -100,7 +99,7 @@ poundsign           ^{whitespace}*#
 
 {whitespace}        ++yylloc->last_column; /* skip whitespace */
 
-{lineend}           if (yytext[0] == '\n') {
+{lineend}           if (yytext[0] != '\r') {
                         /* update position counts */
                         ++yylloc->last_line;
                         yylloc->last_column = 0;
