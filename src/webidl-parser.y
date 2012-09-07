@@ -114,7 +114,13 @@ int webidl_wrap()
 
 %%
 
- /* [1] start with definitions  */
+ /* [1] altered from original grammar to be left recusive, avoid reduce/reduce
+  *   conficts and have an error term.
+  *
+  * By omitting the empty term from here reduce/reduce conficts are removed as
+  *   both ExtendedAttributeList and Definition (by way of Exception) can end
+  *   up with an empty term anyhow.
+  */
 Definitions:
         ExtendedAttributeList Definition
         |
@@ -183,14 +189,14 @@ PartialInterface:
         TOK_INTERFACE TOK_IDENTIFIER '{' InterfaceMembers '}' ';'
         ;
 
- /* [9] */
+ /* [9] slightly altered from original grammar to be left recursive */
 InterfaceMembers:
         /* empty */
         {
           $$ = NULL;
         }
         |
-        ExtendedAttributeList InterfaceMember InterfaceMembers
+        InterfaceMembers ExtendedAttributeList InterfaceMember
         {
           $$ = NULL;
         }
