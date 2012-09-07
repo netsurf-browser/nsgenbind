@@ -37,11 +37,8 @@ int webidl_wrap()
 %define api.pure
 %error-verbose
 
- /* the w3c grammar results in 10 shift/reduce, 2 reduce/reduce conflicts 
-  * The reduce/reduce error are both the result of empty sequences
-  */
- /* %expect 10 */
- /* %expect-rr 2 */
+ /* the w3c grammar results in 19 shift/reduce conficts */
+%expect 19
 
 %union
 {
@@ -119,9 +116,9 @@ int webidl_wrap()
 
  /* [1] start with definitions  */
 Definitions:
-        /* empty */
+        ExtendedAttributeList Definition
         |
-        ExtendedAttributeList Definition Definitions
+        Definitions ExtendedAttributeList Definition
         | 
         error ';' 
         { 
