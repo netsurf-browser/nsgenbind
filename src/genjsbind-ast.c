@@ -1,10 +1,21 @@
+/* binding generator AST implementation for parser
+ *
+ * This file is part of nsgenjsbind.
+ * Licensed under the MIT License,
+ *                http://www.opensource.org/licenses/mit-license.php
+ * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
+ */
+
+/** @todo this currently stuffs everything in one global tree, not very nice
+ */
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 
-#include "jsapi-binding.h"
+#include "genjsbind-ast.h"
 #include "webidl-ast.h"
 #include "options.h"
 

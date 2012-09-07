@@ -1,7 +1,11 @@
 %{
 
-/*
- * binding generator lexer
+/* lexer for the binding generation config file 
+ *
+ * This file is part of nsgenjsbind.
+ * Licensed under the MIT License,
+ *                http://www.opensource.org/licenses/mit-license.php
+ * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
  */
 
 #include <stdbool.h>

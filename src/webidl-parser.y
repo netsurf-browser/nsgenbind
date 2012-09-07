@@ -1,10 +1,15 @@
-/*
- * This is a bison parser for web IDL derived from the the grammar in
- * apendix A of W3C WEB IDL - http://www.w3.org/TR/WebIDL/
- *
- */
-
 %{
+
+/* This is a bison parser for Web IDL
+ *
+ * This file is part of nsgenjsbind.
+ * Licensed under the MIT License,
+ *                http://www.opensource.org/licenses/mit-license.php
+ * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
+ *
+ * Derived from the the grammar in apendix A of W3C WEB IDL 
+ *   http://www.w3.org/TR/WebIDL/
+ */
 
 #include <stdio.h>
 #include <string.h>

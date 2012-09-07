@@ -1,7 +1,13 @@
 %{
 
-/*
- * This is a unicode capable lexer for web IDL derived from:
+/* This is a unicode tolerant lexer for web IDL
+ *
+ * This file is part of nsgenjsbind.
+ * Licensed under the MIT License,
+ *                http://www.opensource.org/licenses/mit-license.php
+ * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
+ *
+ * Derived from:
  *
  * W3C WEB IDL - http://www.w3.org/TR/WebIDL/ (especially the grammar
  * in apendix A)

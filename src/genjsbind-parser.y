@@ -1,7 +1,10 @@
 %{
-/*
- * This is a bison parser for genbind
+/* parser for the binding generation config file 
  *
+ * This file is part of nsgenjsbind.
+ * Licensed under the MIT License,
+ *                http://www.opensource.org/licenses/mit-license.php
+ * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
  */
 
 #include <stdio.h>
@@ -10,7 +13,7 @@
 #include "genjsbind-parser.h"
 #include "genjsbind-lexer.h"
 #include "webidl-ast.h"
-#include "jsapi-binding.h"
+#include "genjsbind-ast.h"
 
 char *errtxt;
 
