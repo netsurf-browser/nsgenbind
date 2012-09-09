@@ -71,6 +71,21 @@ genbind_node_for_each_type(struct genbind_node *node,
 			   genbind_callback_t *cb,
 			   void *ctx)
 {
+	int ret;
+
+	if (node == NULL) {
+		return -1;
+	}
+	if (node->l != NULL) {
+		ret = genbind_node_for_each_type(node->l, type, cb, ctx);
+		if (ret != 0) {
+			return ret;
+		}
+	}
+	if (node->type == type) {
+		return cb(node, ctx);
+	}
+
 	return 0;
 }
 
