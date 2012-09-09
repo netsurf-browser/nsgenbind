@@ -15,6 +15,7 @@
 #include <errno.h>
 
 #include "genjsbind-ast.h"
+#include "jsapi-libdom.h"
 #include "options.h"
 
 struct options *options;
@@ -85,13 +86,13 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
-	res = genjsbind_parsefile(options->infilename);
+	res = genbind_parsefile(options->infilename);
 	if (res != 0) {
 		fprintf(stderr, "Error: parse failed with code %d\n", res);
 		return res;
 	}
 
-	res = genjsbind_output(options->outfilename);
+	res = jsapi_libdom_output(options->outfilename);
 	if (res != 0) {
 		fprintf(stderr, "Error: output failed with code %d\n", res);
 		unlink(options->outfilename);

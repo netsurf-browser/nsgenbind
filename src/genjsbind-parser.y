@@ -104,12 +104,12 @@ HdrStrings
         : 
         TOK_STRING_LITERAL
         {
-          genjsbind_header_comment($1);
+          genbind_header_comment($1);
         }
         | 
         HdrStrings TOK_STRING_LITERAL 
         {
-          genjsbind_header_comment($2);
+          genbind_header_comment($2);
         }
         ;
 
@@ -122,12 +122,12 @@ CBlock
         : 
         TOK_CCODE_LITERAL
         {
-          genjsbind_preamble($1);
+          genbind_preamble($1);
         }
         | 
         CBlock TOK_CCODE_LITERAL 
         {
-          genjsbind_preamble($2);
+          genbind_preamble($2);
         }
         ;
 
@@ -171,7 +171,7 @@ Interface
         : 
         TOK_INTERFACE TOK_IDENTIFIER ';'
         {
-          genjsbind_interface($2);
+          genbind_interface($2);
         }
         ;
 
