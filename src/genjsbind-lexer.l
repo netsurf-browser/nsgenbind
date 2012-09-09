@@ -30,6 +30,7 @@
 %option prefix="genjsbind_"
 %option nounput
 %option noinput
+%option noyywrap
 
 /* other Unicode “space separator” */
 USP (\xe1\x9a\x80)|(\xe1\xa0\x8e)|(\xe2\x80[\x80-\x8a])|(\xe2\x80\xaf)|(\xe2\x81\x9f)|(\xe3\x80\x80)

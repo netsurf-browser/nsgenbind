@@ -38,6 +38,7 @@
 %option warn
 %option prefix="webidl_"
 %option nounput
+%option noyywrap
 
 /* regular definitions */
 

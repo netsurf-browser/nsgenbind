@@ -73,6 +73,7 @@ static struct options* process_cmdline(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	int res;
+	struct genbind_node *genbind_root;
 
 	options = process_cmdline(argc, argv);
 	if (options == NULL) {
@@ -86,13 +87,17 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
-	res = genbind_parsefile(options->infilename);
+	res = genbind_parsefile(options->infilename, &genbind_root);
 	if (res != 0) {
 		fprintf(stderr, "Error: parse failed with code %d\n", res);
 		return res;
 	}
 
-	res = jsapi_libdom_output(options->outfilename);
+	if (options->verbose) {
+		genbind_ast_dump(genbind_root);
+	}
+
+	res = jsapi_libdom_output(options->outfilename, genbind_root);
 	if (res != 0) {
 		fprintf(stderr, "Error: output failed with code %d\n", res);
 		unlink(options->outfilename);

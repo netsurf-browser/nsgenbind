@@ -17,26 +17,23 @@
 
 char *errtxt;
 
-static void genjsbind_error(const char *str)
+ static void genjsbind_error(YYLTYPE *locp, struct genbind_node **genbind_ast, const char *str)
 {
     errtxt = strdup(str);
 }
 
-
-int genjsbind_wrap()
-{
-    return 1;
-}
 
 %}
 
 %locations
 %define api.pure
 %error-verbose
+%parse-param { struct genbind_node **genbind_ast }
 
 %union
 {
   char* text;
+  struct genbind_node *node;
 }
 
 %token TOK_IDLFILE
@@ -50,19 +47,42 @@ int genjsbind_wrap()
 %token TOK_NODE
 
 %token <text> TOK_IDENTIFIER
-
 %token <text> TOK_STRING_LITERAL
 %token <text> TOK_CCODE_LITERAL
 
+%type <text> CBlock
+
+%type <node> Statement
+%type <node> Statements
+%type <node> IdlFile
+%type <node> Preamble 
+%type <node> HdrComment
+%type <node> Strings
+%type <node> Binding
+%type <node> BindingArgs
+%type <node> BindingArg
+%type <node> Type
+%type <node> TypeArgs
+%type <node> Extra
+%type <node> Interface
+%type <node> Node
 
 %%
 
- /* [1] start with Statements */
+Input
+        :
+        Statements { *genbind_ast = $1 }
+        ;
+        
+
 Statements
         : 
         Statement 
         | 
         Statements Statement  
+        {
+          $$ = genbind_node_link($2, $1);
+        }
         | 
         error ';' 
         { 
@@ -85,55 +105,60 @@ Statement
 
  /* [3] load a web IDL file */
 IdlFile
-        : TOK_IDLFILE TOK_STRING_LITERAL ';'
+        : 
+        TOK_IDLFILE TOK_STRING_LITERAL ';'
         {
-          if (webidl_parsefile($2) != 0) {
-            YYABORT;
-          }
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_WEBIDLFILE, NULL, $2);
         }
         ;
 
 HdrComment
-        : TOK_HDR_COMMENT HdrStrings ';'
+        : 
+        TOK_HDR_COMMENT Strings ';'
         {
-          
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_HDRCOMMENT, NULL, $2);
         }
         ;
 
-HdrStrings
+Strings
         : 
         TOK_STRING_LITERAL
         {
-          genbind_header_comment($1);
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_STRING, NULL, $1);
         }
         | 
-        HdrStrings TOK_STRING_LITERAL 
+        Strings TOK_STRING_LITERAL 
         {
-          genbind_header_comment($2);
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_STRING, $1, $2);
         }
         ;
 
 Preamble
         :
         TOK_PREAMBLE CBlock ';'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_PREAMBLE, NULL, $2);
+        }
         ;
 
 CBlock
         : 
         TOK_CCODE_LITERAL
-        {
-          genbind_preamble($1);
-        }
         | 
         CBlock TOK_CCODE_LITERAL 
         {
-          genbind_preamble($2);
+          $$ = genbind_strapp($1, $2);
         }
         ;
 
 Binding
         :
         TOK_BINDING TOK_IDENTIFIER '{' BindingArgs '}' ';'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING, 
+                                NULL, 
+                                genbind_new_node(GENBIND_NODE_TYPE_BINDING_IDENT, $4, $2));
+        }
         ;
 
 BindingArgs
@@ -141,6 +166,9 @@ BindingArgs
         BindingArg
         |
         BindingArgs BindingArg
+        {
+          $$ = genbind_node_link($2, $1);
+        }
         ;
 
 BindingArg
@@ -155,23 +183,44 @@ BindingArg
 Type
         :
         TOK_TYPE TOK_IDENTIFIER '{' TypeArgs '}' ';'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE, 
+                                NULL, 
+                                genbind_new_node(GENBIND_NODE_TYPE_TYPE_IDENT, $4, $2));
+        }
         ;
 
 TypeArgs
         :
+        /* empty */
+        { 
+          $$ = NULL;
+        }
+        |
+        Node
+        ;
+
+Node
+        :
         TOK_NODE TOK_IDENTIFIER ';'
+        {
+           $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE_NODE, NULL, $2);
+        }
         ;
 
 Extra
         :
-        TOK_EXTRA TOK_STRING_LITERAL ';'
+        TOK_EXTRA Strings ';'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE_EXTRA, NULL, $2);
+        }
         ;
 
 Interface
         : 
         TOK_INTERFACE TOK_IDENTIFIER ';'
         {
-          genbind_interface($2);
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE_INTERFACE, NULL, $2);
         }
         ;
 

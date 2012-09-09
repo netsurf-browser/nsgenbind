@@ -21,14 +21,12 @@
 
 char *errtxt;
 
-static void webidl_error(const char *str)
+static void 
+webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 {
+  locp = locp;
+  winbind_ast = winbind_ast;
     errtxt = strdup(str);
-}
-
-int webidl_wrap()
-{
-    return 1;
 }
 
 %}
@@ -36,9 +34,7 @@ int webidl_wrap()
 %locations
 %define api.pure
 %error-verbose
-
- /* the w3c grammar results in 19 shift/reduce conficts */
-%expect 19
+%parse-param { struct webidl_node **webidl_ast }
 
 %union
 {
@@ -46,6 +42,7 @@ int webidl_wrap()
   char* text;
   long value;
   struct ifmember_s **ifmember;
+  struct webidl_node *node;
 }
 
 
@@ -112,25 +109,34 @@ int webidl_wrap()
 %type <text> Inheritance
 %type <ifmember> InterfaceMembers
 
+%type <node> Definitions
+%type <node> Definition
+
 %%
 
- /* [1] altered from original grammar to be left recusive, avoid reduce/reduce
-  *   conficts and have an error term.
-  *
-  * By omitting the empty term from here reduce/reduce conficts are removed as
-  *   both ExtendedAttributeList and Definition (by way of Exception) can end
-  *   up with an empty term anyhow.
-  */
-Definitions:
-        ExtendedAttributeList Definition
-        |
-        Definitions ExtendedAttributeList Definition
+ /* default rule to add built AST to passed in one */
+Input:
+        Definitions 
+        { *webidl_ast = webidl_node_link(*webidl_ast, $1); }
         | 
-        error ';' 
+        error 
         { 
             fprintf(stderr, "%d: %s\n", yylloc.first_line, errtxt);
             free(errtxt);
             YYABORT ;
+        }
+        ;
+
+ /* [1] altered from original grammar to be left recusive, */
+Definitions:
+        /* empty */
+        { 
+          $$ = NULL; 
+        }
+        |
+        Definitions ExtendedAttributeList Definition
+        { 
+          $$ = webidl_node_link($1, $3); 
         }
         ;
         
@@ -247,8 +253,6 @@ DefaultValue:
 
  /* [17] */
 Exception:
-        /* empty */
-        |
         TOK_EXCEPTION TOK_IDENTIFIER Inheritance '{' ExceptionMembers '}' ';'
         ;
 
