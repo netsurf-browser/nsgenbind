@@ -57,7 +57,6 @@ static int webidl_hdrcomments_cb(struct genbind_node *node, void *ctx)
 
 static int webidl_hdrcomment_cb(struct genbind_node *node, void *ctx)
 {
-	FILE *outfile = ctx;
 	genbind_node_for_each_type(genbind_node_getnode(node),
 				   GENBIND_NODE_TYPE_STRING, 
 				   webidl_hdrcomments_cb, 

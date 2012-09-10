@@ -9,7 +9,10 @@
 #ifndef genjsbind_webidl_ast_h
 #define genjsbind_webidl_ast_h
 
-#define WEBIDL_NODE_TYPE_ROOT 0
+enum webidl_node_type {
+	WEBIDL_NODE_TYPE_ROOT = 0,
+
+};
 
 struct webidl_node {
 	int type;

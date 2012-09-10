@@ -107,10 +107,20 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token <text>       TOK_JAVADOC
 
 %type <text> Inheritance
-%type <ifmember> InterfaceMembers
 
 %type <node> Definitions
 %type <node> Definition
+%type <node> Partial 
+%type <node> Dictionary 
+%type <node> Exception 
+%type <node> Enum 
+%type <node> Typedef 
+%type <node> ImplementsStatement
+%type <node> Interface
+%type <node> InterfaceMembers
+%type <node> CallbackOrInterface
+%type <node> CallbackRest
+%type <node> CallbackRestOrInterface
 
 %%
 
@@ -158,8 +168,12 @@ Definition:
         ;
 
  /* [3] */
-CallbackOrInterface:
+CallbackOrInterface
+        :
         TOK_CALLBACK CallbackRestOrInterface
+        {
+            $$ = $2;
+        }
         |
         Interface
         ;
@@ -175,6 +189,7 @@ CallbackRestOrInterface:
 Interface:
         TOK_INTERFACE TOK_IDENTIFIER Inheritance '{' InterfaceMembers '}' ';'
         {
+            $$ = NULL;
         }
         ;
 
@@ -296,6 +311,10 @@ EnumValues:
  /* [23] - bug in w3c grammar? it doesnt list the equals as a terminal  */
 CallbackRest:
         TOK_IDENTIFIER '=' ReturnType '(' ArgumentList ')' ';'
+        {
+            $$ = NULL;
+        }
+        ;
 
  /* [24] */
 Typedef:

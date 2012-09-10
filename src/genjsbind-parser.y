@@ -19,6 +19,8 @@ char *errtxt;
 
  static void genjsbind_error(YYLTYPE *locp, struct genbind_node **genbind_ast, const char *str)
 {
+    locp = locp;
+    genbind_ast = genbind_ast;
     errtxt = strdup(str);
 }
 
@@ -71,7 +73,10 @@ char *errtxt;
 
 Input
         :
-        Statements { *genbind_ast = $1 }
+        Statements 
+        { 
+            *genbind_ast = $1; 
+        }
         ;
         
 
