@@ -7,7 +7,7 @@
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
  *
- * Derived from the the grammar in apendix A of W3C WEB IDL 
+ * Derived from the the grammar in apendix A of W3C WEB IDL
  *   http://www.w3.org/TR/WebIDL/
  */
 
@@ -21,7 +21,7 @@
 
 char *errtxt;
 
-static void 
+static void
 webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 {
   locp = locp;
@@ -110,11 +110,11 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %type <node> Definitions
 %type <node> Definition
-%type <node> Partial 
-%type <node> Dictionary 
-%type <node> Exception 
-%type <node> Enum 
-%type <node> Typedef 
+%type <node> Partial
+%type <node> Dictionary
+%type <node> Exception
+%type <node> Enum
+%type <node> Typedef
 %type <node> ImplementsStatement
 %type <node> Interface
 %type <node> InterfaceMembers
@@ -126,11 +126,11 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
  /* default rule to add built AST to passed in one */
 Input:
-        Definitions 
+        Definitions
         { *webidl_ast = webidl_node_link(*webidl_ast, $1); }
-        | 
-        error 
-        { 
+        |
+        error
+        {
             fprintf(stderr, "%d: %s\n", yylloc.first_line, errtxt);
             free(errtxt);
             YYABORT ;
@@ -140,30 +140,30 @@ Input:
  /* [1] altered from original grammar to be left recusive, */
 Definitions:
         /* empty */
-        { 
-          $$ = NULL; 
+        {
+          $$ = NULL;
         }
         |
         Definitions ExtendedAttributeList Definition
-        { 
-          $$ = webidl_node_link($1, $3); 
+        {
+          $$ = webidl_node_link($1, $3);
         }
         ;
-        
+
  /* [2] */
-Definition:  
+Definition:
         CallbackOrInterface
         |
-        Partial 
-        | 
-        Dictionary 
-        | 
-        Exception 
-        | 
-        Enum 
-        | 
-        Typedef 
-        | 
+        Partial
+        |
+        Dictionary
+        |
+        Exception
+        |
+        Enum
+        |
+        Typedef
+        |
         ImplementsStatement
         ;
 
@@ -189,7 +189,19 @@ CallbackRestOrInterface:
 Interface:
         TOK_INTERFACE TOK_IDENTIFIER Inheritance '{' InterfaceMembers '}' ';'
         {
-            $$ = NULL;
+            struct webidl_node *ident;
+            struct webidl_node *members;
+            struct webidl_node *inheritance = NULL;
+
+            if ($3 != NULL) {
+                inheritance = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, NULL, $3);
+            }
+
+            members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, inheritance, $5);
+
+            ident = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_IDENT, members, $2);
+
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, ident);
         }
         ;
 
@@ -200,8 +212,8 @@ Partial:
 
  /* [7] */
 PartialDefinition:
-        PartialInterface 
-        | 
+        PartialInterface
+        |
         PartialDictionary
         ;
 
@@ -226,7 +238,7 @@ InterfaceMembers:
  /* [10] */
 InterfaceMember:
         Const
-        | 
+        |
         AttributeOrOperation
         ;
 
@@ -255,13 +267,13 @@ PartialDictionary:
 Default:
         /* empty */
         |
-        '=' DefaultValue 
+        '=' DefaultValue
         ;
 
 
  /* [16] */
 DefaultValue:
-        ConstValue 
+        ConstValue
         |
         TOK_STRING_LITERAL
         ;
@@ -276,7 +288,7 @@ ExceptionMembers:
         /* empty */
         |
         ExtendedAttributeList ExceptionMember ExceptionMembers
-        ; 
+        ;
 
  /* [19] returns a string */
 Inheritance:
@@ -333,64 +345,64 @@ Const:
 
  /* [27] */
 ConstValue:
-        BooleanLiteral 
-        | 
-        FloatLiteral 
-        | 
-        TOK_INT_LITERAL 
-        | 
+        BooleanLiteral
+        |
+        FloatLiteral
+        |
+        TOK_INT_LITERAL
+        |
         TOK_NULL_LITERAL
         ;
 
  /* [28] */
 BooleanLiteral:
-        TOK_TRUE 
-        | 
+        TOK_TRUE
+        |
         TOK_FALSE
         ;
 
  /* [29] */
 FloatLiteral:
         TOK_FLOAT_LITERAL
-        | 
+        |
         '-' TOK_INFINITY
-        | 
+        |
         TOK_INFINITY
         |
         TOK_NAN
         ;
 
- /* [30] */	
+ /* [30] */
 AttributeOrOperation:
-        TOK_STRINGIFIER StringifierAttributeOrOperation 
-        | 
-        Attribute 
-        | 
+        TOK_STRINGIFIER StringifierAttributeOrOperation
+        |
+        Attribute
+        |
         Operation
         ;
 
- /* [31] */	
+ /* [31] */
 StringifierAttributeOrOperation:
-        Attribute 
-        | 
-        OperationRest 
-        | 
+        Attribute
+        |
+        OperationRest
+        |
         ';'
         ;
 
- /* [32] */	
+ /* [32] */
 Attribute:
         Inherit ReadOnly TOK_ATTRIBUTE Type TOK_IDENTIFIER ';'
         ;
 
- /* [33] */	
+ /* [33] */
 Inherit:
         /* empty */
         |
         TOK_INHERIT
-        ; 
+        ;
 
- /* [34] */	
+ /* [34] */
 ReadOnly:
         /* empty */
         |
@@ -405,7 +417,7 @@ Operation:
  /* [36] */
 Qualifiers:
         TOK_STATIC
-        | 
+        |
         Specials
         ;
 
@@ -413,7 +425,7 @@ Qualifiers:
 Specials:
         /* empty */
         |
-        Special Specials 
+        Special Specials
         ;
 
  /* [38] */
@@ -446,14 +458,14 @@ OptionalIdentifier:
 ArgumentList:
         /* empty */
         |
-        Argument Arguments 
+        Argument Arguments
         ;
 
  /* [42] */
 Arguments:
         /* empty */
         |
-        ',' Argument Arguments 
+        ',' Argument Arguments
         ;
 
 
@@ -464,15 +476,15 @@ Argument:
 
  /* [44] */
 OptionalOrRequiredArgument:
-        TOK_OPTIONAL Type ArgumentName Default 
-        | 
+        TOK_OPTIONAL Type ArgumentName Default
+        |
         Type Ellipsis ArgumentName
         ;
 
  /* [45] */
 ArgumentName:
-        ArgumentNameKeyword 
-        | 
+        ArgumentNameKeyword
+        |
         TOK_IDENTIFIER
         ;
 
@@ -485,8 +497,8 @@ Ellipsis:
 
  /* [47] */
 ExceptionMember:
-        Const 
-        | 
+        Const
+        |
         ExceptionField
         ;
 
@@ -517,7 +529,7 @@ ExtendedAttribute:
         |
         '{' ExtendedAttributeInner '}' ExtendedAttributeRest
         |
-        Other ExtendedAttributeRest 
+        Other ExtendedAttributeRest
         ;
 
  /* [52] extended attributes can be space separated too */
@@ -550,7 +562,7 @@ Other:
         |
         TOK_STRING_LITERAL
         |
-        TOK_OTHER_LITERAL 
+        TOK_OTHER_LITERAL
         |
         '-'
         |
@@ -665,15 +677,15 @@ OtherOrComma:
 
  /* [57] */
 Type:
-        SingleType 
-        | 
+        SingleType
+        |
         UnionType TypeSuffix
         ;
 
  /* [58] */
 SingleType:
-        NonAnyType 
-        | 
+        NonAnyType
+        |
         TOK_ANY TypeSuffixStartingWithArray
         ;
 
@@ -684,10 +696,10 @@ UnionType:
 
  /* [60] */
 UnionMemberType:
-        NonAnyType 
-        | 
-        UnionType TypeSuffix 
-        | 
+        NonAnyType
+        |
+        UnionType TypeSuffix
+        |
         TOK_ANY '[' ']' TypeSuffix
         ;
 
@@ -695,48 +707,48 @@ UnionMemberType:
 UnionMemberTypes:
         /* empty */
         |
-        TOK_OR UnionMemberType UnionMemberTypes 
+        TOK_OR UnionMemberType UnionMemberTypes
         ;
 
  /* [62] */
 NonAnyType:
-        PrimitiveType TypeSuffix 
-        | 
-        TOK_STRING TypeSuffix 
-        | 
-        TOK_IDENTIFIER TypeSuffix 
-        | 
-        TOK_SEQUENCE '<' Type '>' Null 
-        | 
-        TOK_OBJECT TypeSuffix 
-        | 
+        PrimitiveType TypeSuffix
+        |
+        TOK_STRING TypeSuffix
+        |
+        TOK_IDENTIFIER TypeSuffix
+        |
+        TOK_SEQUENCE '<' Type '>' Null
+        |
+        TOK_OBJECT TypeSuffix
+        |
         TOK_DATE TypeSuffix
         ;
 
  /* [63] */
 ConstType:
-        PrimitiveType Null 
-        | 
+        PrimitiveType Null
+        |
         TOK_IDENTIFIER Null
         ;
 
  /* [64] */
 PrimitiveType:
-        UnsignedIntegerType 
-        | 
-        UnrestrictedFloatType 
-        | 
+        UnsignedIntegerType
+        |
+        UnrestrictedFloatType
+        |
         TOK_BOOLEAN
-        | 
+        |
         TOK_BYTE
-        | 
+        |
         TOK_OCTET
         ;
 
  /* [65] */
 UnrestrictedFloatType:
-        TOK_UNRESTRICTED FloatType 
-        | 
+        TOK_UNRESTRICTED FloatType
+        |
         FloatType
         ;
 
@@ -749,15 +761,15 @@ FloatType:
 
  /* [67] */
 UnsignedIntegerType:
-        TOK_UNSIGNED IntegerType 
-        | 
+        TOK_UNSIGNED IntegerType
+        |
         IntegerType
         ;
 
  /* [68] */
 IntegerType:
         TOK_SHORT
-        | 
+        |
         TOK_LONG OptionalLong
         ;
 
@@ -766,18 +778,18 @@ OptionalLong:
         /* empty */
         |
         TOK_LONG
-        ; 
+        ;
 
  /* [70] */
 TypeSuffix:
         /* empty */
         |
-        '[' ']' TypeSuffix 
-        | 
-        '?' TypeSuffixStartingWithArray 
+        '[' ']' TypeSuffix
+        |
+        '?' TypeSuffixStartingWithArray
         ;
 
- /* [71] */	
+ /* [71] */
 TypeSuffixStartingWithArray:
         /* empty */
         |
@@ -791,10 +803,10 @@ Null:
         '?'
         ;
 
- /* [73] */	
+ /* [73] */
 ReturnType:
-        Type 
-        | 
+        Type
+        |
         TOK_VOID
         ;
 
