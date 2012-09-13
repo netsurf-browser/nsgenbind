@@ -110,8 +110,14 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %type <node> Definitions
 %type <node> Definition
+
 %type <node> Partial
+%type <node> PartialDefinition
+%type <node> PartialInterface
+
 %type <node> Dictionary
+%type <node> PartialDictionary
+
 %type <node> Exception
 %type <node> Enum
 %type <node> Typedef
@@ -208,6 +214,9 @@ Interface:
  /* [6] */
 Partial:
         TOK_PARTIAL PartialDefinition
+        {
+            $$ = $2;
+        }
         ;
 
  /* [7] */
@@ -220,6 +229,9 @@ PartialDefinition:
  /* [8] */
 PartialInterface:
         TOK_INTERFACE TOK_IDENTIFIER '{' InterfaceMembers '}' ';'
+        {
+            $$=NULL;
+        }
         ;
 
  /* [9] slightly altered from original grammar to be left recursive */
@@ -245,6 +257,9 @@ InterfaceMember:
  /* [11] */
 Dictionary:
         TOK_DICTIONARY TOK_IDENTIFIER Inheritance '{' DictionaryMembers '}' ';'
+        {
+            $$ = NULL;
+        }
         ;
 
  /* [12] */
@@ -262,6 +277,9 @@ DictionaryMember:
  /* [14] */
 PartialDictionary:
         TOK_DICTIONARY TOK_IDENTIFIER '{' DictionaryMembers '}' ';'
+        {
+            $$=NULL;
+        }
 
  /* [15] */
 Default:
@@ -281,6 +299,9 @@ DefaultValue:
  /* [17] */
 Exception:
         TOK_EXCEPTION TOK_IDENTIFIER Inheritance '{' ExceptionMembers '}' ';'
+        {
+            $$ = NULL;
+        }
         ;
 
  /* [18] */
@@ -306,6 +327,9 @@ Inheritance:
 /* [20] */
 Enum:
         TOK_ENUM TOK_IDENTIFIER '{' EnumValueList '}' ';'
+        {
+            $$ = NULL;
+        }
         ;
 
 /* [21] */
@@ -331,11 +355,17 @@ CallbackRest:
  /* [24] */
 Typedef:
         TOK_TYPEDEF ExtendedAttributeList Type TOK_IDENTIFIER ';'
+        {
+            $$ = NULL;
+        }
         ;
 
  /* [25] */
 ImplementsStatement:
         TOK_IDENTIFIER TOK_IMPLEMENTS TOK_IDENTIFIER ';'
+        {
+            $$ = NULL;
+        }
         ;
 
  /* [26] */

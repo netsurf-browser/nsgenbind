@@ -120,63 +120,56 @@ struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 	}
 }
 
+static const char *genbind_node_type_to_str(enum genbind_node_type type)
+{
+	switch(type) {
+	case GENBIND_NODE_TYPE_ROOT:
+		return "Root";
+
+	case GENBIND_NODE_TYPE_WEBIDLFILE:
+		return "webidlfile";
+
+	case GENBIND_NODE_TYPE_HDRCOMMENT:
+		return "HdrComment";
+
+	case GENBIND_NODE_TYPE_STRING:
+		return "String";
+
+	case GENBIND_NODE_TYPE_PREAMBLE:
+		return "Preamble";
+
+	case GENBIND_NODE_TYPE_BINDING:
+		return "Binding";
+
+	case GENBIND_NODE_TYPE_BINDING_IDENT:
+		return "Binding: Ident";
+
+	case GENBIND_NODE_TYPE_TYPE:
+		return "Type";
+
+	case GENBIND_NODE_TYPE_TYPE_IDENT:
+		return "Type: Ident";
+
+	case GENBIND_NODE_TYPE_TYPE_NODE:
+		return "Type: Node";
+
+	case GENBIND_NODE_TYPE_TYPE_EXTRA:
+		return "Type: Extra";
+
+	case GENBIND_NODE_TYPE_TYPE_INTERFACE:
+		return "Type: Interface";
+
+	default:
+		return "Unknown";
+	}
+}
+
 int genbind_ast_dump(struct genbind_node *node)
 {
 	char *txt;
 	while (node != NULL) {
-		switch(node->type) {
-		case GENBIND_NODE_TYPE_ROOT:
-			printf("root\n");
-			break;
 
-		case GENBIND_NODE_TYPE_WEBIDLFILE:
-			printf("webidlfile\n");
-			break;
-
-		case GENBIND_NODE_TYPE_HDRCOMMENT:
-			printf("hdrcomment\n");
-			break;
-
-		case GENBIND_NODE_TYPE_STRING:
-			printf("string\n");
-			break;
-
-		case GENBIND_NODE_TYPE_PREAMBLE:
-			printf("preamble\n");
-			break;
-
-		case GENBIND_NODE_TYPE_BINDING:
-			printf("binding\n");
-			break;
-
-		case GENBIND_NODE_TYPE_BINDING_IDENT:
-			printf("binding ident\n");
-			break;
-
-		case GENBIND_NODE_TYPE_TYPE:
-			printf("type\n");
-			break;
-
-		case GENBIND_NODE_TYPE_TYPE_IDENT:
-			printf("type ident\n");
-			break;
-
-		case GENBIND_NODE_TYPE_TYPE_NODE:
-			printf("type node\n");
-			break;
-
-		case GENBIND_NODE_TYPE_TYPE_EXTRA:
-			printf("type extra\n");
-			break;
-
-		case GENBIND_NODE_TYPE_TYPE_INTERFACE:
-			printf("\n");
-			break;
-
-		default:
-			printf("Unknown node type!\n");
-			break;
-		}
+		printf("%s\n", genbind_node_type_to_str(node->type));
 
 		txt = genbind_node_gettext(node);
 		if (txt == NULL) {

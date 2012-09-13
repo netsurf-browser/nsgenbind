@@ -27,14 +27,16 @@ enum genbind_node_type {
 
 struct genbind_node;
 
+/** callback for search and iteration routines */
+typedef int (genbind_callback_t)(struct genbind_node *node, void *ctx);
+
+
 int genbind_parsefile(char *infilename, struct genbind_node **ast);
 
 char *genbind_strapp(char *a, char *b);
 
 struct genbind_node *genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r);
 struct genbind_node *genbind_node_link(struct genbind_node *tgt, struct genbind_node *src);
-
-typedef int (genbind_callback_t)(struct genbind_node *node, void *ctx);
 
 int genbind_node_for_each_type(struct genbind_node *node, enum genbind_node_type type, genbind_callback_t *cb, void *ctx);
 

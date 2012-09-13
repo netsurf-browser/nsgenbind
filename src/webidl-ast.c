@@ -21,6 +21,120 @@ extern void webidl_restart(FILE*);
 extern int webidl_parse(struct webidl_node **webidl_ast);
 
 
+
+struct webidl_node *
+webidl_node_link(struct webidl_node *tgt, struct webidl_node *src)
+{
+	if (tgt != NULL) {
+		tgt->l = src;
+		return tgt;
+	} 
+	return src;
+}
+
+struct webidl_node *webidl_node_new(enum webidl_node_type type, struct webidl_node *l, void *r)
+{
+	struct webidl_node *nn;
+	nn = calloc(1, sizeof(struct webidl_node));
+	nn->type = type;
+	nn->l = l;
+	nn->r.text = r;
+	return nn;
+}
+
+
+int
+webidl_node_for_each_type(struct webidl_node *node,
+			   enum webidl_node_type type,
+			   webidl_callback_t *cb,
+			   void *ctx)
+{
+	int ret;
+
+	if (node == NULL) {
+		return -1;
+	}
+	if (node->l != NULL) {
+		ret = webidl_node_for_each_type(node->l, type, cb, ctx);
+		if (ret != 0) {
+			return ret;
+		}
+	}
+	if (node->type == type) {
+		return cb(node, ctx);
+	}
+
+	return 0;
+}
+
+
+char *webidl_node_gettext(struct webidl_node *node)
+{
+	switch(node->type) {
+	case WEBIDL_NODE_TYPE_INTERFACE_IDENT:
+	case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
+
+		return node->r.text;
+
+	default:
+		return NULL;
+	}
+}
+
+struct webidl_node *webidl_node_getnode(struct webidl_node *node)
+{
+	switch(node->type) {
+	case WEBIDL_NODE_TYPE_ROOT:
+	case WEBIDL_NODE_TYPE_INTERFACE:
+	case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
+		return node->r.node;
+
+	default:
+		return NULL;
+	}
+}
+
+static const char *webidl_node_type_to_str(enum webidl_node_type type)
+{
+	switch(type) {
+	case WEBIDL_NODE_TYPE_ROOT:
+		return "root";
+
+	case WEBIDL_NODE_TYPE_INTERFACE_IDENT:
+		return "Interface: Ident";
+
+	case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
+		return "Interface: Inherit";
+
+	case WEBIDL_NODE_TYPE_INTERFACE:
+		return "Interface";
+
+	case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
+		return "Interface: Members";
+
+	default:
+		return "Unknown";
+	}
+
+}
+
+int webidl_ast_dump(struct webidl_node *node)
+{
+	char *txt;
+	while (node != NULL) {
+		printf("%s\n", webidl_node_type_to_str(node->type));
+
+		txt = webidl_node_gettext(node);
+		if (txt == NULL) {
+			webidl_ast_dump(webidl_node_getnode(node));
+		} else {
+			printf("    %s\n", txt);
+		}
+		node = node->l;
+	}
+	return 0;
+}
+
 static FILE *idlopen(const char *filename)
 {
 	FILE *idlfile;
@@ -43,27 +157,6 @@ static FILE *idlopen(const char *filename)
 	}
 	return idlfile;
 }
-
-struct webidl_node *
-webidl_node_link(struct webidl_node *tgt, struct webidl_node *src)
-{
-	if (tgt != NULL) {
-		tgt->l = src;
-		return tgt;
-	} 
-	return src;
-}
-
-struct webidl_node *webidl_node_new(int type, struct webidl_node *l, void *r)
-{
-	struct webidl_node *nn;
-	nn = calloc(1, sizeof(struct webidl_node));
-	nn->type = type;
-	nn->l = l;
-	nn->r.text = r;
-	return nn;
-}
-
 
 int webidl_parsefile(char *filename, struct webidl_node **webidl_ast)
 {

@@ -18,7 +18,7 @@ enum webidl_node_type {
 };
 
 struct webidl_node {
-	int type;
+	enum webidl_node_type type;
 	struct webidl_node *l;
 	union {
 		struct webidl_node *node;
@@ -26,12 +26,29 @@ struct webidl_node {
 	} r;
 };
 
+/** callback for search and iteration routines */
+typedef int (webidl_callback_t)(struct webidl_node *node, void *ctx);
+
+
+struct webidl_node *webidl_node_new(enum webidl_node_type, struct webidl_node *l, void *r);
+
+struct webidl_node *webidl_node_link(struct webidl_node *tgt, struct webidl_node *src);
+
+/* node contents acessors */
+char *webidl_node_gettext(struct webidl_node *node);
+struct webidl_node *webidl_node_getnode(struct webidl_node *node);
+
+
+/* node searches */
+int webidl_node_for_each_type(struct webidl_node *node,
+			   enum webidl_node_type type,
+			   webidl_callback_t *cb,
+			      void *ctx);
+
+/* debug dump */
+int webidl_ast_dump(struct webidl_node *node);
 
 /** parse web idl file */
 int webidl_parsefile(char *filename, struct webidl_node **webidl_ast);
-
-struct webidl_node *webidl_node_new(int type, struct webidl_node *l, void *r);
-
-struct webidl_node *webidl_node_link(struct webidl_node *tgt, struct webidl_node *src);
 
 #endif
