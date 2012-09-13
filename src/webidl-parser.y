@@ -130,6 +130,13 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> CallbackRest
 %type <node> CallbackRestOrInterface
 
+%type <node> Attribute
+%type <node> AttributeOrOperation
+%type <node> StringifierAttributeOrOperation
+%type <node> Const
+%type <node> Operation
+%type <node> OperationRest
+
 %%
 
  /* default rule to add built AST to passed in one */
@@ -207,7 +214,7 @@ Interface:
 
             members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, inheritance, $5);
 
-            ident = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_IDENT, members, $2);
+            ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
 
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, ident);
         }
@@ -245,7 +252,7 @@ InterfaceMembers:
         |
         InterfaceMembers ExtendedAttributeList InterfaceMember
         {
-          $$ = webidl_node_link($1, $3);
+          $$ = webidl_node_link($3, $1);
         }
         ;
 
@@ -373,6 +380,9 @@ ImplementsStatement:
  /* [26] */
 Const:
         TOK_CONST ConstType TOK_IDENTIFIER '=' ConstValue ';'
+        {
+            $$ = NULL;
+        }
         ;
 
  /* [27] */
@@ -423,12 +433,18 @@ StringifierAttributeOrOperation:
         OperationRest
         |
         ';'
+        {
+          $$=NULL;
+        }
         ;
 
  /* [32] */
 Attribute:
         Inherit ReadOnly TOK_ATTRIBUTE Type TOK_IDENTIFIER ';'
         {
+            struct webidl_node *ident;
+            ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $5);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ATTRIBUTE, NULL, ident);;
         }
         ;
 
@@ -449,6 +465,9 @@ ReadOnly:
  /* [35] */
 Operation:
         Qualifiers OperationRest
+        {
+          $$=$2;
+        }
         ;
 
  /* [36] */
@@ -481,6 +500,9 @@ Special:
  /* [39] */
 OperationRest:
         ReturnType OptionalIdentifier '(' ArgumentList ')' ';'
+        {
+          $$=NULL;
+        }
         ;
 
  /* [40] */

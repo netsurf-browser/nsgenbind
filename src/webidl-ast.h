@@ -11,10 +11,11 @@
 
 enum webidl_node_type {
 	WEBIDL_NODE_TYPE_ROOT = 0,
+	WEBIDL_NODE_TYPE_IDENT,
 	WEBIDL_NODE_TYPE_INTERFACE,
-	WEBIDL_NODE_TYPE_INTERFACE_IDENT,
 	WEBIDL_NODE_TYPE_INTERFACE_MEMBERS,
 	WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE,
+	WEBIDL_NODE_TYPE_ATTRIBUTE,
 };
 
 struct webidl_node {
@@ -46,7 +47,7 @@ int webidl_node_for_each_type(struct webidl_node *node,
 			      void *ctx);
 
 /* debug dump */
-int webidl_ast_dump(struct webidl_node *node);
+int webidl_ast_dump(struct webidl_node *node, int indent);
 
 /** parse web idl file */
 int webidl_parsefile(char *filename, struct webidl_node **webidl_ast);

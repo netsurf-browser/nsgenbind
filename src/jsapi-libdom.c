@@ -83,7 +83,7 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 	}
 
 	if (options->verbose) {
-		webidl_ast_dump(webidl_ast);
+		webidl_ast_dump(webidl_ast, 0);
 	}
 
         /* open output file */

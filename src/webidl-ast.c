@@ -71,7 +71,7 @@ webidl_node_for_each_type(struct webidl_node *node,
 char *webidl_node_gettext(struct webidl_node *node)
 {
 	switch(node->type) {
-	case WEBIDL_NODE_TYPE_INTERFACE_IDENT:
+	case WEBIDL_NODE_TYPE_IDENT:
 	case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
 
 		return node->r.text;
@@ -87,6 +87,7 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 	case WEBIDL_NODE_TYPE_ROOT:
 	case WEBIDL_NODE_TYPE_INTERFACE:
 	case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
+	case WEBIDL_NODE_TYPE_ATTRIBUTE:
 		return node->r.node;
 
 	default:
@@ -100,35 +101,40 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_ROOT:
 		return "root";
 
-	case WEBIDL_NODE_TYPE_INTERFACE_IDENT:
-		return "Interface: Ident";
+	case WEBIDL_NODE_TYPE_IDENT:
+		return "Ident";
 
 	case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
-		return "Interface: Inherit";
+		return "Inherit";
 
 	case WEBIDL_NODE_TYPE_INTERFACE:
 		return "Interface";
 
 	case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
-		return "Interface: Members";
+		return "Members";
+
+	case WEBIDL_NODE_TYPE_ATTRIBUTE:
+		return "Attribute";
 
 	default:
 		return "Unknown";
 	}
 
 }
+const char *SPACES="                                                                               ";
 
-int webidl_ast_dump(struct webidl_node *node)
+int webidl_ast_dump(struct webidl_node *node, int indent)
 {
 	char *txt;
 	while (node != NULL) {
-		printf("%s\n", webidl_node_type_to_str(node->type));
+		printf("%.*s%s", indent, SPACES, webidl_node_type_to_str(node->type));
 
 		txt = webidl_node_gettext(node);
 		if (txt == NULL) {
-			webidl_ast_dump(webidl_node_getnode(node));
+			printf("\n");
+			webidl_ast_dump(webidl_node_getnode(node), indent + 2);
 		} else {
-			printf("    %s\n", txt);
+			printf(": \"%s\"\n", txt);
 		}
 		node = node->l;
 	}
