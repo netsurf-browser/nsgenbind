@@ -124,6 +124,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> ImplementsStatement
 %type <node> Interface
 %type <node> InterfaceMembers
+%type <node> InterfaceMember
+
 %type <node> CallbackOrInterface
 %type <node> CallbackRest
 %type <node> CallbackRestOrInterface
@@ -133,7 +135,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
  /* default rule to add built AST to passed in one */
 Input:
         Definitions
-        { *webidl_ast = webidl_node_link(*webidl_ast, $1); }
+        { *webidl_ast = webidl_node_link($1, *webidl_ast); }
         |
         error
         {
@@ -243,7 +245,7 @@ InterfaceMembers:
         |
         InterfaceMembers ExtendedAttributeList InterfaceMember
         {
-          $$ = NULL;
+          $$ = webidl_node_link($1, $3);
         }
         ;
 
@@ -405,6 +407,9 @@ FloatLiteral:
  /* [30] */
 AttributeOrOperation:
         TOK_STRINGIFIER StringifierAttributeOrOperation
+        {
+            $$ = $2;
+        }
         |
         Attribute
         |
@@ -423,6 +428,8 @@ StringifierAttributeOrOperation:
  /* [32] */
 Attribute:
         Inherit ReadOnly TOK_ATTRIBUTE Type TOK_IDENTIFIER ';'
+        {
+        }
         ;
 
  /* [33] */
