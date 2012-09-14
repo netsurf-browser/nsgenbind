@@ -88,6 +88,7 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 	case WEBIDL_NODE_TYPE_INTERFACE:
 	case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
 	case WEBIDL_NODE_TYPE_ATTRIBUTE:
+	case WEBIDL_NODE_TYPE_OPERATION:
 		return node->r.node;
 
 	default:
@@ -115,6 +116,9 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 
 	case WEBIDL_NODE_TYPE_ATTRIBUTE:
 		return "Attribute";
+
+	case WEBIDL_NODE_TYPE_OPERATION:
+		return "Operation";
 
 	default:
 		return "Unknown";

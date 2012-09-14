@@ -134,8 +134,10 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> AttributeOrOperation
 %type <node> StringifierAttributeOrOperation
 %type <node> Const
+
 %type <node> Operation
 %type <node> OperationRest
+%type <node> OptionalIdentifier
 
 %%
 
@@ -501,13 +503,20 @@ Special:
 OperationRest:
         ReturnType OptionalIdentifier '(' ArgumentList ')' ';'
         {
-          $$=NULL;
+            struct webidl_node *ident = NULL;
+            if ($2 != NULL) {
+                ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $2);
+            }
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, ident);
         }
         ;
 
  /* [40] */
 OptionalIdentifier:
         /* empty */
+        {
+            $$=NULL;
+        }
         |
         TOK_IDENTIFIER
         ;
