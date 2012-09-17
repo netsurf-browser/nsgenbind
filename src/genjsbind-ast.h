@@ -30,6 +30,7 @@ struct genbind_node;
 /** callback for search and iteration routines */
 typedef int (genbind_callback_t)(struct genbind_node *node, void *ctx);
 
+int genbind_cmp_node_type(struct genbind_node *node, void *ctx);
 
 int genbind_parsefile(char *infilename, struct genbind_node **ast);
 
@@ -38,11 +39,27 @@ char *genbind_strapp(char *a, char *b);
 struct genbind_node *genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r);
 struct genbind_node *genbind_node_link(struct genbind_node *tgt, struct genbind_node *src);
 
+int genbind_ast_dump(struct genbind_node *ast);
+
+/** Depth first left hand search using user provided comparison 
+ *
+ * @param node The node to start the search from
+
+ * @param prev The node at which to stop the search, either NULL to
+ *             search the full tree depth (initial search) or the result 
+ *             of a previous search to continue.
+ * @param cb Comparison callback
+ * @param ctx Context for callback
+ */
+struct genbind_node *
+genbind_node_find(struct genbind_node *node,
+		  struct genbind_node *prev,
+		  genbind_callback_t *cb,
+		  void *ctx);
+
 int genbind_node_for_each_type(struct genbind_node *node, enum genbind_node_type type, genbind_callback_t *cb, void *ctx);
 
 char *genbind_node_gettext(struct genbind_node *node);
 struct genbind_node *genbind_node_getnode(struct genbind_node *node);
-
-int genbind_ast_dump(struct genbind_node *ast);
 
 #endif

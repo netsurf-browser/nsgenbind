@@ -125,11 +125,11 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	}
 
 }
-const char *SPACES="                                                                               ";
+
 
 int webidl_ast_dump(struct webidl_node *node, int indent)
 {
-	char *txt;
+	const char *SPACES="                                                                               ";	char *txt;
 	while (node != NULL) {
 		printf("%.*s%s", indent, SPACES, webidl_node_type_to_str(node->type));
 

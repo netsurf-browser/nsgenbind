@@ -82,10 +82,37 @@ static int webidl_file_cb(struct genbind_node *node, void *ctx)
 static int 
 read_webidl(struct genbind_node *genbind_ast, struct webidl_node **webidl_ast)
 {
-	return genbind_node_for_each_type(genbind_ast,
-					  GENBIND_NODE_TYPE_WEBIDLFILE, 
-					  webidl_file_cb, 
-					  webidl_ast);
+	int res;
+
+	res = genbind_node_for_each_type(genbind_ast,
+					 GENBIND_NODE_TYPE_WEBIDLFILE, 
+					 webidl_file_cb, 
+					 webidl_ast);
+
+        /* debug dump of web idl AST */
+	if (options->verbose) {
+		webidl_ast_dump(webidl_ast, 0);
+	}
+	return res;
+}
+
+struct binding {
+	const char *name; /* name of the binding */
+	const char *interface; /* webidl interface binding is for */
+};
+
+
+static struct binding *binding_new(struct genbind_node *genbind_ast)
+{
+	struct binding *nb;
+	nb = calloc(1, sizeof(struct binding));
+
+	struct genbind_node *binding_node;
+
+	binding_node = genbind_node_find(genbind_ast,
+		  NULL,
+		  genbind_cmp_node_type,
+		  GENBIND_NODE_TYPE_BINDING);
 
 }
 
@@ -94,16 +121,17 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
         FILE *outfile = NULL;
 	struct webidl_node *webidl_ast = NULL;
 	int res;
+	struct binding *binding;
 
+	/* walk ast and load any web IDL files required */
 	res = read_webidl(genbind_ast, &webidl_ast);
 	if (res != 0) {
 		fprintf(stderr, "Error reading Web IDL files\n");
 		return 5;
 	}
 
-	if (options->verbose) {
-		webidl_ast_dump(webidl_ast, 0);
-	}
+	/* get general binding information used in output */
+	binding = binding_new(genbind_ast);
 
         /* open output file */
 	if (outfilename == NULL) {
@@ -123,10 +151,10 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 
 	output_preamble(outfile, genbind_ast);
 
-	/*	
+	//output_function_spec(outfile, genbind_ast);
 
-	fprintf(outfile, " interface %s \n\n", genbind_ast->ifname);
-*/
+	//output_property_spec(outfile, genbind_ast);
+
 	fclose(outfile);
 
 	return 0;

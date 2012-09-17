@@ -89,6 +89,40 @@ genbind_node_for_each_type(struct genbind_node *node,
 	return 0;
 }
 
+/* exported interface defined in genjsbind-ast.h */
+struct genbind_node *
+genbind_node_find(struct genbind_node *node,
+		  struct genbind_node *prev,
+		  genbind_callback_t *cb,
+		  void *ctx)
+{
+	struct genbind_node *ret;
+
+	if (node == NULL) {
+		return NULL;
+	}
+
+	if (node->l != prev) {
+		ret = genbind_node_find(node->l, prev, cb, ctx);
+		if (ret != NULL) {
+			return ret;
+		}
+	}
+
+	if (cb(node, ctx) != 0) {
+		return node;
+	}
+
+	return NULL;
+}
+
+int genbind_cmp_node_type(struct genbind_node *node, void *ctx)
+{
+	if (node->type == (enum genbind_node_type)ctx)
+		return 1;
+	return 0;
+}
+
 char *genbind_node_gettext(struct genbind_node *node)
 {
 	switch(node->type) {
