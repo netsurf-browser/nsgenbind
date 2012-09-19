@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 	}
 
 	if (options->verbose) {
-		genbind_ast_dump(genbind_root);
+		genbind_ast_dump(genbind_root, 0);
 	}
 
 	res = jsapi_libdom_output(options->outfilename, genbind_root);

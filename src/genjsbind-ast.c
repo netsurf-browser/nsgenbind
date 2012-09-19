@@ -181,31 +181,33 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 		return "Type";
 
 	case GENBIND_NODE_TYPE_TYPE_NODE:
-		return "Type: Node";
+		return "Node";
 
 	case GENBIND_NODE_TYPE_TYPE_EXTRA:
-		return "Type: Extra";
+		return "Extra";
 
 	case GENBIND_NODE_TYPE_TYPE_INTERFACE:
-		return "Type: Interface";
+		return "Interface";
 
 	default:
 		return "Unknown";
 	}
 }
 
-int genbind_ast_dump(struct genbind_node *node)
+int genbind_ast_dump(struct genbind_node *node, int indent)
 {
+	const char *SPACES="                                                                               ";	
 	char *txt;
-	while (node != NULL) {
 
-		printf("%s\n", genbind_node_type_to_str(node->type));
+	while (node != NULL) {
+		printf("%.*s%s", indent, SPACES,  genbind_node_type_to_str(node->type));
 
 		txt = genbind_node_gettext(node);
 		if (txt == NULL) {
-			genbind_ast_dump(genbind_node_getnode(node));
+			printf("\n");
+			genbind_ast_dump(genbind_node_getnode(node), indent + 2);
 		} else {
-			printf("    %s\n", txt);
+			printf(": \"%.*s\"\n", 75 - indent, txt);
 		}
 		node = node->l;
 	}

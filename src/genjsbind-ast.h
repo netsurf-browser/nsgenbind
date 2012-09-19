@@ -38,7 +38,7 @@ char *genbind_strapp(char *a, char *b);
 struct genbind_node *genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r);
 struct genbind_node *genbind_node_link(struct genbind_node *tgt, struct genbind_node *src);
 
-int genbind_ast_dump(struct genbind_node *ast);
+int genbind_ast_dump(struct genbind_node *ast, int indent);
 
 /** Depth first left hand search using user provided comparison 
  *
