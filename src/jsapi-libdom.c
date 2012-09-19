@@ -108,6 +108,14 @@ output_function_spec(FILE *outfile,
 		     struct genbind_node *genbind_ast,
 		     struct binding *binding)
 {
+/* find interface element with correct ident attached in webidl */
+/* for each function (WEBIDL_NODE_TYPE_OPERATION) emit a JSAPI_FS()*/
+/* static JSFunctionSpec jsfunctions_document[] = {
+	JSAPI_FS_DOCUMENT,
+	JSAPI_FS(write, 1, 0),
+	JSAPI_FS_END
+};
+*/
 	fprintf(outfile, "%s\n%s\n", binding->name, binding->interface);
 
 	return 0;
