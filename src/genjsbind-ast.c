@@ -129,8 +129,7 @@ char *genbind_node_gettext(struct genbind_node *node)
 	case GENBIND_NODE_TYPE_WEBIDLFILE:
 	case GENBIND_NODE_TYPE_STRING:
 	case GENBIND_NODE_TYPE_PREAMBLE:
-	case GENBIND_NODE_TYPE_BINDING_IDENT:
-	case GENBIND_NODE_TYPE_TYPE_IDENT:
+	case GENBIND_NODE_TYPE_IDENT:
 	case GENBIND_NODE_TYPE_TYPE_NODE:
 	case GENBIND_NODE_TYPE_TYPE_INTERFACE:
 		return node->r.text;
@@ -157,6 +156,9 @@ struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 static const char *genbind_node_type_to_str(enum genbind_node_type type)
 {
 	switch(type) {
+	case GENBIND_NODE_TYPE_IDENT:
+		return "Ident";
+
 	case GENBIND_NODE_TYPE_ROOT:
 		return "Root";
 
@@ -175,14 +177,8 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 	case GENBIND_NODE_TYPE_BINDING:
 		return "Binding";
 
-	case GENBIND_NODE_TYPE_BINDING_IDENT:
-		return "Binding: Ident";
-
 	case GENBIND_NODE_TYPE_TYPE:
 		return "Type";
-
-	case GENBIND_NODE_TYPE_TYPE_IDENT:
-		return "Type: Ident";
 
 	case GENBIND_NODE_TYPE_TYPE_NODE:
 		return "Type: Node";

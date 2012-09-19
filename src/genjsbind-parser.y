@@ -162,7 +162,7 @@ Binding
         {
           $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING, 
                                 NULL, 
-                                genbind_new_node(GENBIND_NODE_TYPE_BINDING_IDENT, $4, $2));
+                                genbind_new_node(GENBIND_NODE_TYPE_IDENT, $4, $2));
         }
         ;
 
@@ -191,7 +191,7 @@ Type
         {
           $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE, 
                                 NULL, 
-                                genbind_new_node(GENBIND_NODE_TYPE_TYPE_IDENT, $4, $2));
+                                genbind_new_node(GENBIND_NODE_TYPE_IDENT, $4, $2));
         }
         ;
 
