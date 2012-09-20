@@ -122,7 +122,7 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 		return 1;
 	} else {
 		fprintf(outfile,
-			"   JSAPI_PS(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
+			"    JSAPI_PS(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
 			webidl_node_gettext(ident_node));
 	}
 	return 0;
@@ -136,6 +136,7 @@ generate_property_spec(FILE *outfile,
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
 	struct webidl_node *inherit_node;
+
 
 	/* find interface in webidl with correct ident attached */
 	interface_node = webidl_node_find_type_ident(webidl_ast,
@@ -153,21 +154,25 @@ generate_property_spec(FILE *outfile,
 					NULL,
 					webidl_cmp_node_type,
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
-	if (members_node == NULL) {
-		fprintf(stderr,
-			"Unable to find members within interface %s\n",
-			interface);
-		return -1;
+
+	while (members_node != NULL) {
+
+		fprintf(outfile,"    /**** %s ****/\n", interface);
+
+
+		/* for each function emit a JSAPI_FS()*/
+		webidl_node_for_each_type(webidl_node_getnode(members_node),
+					  WEBIDL_NODE_TYPE_ATTRIBUTE,
+					  webidl_property_spec_cb,
+					  outfile);
+
+
+		members_node = webidl_node_find(webidl_node_getnode(interface_node),
+						members_node,
+						webidl_cmp_node_type,
+						(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
+
 	}
-
-
-	/* for each function emit a JSAPI_FS()*/
-	webidl_node_for_each_type(webidl_node_getnode(members_node),
-				  WEBIDL_NODE_TYPE_ATTRIBUTE,
-				  webidl_property_spec_cb,
-				  outfile);
-
-
 	/* check for inherited nodes and insert them too */
 	inherit_node = webidl_node_find(webidl_node_getnode(interface_node),
 					NULL,
@@ -195,7 +200,7 @@ output_property_spec(FILE *outfile,
 
 	res = generate_property_spec(outfile, binding->interface, webidl_ast);
 
-	fprintf(outfile, "   JSAPI_PS_END\n};\n");
+	fprintf(outfile, "    JSAPI_PS_END\n};\n");
 
 	return res;
 }
@@ -217,7 +222,7 @@ static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 		 */
 	} else {
 		fprintf(outfile,
-			"   JSAPI_FS(%s, 0, 0),\n",
+			"    JSAPI_FS(%s, 0, 0),\n",
 			webidl_node_gettext(ident_node));
 	}
 	return 0;
@@ -231,6 +236,7 @@ generate_function_spec(FILE *outfile,
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
 	struct webidl_node *inherit_node;
+
 
 	/* find interface in webidl with correct ident attached */
 	interface_node = webidl_node_find_type_ident(webidl_ast,
@@ -248,20 +254,21 @@ generate_function_spec(FILE *outfile,
 					NULL,
 					webidl_cmp_node_type,
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
-	if (members_node == NULL) {
-		fprintf(stderr,
-			"Unable to find members within interface %s\n",
-			interface);
-		return -1;
+	while (members_node != NULL) { 
+
+		fprintf(outfile,"    /**** %s ****/\n", interface);
+
+		/* for each function emit a JSAPI_FS()*/
+		webidl_node_for_each_type(webidl_node_getnode(members_node),
+					  WEBIDL_NODE_TYPE_OPERATION,
+					  webidl_func_spec_cb,
+					  outfile);
+
+		members_node = webidl_node_find(webidl_node_getnode(interface_node),
+						members_node,
+						webidl_cmp_node_type,
+						(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
 	}
-
-
-	/* for each function emit a JSAPI_FS()*/
-	webidl_node_for_each_type(webidl_node_getnode(members_node),
-				  WEBIDL_NODE_TYPE_OPERATION,
-				  webidl_func_spec_cb,
-				  outfile);
-
 
 	/* check for inherited nodes and insert them too */
 	inherit_node = webidl_node_find(webidl_node_getnode(interface_node),

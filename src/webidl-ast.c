@@ -20,6 +20,15 @@ extern int webidl__flex_debug;
 extern void webidl_restart(FILE*);
 extern int webidl_parse(struct webidl_node **webidl_ast);
 
+struct webidl_node {
+	enum webidl_node_type type;
+	struct webidl_node *l;
+	union {
+		void *value;
+		struct webidl_node *node;
+		char *text;
+	} r;
+};
 
 
 struct webidl_node *
@@ -42,6 +51,12 @@ struct webidl_node *webidl_node_new(enum webidl_node_type type, struct webidl_no
 	return nn;
 }
 
+void 
+webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void *r)
+{
+	node->type = type;
+	node->r.value = r; 
+}
 
 int
 webidl_node_for_each_type(struct webidl_node *node,
@@ -76,7 +91,7 @@ webidl_node_find(struct webidl_node *node,
 {
 	struct webidl_node *ret;
 
-	if (node == NULL) {
+	if ((node == NULL) || (node == prev)){
 		return NULL;
 	}
 
@@ -150,17 +165,20 @@ char *webidl_node_gettext(struct webidl_node *node)
 
 struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 {
-	switch(node->type) {
-	case WEBIDL_NODE_TYPE_ROOT:
-	case WEBIDL_NODE_TYPE_INTERFACE:
-	case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
-	case WEBIDL_NODE_TYPE_ATTRIBUTE:
-	case WEBIDL_NODE_TYPE_OPERATION:
-		return node->r.node;
-
-	default:
-		return NULL;
+	if (node != NULL) {
+		switch (node->type) {
+		case WEBIDL_NODE_TYPE_ROOT:
+		case WEBIDL_NODE_TYPE_INTERFACE:
+		case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
+		case WEBIDL_NODE_TYPE_ATTRIBUTE:
+		case WEBIDL_NODE_TYPE_OPERATION:
+			return node->r.node;
+		default:
+			break;
+		}
 	}
+	return NULL;
+
 }
 
 static const char *webidl_node_type_to_str(enum webidl_node_type type)

@@ -19,14 +19,7 @@ enum webidl_node_type {
 	WEBIDL_NODE_TYPE_OPERATION,
 };
 
-struct webidl_node {
-	enum webidl_node_type type;
-	struct webidl_node *l;
-	union {
-		struct webidl_node *node;
-		char *text;
-	} r;
-};
+struct webidl_node;
 
 /** callback for search and iteration routines */
 typedef int (webidl_callback_t)(struct webidl_node *node, void *ctx);
@@ -34,6 +27,8 @@ typedef int (webidl_callback_t)(struct webidl_node *node, void *ctx);
 int webidl_cmp_node_type(struct webidl_node *node, void *ctx);
 
 struct webidl_node *webidl_node_new(enum webidl_node_type, struct webidl_node *l, void *r);
+
+void webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void *r);
 
 struct webidl_node *webidl_node_link(struct webidl_node *tgt, struct webidl_node *src);
 

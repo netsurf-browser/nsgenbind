@@ -113,7 +113,6 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %type <node> Partial
 %type <node> PartialDefinition
-%type <node> PartialInterface
 
 %type <node> Dictionary
 %type <node> PartialDictionary
@@ -122,9 +121,11 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> Enum
 %type <node> Typedef
 %type <node> ImplementsStatement
+
 %type <node> Interface
 %type <node> InterfaceMembers
 %type <node> InterfaceMember
+%type <node> PartialInterface
 
 %type <node> CallbackOrInterface
 %type <node> CallbackRest
@@ -137,7 +138,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %type <node> Operation
 %type <node> OperationRest
-%type <node> OptionalIdentifier
+%type <text> OptionalIdentifier
 
 %%
 
@@ -206,19 +207,43 @@ CallbackRestOrInterface:
 Interface:
         TOK_INTERFACE TOK_IDENTIFIER Inheritance '{' InterfaceMembers '}' ';'
         {
-            struct webidl_node *ident;
-            struct webidl_node *members;
-            struct webidl_node *inheritance = NULL;
+            /* extend interface with additional members */
+            struct webidl_node *interface_node;
+            interface_node = webidl_node_find_type_ident(*webidl_ast,
+						     WEBIDL_NODE_TYPE_INTERFACE,
+						     $2);
+            if (interface_node == NULL) {
+                struct webidl_node *members;
+                struct webidl_node *ident;
+                struct webidl_node *inheritance = NULL;
 
-            if ($3 != NULL) {
-                inheritance = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, NULL, $3);
+                if ($3 != NULL) {
+                    inheritance = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, NULL, $3);
+                }
+
+                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, inheritance, $5);
+
+                ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
+
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, ident);
+            } else {
+                struct webidl_node *members;
+                struct webidl_node *inheritance = webidl_node_getnode(interface_node);
+
+                if ($3 != NULL) {
+                    inheritance = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, inheritance, $3);
+                }
+
+                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, 
+                                          inheritance,
+                                          $5);
+
+                /* link member node into interfaces_node */
+                webidl_node_set(interface_node, 
+                                WEBIDL_NODE_TYPE_INTERFACE, 
+                                members);
+                $$ = NULL; /* updated existing interface do not add it again */
             }
-
-            members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, inheritance, $5);
-
-            ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
-
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, ident);
         }
         ;
 
@@ -241,7 +266,35 @@ PartialDefinition:
 PartialInterface:
         TOK_INTERFACE TOK_IDENTIFIER '{' InterfaceMembers '}' ';'
         {
-            $$=NULL;
+            /* extend interface with additional members */
+            struct webidl_node *interface_node;
+            interface_node = webidl_node_find_type_ident(*webidl_ast,
+						     WEBIDL_NODE_TYPE_INTERFACE,
+						     $2);
+            if (interface_node == NULL) {
+                /* doesnt already exist so create it */
+                struct webidl_node *members;
+                struct webidl_node *ident;
+
+                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, NULL, $4);
+
+                ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
+
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, ident);
+
+            } else {
+                struct webidl_node *members;
+                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, 
+                                          webidl_node_getnode(interface_node),
+                                          $4);
+
+                /* link member node into interfaces_node */
+                webidl_node_set(interface_node, 
+                                WEBIDL_NODE_TYPE_INTERFACE, 
+                                members);
+
+                $$ = NULL; /* updated existing interface do not add it again */
+            }
         }
         ;
 
@@ -289,7 +342,6 @@ DictionaryMember:
 PartialDictionary:
         TOK_DICTIONARY TOK_IDENTIFIER '{' DictionaryMembers '}' ';'
         {
-            $$=NULL;
         }
 
  /* [15] */
@@ -515,7 +567,7 @@ OperationRest:
 OptionalIdentifier:
         /* empty */
         {
-            $$=NULL;
+            $$ = NULL;
         }
         |
         TOK_IDENTIFIER
