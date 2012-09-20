@@ -67,6 +67,73 @@ webidl_node_for_each_type(struct webidl_node *node,
 	return 0;
 }
 
+/* exported interface defined in genjsbind-ast.h */
+struct webidl_node *
+webidl_node_find(struct webidl_node *node,
+		  struct webidl_node *prev,
+		  webidl_callback_t *cb,
+		  void *ctx)
+{
+	struct webidl_node *ret;
+
+	if (node == NULL) {
+		return NULL;
+	}
+
+	if (node->l != prev) {
+		ret = webidl_node_find(node->l, prev, cb, ctx);
+		if (ret != NULL) {
+			return ret;
+		}
+	}
+
+	if (cb(node, ctx) != 0) {
+		return node;
+	}
+
+	return NULL;
+}
+
+int webidl_cmp_node_type(struct webidl_node *node, void *ctx)
+{
+	if (node->type == (enum webidl_node_type)ctx)
+		return 1;
+	return 0;
+}
+
+struct webidl_node *
+webidl_node_find_type_ident(struct webidl_node *root_node, 
+			    enum webidl_node_type type, 
+			    const char *ident)
+{
+	struct webidl_node *node;
+	struct webidl_node *ident_node;
+
+	node = webidl_node_find(root_node,
+				NULL,
+				webidl_cmp_node_type,
+				(void *)type);
+
+	while (node != NULL) {
+
+		ident_node = webidl_node_find(webidl_node_getnode(node),
+					      NULL,
+					      webidl_cmp_node_type,
+					      (void *)WEBIDL_NODE_TYPE_IDENT);
+		if (ident_node != NULL) {
+			if (strcmp(ident_node->r.text, ident) == 0)
+				break;
+		}
+
+		node = webidl_node_find(root_node,
+					node,
+					webidl_cmp_node_type,
+					(void *)type);
+
+	}
+	return node;
+}
+
 
 char *webidl_node_gettext(struct webidl_node *node)
 {
