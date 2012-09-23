@@ -41,6 +41,12 @@ webidl_node_link(struct webidl_node *tgt, struct webidl_node *src)
 	return src;
 }
 
+struct webidl_node *
+webidl_add_interface_member(struct webidl_node *list, struct webidl_node *new)
+{
+	return webidl_node_link(new, list);
+}
+
 struct webidl_node *webidl_node_new(enum webidl_node_type type, struct webidl_node *l, void *r)
 {
 	struct webidl_node *nn;

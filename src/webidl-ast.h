@@ -32,6 +32,8 @@ void webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void 
 
 struct webidl_node *webidl_node_link(struct webidl_node *tgt, struct webidl_node *src);
 
+struct webidl_node *webidl_add_interface_member(struct webidl_node *list, struct webidl_node *new);
+
 /* node contents acessors */
 char *webidl_node_gettext(struct webidl_node *node);
 struct webidl_node *webidl_node_getnode(struct webidl_node *node);

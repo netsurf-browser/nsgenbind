@@ -307,7 +307,7 @@ InterfaceMembers:
         |
         InterfaceMembers ExtendedAttributeList InterfaceMember
         {
-          $$ = webidl_node_link($3, $1);
+          $$ = webidl_add_interface_member($1, $3);
         }
         ;
 
