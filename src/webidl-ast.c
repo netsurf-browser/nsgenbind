@@ -30,21 +30,40 @@ struct webidl_node {
 	} r;
 };
 
-
+/* insert node at beginning of a list */
 struct webidl_node *
-webidl_node_link(struct webidl_node *tgt, struct webidl_node *src)
+webidl_node_prepend(struct webidl_node *list, struct webidl_node *node)
 {
-	if (tgt != NULL) {
-		tgt->l = src;
-		return tgt;
-	} 
-	return src;
+	if (node == NULL) {
+		return list; /* no node to prepend - return existing list */
+	}
+
+	node->l = list;
+	return node;	
+}
+
+/* append node at end of a list */
+struct webidl_node *
+webidl_node_append(struct webidl_node *list, struct webidl_node *node)
+{
+	struct webidl_node *cur = list;
+
+	if (cur == NULL) {
+		return node; /* no existing list so just return node */
+	}
+
+	while (cur->l != NULL) {
+		cur = cur->l;
+	}
+	cur->l = node;
+
+	return list;
 }
 
 struct webidl_node *
 webidl_add_interface_member(struct webidl_node *list, struct webidl_node *new)
 {
-	return webidl_node_link(new, list);
+	return webidl_node_prepend(list, new);
 }
 
 struct webidl_node *webidl_node_new(enum webidl_node_type type, struct webidl_node *l, void *r)
@@ -178,6 +197,9 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 		case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
 		case WEBIDL_NODE_TYPE_ATTRIBUTE:
 		case WEBIDL_NODE_TYPE_OPERATION:
+		case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
+		case WEBIDL_NODE_TYPE_ARGUMENT:
+		case WEBIDL_NODE_TYPE_TYPE:
 			return node->r.node;
 		default:
 			break;
@@ -210,6 +232,24 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 
 	case WEBIDL_NODE_TYPE_OPERATION:
 		return "Operation";
+
+	case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
+		return "Argument(opt)";
+
+	case WEBIDL_NODE_TYPE_ARGUMENT:
+		return "Argument";
+
+	case WEBIDL_NODE_TYPE_ELLIPSIS:
+		return "Ellipsis";
+
+	case WEBIDL_NODE_TYPE_TYPE:
+		return "Type";
+
+	case WEBIDL_NODE_TYPE_TYPE_BASE:
+		return "Base";
+
+	case WEBIDL_NODE_TYPE_TYPE_MODIFIER:
+		return "Modifier";
 
 	default:
 		return "Unknown";

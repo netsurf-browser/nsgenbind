@@ -17,6 +17,33 @@ enum webidl_node_type {
 	WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE,
 	WEBIDL_NODE_TYPE_ATTRIBUTE,
 	WEBIDL_NODE_TYPE_OPERATION,
+	WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT,
+	WEBIDL_NODE_TYPE_ARGUMENT,
+	WEBIDL_NODE_TYPE_ELLIPSIS,
+	WEBIDL_NODE_TYPE_TYPE,
+	WEBIDL_NODE_TYPE_TYPE_BASE,
+	WEBIDL_NODE_TYPE_TYPE_MODIFIER,
+};
+
+enum webidl_type {
+	WEBIDL_TYPE_BOOL,
+	WEBIDL_TYPE_BYTE,
+	WEBIDL_TYPE_OCTET,
+	WEBIDL_TYPE_FLOAT,
+	WEBIDL_TYPE_DOUBLE,
+	WEBIDL_TYPE_SHORT,
+	WEBIDL_TYPE_LONG,
+	WEBIDL_TYPE_LONGLONG,
+	WEBIDL_TYPE_STRING,
+	WEBIDL_TYPE_SEQUENCE,
+	WEBIDL_TYPE_OBJECT,
+	WEBIDL_TYPE_DATE,
+	WEBIDL_TYPE_USER,
+};
+
+enum webidl_type_modifier {
+	WEBIDL_TYPE_MODIFIER_UNSIGNED,
+	WEBIDL_TYPE_MODIFIER_UNRESTRICTED,
 };
 
 struct webidl_node;
@@ -30,7 +57,8 @@ struct webidl_node *webidl_node_new(enum webidl_node_type, struct webidl_node *l
 
 void webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void *r);
 
-struct webidl_node *webidl_node_link(struct webidl_node *tgt, struct webidl_node *src);
+struct webidl_node *webidl_node_prepend(struct webidl_node *list, struct webidl_node *node);
+struct webidl_node *webidl_node_append(struct webidl_node *list, struct webidl_node *node);
 
 struct webidl_node *webidl_add_interface_member(struct webidl_node *list, struct webidl_node *new);
 

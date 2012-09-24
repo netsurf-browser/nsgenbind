@@ -13,6 +13,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "webidl-ast.h"
 
@@ -39,9 +41,9 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %union
 {
   int attr;
-  char* text;
   long value;
-  struct ifmember_s **ifmember;
+    bool isit;
+  char* text;
   struct webidl_node *node;
 }
 
@@ -138,14 +140,36 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %type <node> Operation
 %type <node> OperationRest
-%type <text> OptionalIdentifier
+%type <node> OptionalIdentifier
+
+%type <node> ArgumentList
+%type <node> Arguments
+%type <node> Argument
+%type <node> OptionalOrRequiredArgument
+%type <text> ArgumentName
+%type <text> ArgumentNameKeyword
+%type <node> Ellipsis
+
+%type <node> Type
+%type <node> SingleType
+%type <node> UnionType
+%type <node> NonAnyType
+%type <node> PrimitiveType
+%type <node> UnrestrictedFloatType
+%type <node> FloatType
+%type <node> UnsignedIntegerType
+%type <node> IntegerType
+
+%type <isit> OptionalLong
 
 %%
 
  /* default rule to add built AST to passed in one */
 Input:
         Definitions
-        { *webidl_ast = webidl_node_link($1, *webidl_ast); }
+        { 
+            *webidl_ast = webidl_node_prepend(*webidl_ast, $1); 
+        }
         |
         error
         {
@@ -164,7 +188,7 @@ Definitions:
         |
         Definitions ExtendedAttributeList Definition
         {
-          $$ = webidl_node_link($1, $3);
+          $$ = webidl_node_prepend($1, $3);
         }
         ;
 
@@ -496,9 +520,9 @@ StringifierAttributeOrOperation:
 Attribute:
         Inherit ReadOnly TOK_ATTRIBUTE Type TOK_IDENTIFIER ';'
         {
-            struct webidl_node *ident;
-            ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $5);
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ATTRIBUTE, NULL, ident);;
+            struct webidl_node *attribute;
+            attribute = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $5);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ATTRIBUTE, NULL, attribute);
         }
         ;
 
@@ -555,11 +579,11 @@ Special:
 OperationRest:
         ReturnType OptionalIdentifier '(' ArgumentList ')' ';'
         {
-            struct webidl_node *ident = NULL;
-            if ($2 != NULL) {
-                ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $2);
-            }
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, ident);
+            struct webidl_node *operation = $4; /* argument list */
+
+            operation = webidl_node_prepend(operation, $2); /* identifier */
+
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, operation);
         }
         ;
 
@@ -571,34 +595,67 @@ OptionalIdentifier:
         }
         |
         TOK_IDENTIFIER
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $1);
+        }
         ;
 
 
- /* [41] */
+ /* [41] an empty list or a list of non empty comma separated arguments, note
+  * this is right associative so the tree build is ass backwards 
+  */
 ArgumentList:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         Argument Arguments
+        {
+            $$ = webidl_node_append($2, $1);
+        }
         ;
 
  /* [42] */
 Arguments:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         ',' Argument Arguments
+        {
+            $$ = webidl_node_append($3, $2);
+        }
         ;
 
 
  /* [43] */
 Argument:
         ExtendedAttributeList OptionalOrRequiredArgument
+        {
+            $$ = $2;
+        }
         ;
 
  /* [44] */
 OptionalOrRequiredArgument:
         TOK_OPTIONAL Type ArgumentName Default
+        {
+            struct webidl_node *argument;
+            argument = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $3);
+            argument = webidl_node_prepend(argument, $2); /* add type node */
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT, NULL, argument);
+        }
         |
         Type Ellipsis ArgumentName
+        {
+            struct webidl_node *argument;
+            argument = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $3);
+            argument = webidl_node_prepend(argument, $2); /* ellipsis node */
+            argument = webidl_node_prepend(argument, $1); /* add type node */
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ARGUMENT, NULL, argument);
+        }
         ;
 
  /* [45] */
@@ -611,8 +668,14 @@ ArgumentName:
  /* [46] */
 Ellipsis:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         TOK_ELLIPSIS
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ELLIPSIS, NULL, NULL);
+        }
         ;
 
  /* [47] */
@@ -750,42 +813,99 @@ Other:
  /* [55] */
 ArgumentNameKeyword:
         TOK_ATTRIBUTE
+        {
+            $$ = strdup("attribute");
+        }
         |
         TOK_CALLBACK
+        {
+            $$ = strdup("callback");
+        }
         |
         TOK_CONST
+        {
+            $$ = strdup("const");
+        }
         |
         TOK_CREATOR
+        {
+            $$ = strdup("creator");
+        }
         |
         TOK_DELETER
+        {
+            $$ = strdup("deleter");
+        }
         |
         TOK_DICTIONARY
+        {
+            $$ = strdup("dictionary");
+        }
         |
         TOK_ENUM
+        {
+            $$ = strdup("enum");
+        }
         |
         TOK_EXCEPTION
+        {
+            $$ = strdup("exception");
+        }
         |
         TOK_GETTER
+        {
+            $$ = strdup("getter");
+        }
         |
         TOK_IMPLEMENTS
+        {
+            $$ = strdup("implements");
+        }
         |
         TOK_INHERIT
+        {
+            $$ = strdup("inherit");
+        }
         |
         TOK_INTERFACE
+        {
+            $$ = strdup("interface");
+        }
         |
         TOK_LEGACYCALLER
+        {
+            $$ = strdup("legacycaller");
+        }
         |
         TOK_PARTIAL
+        {
+            $$ = strdup("partial");
+        }
         |
         TOK_SETTER
+        {
+            $$ = strdup("setter");
+        }
         |
         TOK_STATIC
+        {
+            $$ = strdup("static");
+        }
         |
         TOK_STRINGIFIER
+        {
+            $$ = strdup("stringifier");
+        }
         |
         TOK_TYPEDEF
+        {
+            $$ = strdup("typedef");
+        }
         |
         TOK_UNRESTRICTED
+        {
+            $$ = strdup("unrestricted");
+        }
         ;
 
  /* [56] as it says an other element or a comma */
@@ -798,8 +918,15 @@ OtherOrComma:
  /* [57] */
 Type:
         SingleType
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, $1);            
+        }
         |
         UnionType TypeSuffix
+        {
+            /* todo handle suffix */
+            $$ = $1;
+        }
         ;
 
  /* [58] */
@@ -807,11 +934,17 @@ SingleType:
         NonAnyType
         |
         TOK_ANY TypeSuffixStartingWithArray
+        {
+            $$ = NULL; /* todo implement */
+        }
         ;
 
  /* [59] */
 UnionType:
         '(' UnionMemberType TOK_OR UnionMemberType UnionMemberTypes ')'
+        {
+            $$ = NULL;
+        }
         ;
 
  /* [60] */
@@ -835,14 +968,31 @@ NonAnyType:
         PrimitiveType TypeSuffix
         |
         TOK_STRING TypeSuffix
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_STRING);
+        }
         |
         TOK_IDENTIFIER TypeSuffix
+        {
+            struct webidl_node *type;
+            type = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_USER);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, type, $1);
+        }
         |
         TOK_SEQUENCE '<' Type '>' Null
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, $3, (void *)WEBIDL_TYPE_SEQUENCE);
+        }
         |
         TOK_OBJECT TypeSuffix
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_OBJECT);
+        }
         |
         TOK_DATE TypeSuffix
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_DATE);
+        }
         ;
 
  /* [63] */
@@ -859,15 +1009,29 @@ PrimitiveType:
         UnrestrictedFloatType
         |
         TOK_BOOLEAN
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_BOOL);
+        }
         |
         TOK_BYTE
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_BYTE);
+        }
         |
         TOK_OCTET
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_OCTET);
+        }
         ;
 
  /* [65] */
 UnrestrictedFloatType:
         TOK_UNRESTRICTED FloatType
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_MODIFIER, 
+                                 $2, 
+                                 (void *)WEBIDL_TYPE_MODIFIER_UNRESTRICTED);
+        }
         |
         FloatType
         ;
@@ -875,13 +1039,24 @@ UnrestrictedFloatType:
  /* [66] */
 FloatType:
         TOK_FLOAT
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_FLOAT);
+        }
         |
         TOK_DOUBLE
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_DOUBLE);
+        }
         ;
 
  /* [67] */
 UnsignedIntegerType:
         TOK_UNSIGNED IntegerType
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_MODIFIER, 
+                                 $2, 
+                                 (void *)WEBIDL_TYPE_MODIFIER_UNSIGNED);
+        }
         |
         IntegerType
         ;
@@ -889,15 +1064,31 @@ UnsignedIntegerType:
  /* [68] */
 IntegerType:
         TOK_SHORT
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_SHORT);
+        }
         |
         TOK_LONG OptionalLong
+        {
+            if ($2) {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_LONGLONG);
+            } else {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_LONG);
+            }
+        }
         ;
 
  /* [69] */
 OptionalLong:
         /* empty */
+        {
+            $$ = false;
+        } 
         |
         TOK_LONG
+        {
+            $$ = true;
+        }
         ;
 
  /* [70] */
