@@ -39,6 +39,7 @@ enum webidl_type {
 	WEBIDL_TYPE_OBJECT,
 	WEBIDL_TYPE_DATE,
 	WEBIDL_TYPE_USER,
+	WEBIDL_TYPE_VOID,
 };
 
 enum webidl_type_modifier {

@@ -25,8 +25,9 @@ struct webidl_node {
 	struct webidl_node *l;
 	union {
 		void *value;
-		struct webidl_node *node;
-		char *text;
+		struct webidl_node *node; /* node has a list of nodes */
+		char *text; /* node data is text */
+		int number; /* node data is an integer */
 	} r;
 };
 

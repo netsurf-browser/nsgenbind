@@ -151,6 +151,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> Ellipsis
 
 %type <node> Type
+%type <node> ReturnType
 %type <node> SingleType
 %type <node> UnionType
 %type <node> NonAnyType
@@ -580,6 +581,8 @@ OperationRest:
         ReturnType OptionalIdentifier '(' ArgumentList ')' ';'
         {
             struct webidl_node *operation = $4; /* argument list */
+
+            operation = webidl_node_prepend(operation, $1); /* return type */
 
             operation = webidl_node_prepend(operation, $2); /* identifier */
 
@@ -1119,6 +1122,12 @@ ReturnType:
         Type
         |
         TOK_VOID
+        {
+            struct webidl_node *type;
+            type = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_VOID);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, type);            
+        }
+
         ;
 
 %%
