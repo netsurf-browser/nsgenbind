@@ -153,7 +153,7 @@ generate_property_spec(FILE *outfile,
 	members_node = webidl_node_find(webidl_node_getnode(interface_node),
 					NULL,
 					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
+					(void *)WEBIDL_NODE_TYPE_LIST);
 
 	while (members_node != NULL) {
 
@@ -170,7 +170,7 @@ generate_property_spec(FILE *outfile,
 		members_node = webidl_node_find(webidl_node_getnode(interface_node),
 						members_node,
 						webidl_cmp_node_type,
-						(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
+						(void *)WEBIDL_NODE_TYPE_LIST);
 
 	}
 	/* check for inherited nodes and insert them too */
@@ -253,7 +253,7 @@ generate_function_spec(FILE *outfile,
 	members_node = webidl_node_find(webidl_node_getnode(interface_node),
 					NULL,
 					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
+					(void *)WEBIDL_NODE_TYPE_LIST);
 	while (members_node != NULL) { 
 
 		fprintf(outfile,"    /**** %s ****/\n", interface);
@@ -267,7 +267,7 @@ generate_function_spec(FILE *outfile,
 		members_node = webidl_node_find(webidl_node_getnode(interface_node),
 						members_node,
 						webidl_cmp_node_type,
-						(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
+						(void *)WEBIDL_NODE_TYPE_LIST);
 	}
 
 	/* check for inherited nodes and insert them too */
@@ -352,7 +352,7 @@ generate_function_body(FILE *outfile,
 	members_node = webidl_node_find(webidl_node_getnode(interface_node),
 					NULL,
 					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
+					(void *)WEBIDL_NODE_TYPE_LIST);
 	while (members_node != NULL) { 
 
 		fprintf(outfile,"/**** %s ****/\n", interface);
@@ -366,7 +366,7 @@ generate_function_body(FILE *outfile,
 		members_node = webidl_node_find(webidl_node_getnode(interface_node),
 						members_node,
 						webidl_cmp_node_type,
-						(void *)WEBIDL_NODE_TYPE_INTERFACE_MEMBERS);
+						(void *)WEBIDL_NODE_TYPE_LIST);
 	}
 
 	/* check for inherited nodes and insert them too */

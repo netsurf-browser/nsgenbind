@@ -195,7 +195,7 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 		switch (node->type) {
 		case WEBIDL_NODE_TYPE_ROOT:
 		case WEBIDL_NODE_TYPE_INTERFACE:
-		case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
+		case WEBIDL_NODE_TYPE_LIST:
 		case WEBIDL_NODE_TYPE_ATTRIBUTE:
 		case WEBIDL_NODE_TYPE_OPERATION:
 		case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
@@ -225,8 +225,8 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_INTERFACE:
 		return "Interface";
 
-	case WEBIDL_NODE_TYPE_INTERFACE_MEMBERS:
-		return "Members";
+	case WEBIDL_NODE_TYPE_LIST:
+		return "List";
 
 	case WEBIDL_NODE_TYPE_ATTRIBUTE:
 		return "Attribute";

@@ -168,8 +168,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
  /* default rule to add built AST to passed in one */
 Input:
         Definitions
-        { 
-            *webidl_ast = webidl_node_prepend(*webidl_ast, $1); 
+        {
+            *webidl_ast = webidl_node_prepend(*webidl_ast, $1);
         }
         |
         error
@@ -235,8 +235,8 @@ Interface:
             /* extend interface with additional members */
             struct webidl_node *interface_node;
             interface_node = webidl_node_find_type_ident(*webidl_ast,
-						     WEBIDL_NODE_TYPE_INTERFACE,
-						     $2);
+                                                     WEBIDL_NODE_TYPE_INTERFACE,
+                                                     $2);
             if (interface_node == NULL) {
                 struct webidl_node *members;
                 struct webidl_node *ident;
@@ -246,7 +246,7 @@ Interface:
                     inheritance = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, NULL, $3);
                 }
 
-                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, inheritance, $5);
+                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, inheritance, $5);
 
                 ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
 
@@ -259,13 +259,13 @@ Interface:
                     inheritance = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, inheritance, $3);
                 }
 
-                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, 
+                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST,
                                           inheritance,
                                           $5);
 
                 /* link member node into interfaces_node */
-                webidl_node_set(interface_node, 
-                                WEBIDL_NODE_TYPE_INTERFACE, 
+                webidl_node_set(interface_node,
+                                WEBIDL_NODE_TYPE_INTERFACE,
                                 members);
                 $$ = NULL; /* updated existing interface do not add it again */
             }
@@ -294,14 +294,14 @@ PartialInterface:
             /* extend interface with additional members */
             struct webidl_node *interface_node;
             interface_node = webidl_node_find_type_ident(*webidl_ast,
-						     WEBIDL_NODE_TYPE_INTERFACE,
-						     $2);
+                                                     WEBIDL_NODE_TYPE_INTERFACE,
+                                                     $2);
             if (interface_node == NULL) {
                 /* doesnt already exist so create it */
                 struct webidl_node *members;
                 struct webidl_node *ident;
 
-                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, NULL, $4);
+                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, $4);
 
                 ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
 
@@ -309,13 +309,13 @@ PartialInterface:
 
             } else {
                 struct webidl_node *members;
-                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_MEMBERS, 
+                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST,
                                           webidl_node_getnode(interface_node),
                                           $4);
 
                 /* link member node into interfaces_node */
-                webidl_node_set(interface_node, 
-                                WEBIDL_NODE_TYPE_INTERFACE, 
+                webidl_node_set(interface_node,
+                                WEBIDL_NODE_TYPE_INTERFACE,
                                 members);
 
                 $$ = NULL; /* updated existing interface do not add it again */
@@ -580,9 +580,14 @@ Special:
 OperationRest:
         ReturnType OptionalIdentifier '(' ArgumentList ')' ';'
         {
-            struct webidl_node *operation = $4; /* argument list */
+            struct webidl_node *operation;
+            struct webidl_node *arglist;
 
-            operation = webidl_node_prepend(operation, $1); /* return type */
+            /* put return type in argument list */
+            arglist = webidl_node_prepend($4, $1);
+
+            /* argument list */
+            operation = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, arglist);
 
             operation = webidl_node_prepend(operation, $2); /* identifier */
 
@@ -605,7 +610,7 @@ OptionalIdentifier:
 
 
  /* [41] an empty list or a list of non empty comma separated arguments, note
-  * this is right associative so the tree build is ass backwards 
+  * this is right associative so the tree build is ass backwards
   */
 ArgumentList:
         /* empty */
@@ -922,7 +927,7 @@ OtherOrComma:
 Type:
         SingleType
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, $1);            
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, $1);
         }
         |
         UnionType TypeSuffix
@@ -1031,8 +1036,8 @@ PrimitiveType:
 UnrestrictedFloatType:
         TOK_UNRESTRICTED FloatType
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_MODIFIER, 
-                                 $2, 
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_MODIFIER,
+                                 $2,
                                  (void *)WEBIDL_TYPE_MODIFIER_UNRESTRICTED);
         }
         |
@@ -1056,8 +1061,8 @@ FloatType:
 UnsignedIntegerType:
         TOK_UNSIGNED IntegerType
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_MODIFIER, 
-                                 $2, 
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_MODIFIER,
+                                 $2,
                                  (void *)WEBIDL_TYPE_MODIFIER_UNSIGNED);
         }
         |
@@ -1086,7 +1091,7 @@ OptionalLong:
         /* empty */
         {
             $$ = false;
-        } 
+        }
         |
         TOK_LONG
         {
@@ -1125,7 +1130,7 @@ ReturnType:
         {
             struct webidl_node *type;
             type = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_VOID);
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, type);            
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, type);
         }
 
         ;
