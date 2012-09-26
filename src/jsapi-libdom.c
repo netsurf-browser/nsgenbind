@@ -314,6 +314,8 @@ output_function_spec(FILE *outfile,
 	return res;
 }
 
+
+
 static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 {
 	FILE *outfile = ctx;
@@ -329,10 +331,21 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 		 * http://www.w3.org/TR/WebIDL/#idl-operations
 		 */
 	} else {
+		/* normal operation with identifier */
+
 		fprintf(outfile,
 			"static JSBool JSAPI_NATIVE(%s, JSContext *cx, uintN argc, jsval *vp)\n",
 			webidl_node_gettext(ident_node));
 		fprintf(outfile, "{\n");
+/* 	struct JSCLASS_TYPE *priv;
+
+	priv = JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx,vp), &JSCLASS_OBJECT, NULL);
+	if (priv == NULL)
+		return JS_FALSE;
+
+
+	JSAPI_SET_RVAL(cx, vp, JSVAL_VOID);
+*/
 		fprintf(outfile, "}\n\n");
 
 	}
@@ -529,6 +542,58 @@ output_property_body(FILE *outfile,
 	return res;
 }
 
+static int
+output_private_declaration(FILE *outfile,
+		     struct binding *binding,
+			   struct genbind_node *genbind_ast,
+		       struct webidl_node *webidl_ast)
+{
+/*
+struct jsclass_document_priv {
+	struct html_content *htmlc;
+	dom_document *node;
+};
+*/
+	struct genbind_node *binding_node;
+	struct genbind_node *type_node;
+
+	binding_node = genbind_node_find(genbind_ast,
+					 NULL,
+					 genbind_cmp_node_type,
+					 (void *)GENBIND_NODE_TYPE_BINDING);
+
+	if (binding_node == NULL) {
+		return -1;
+	}
+
+	type_node = genbind_node_find(genbind_node_getnode(binding_node),
+				       NULL,
+				       genbind_cmp_node_type,
+				       (void *)GENBIND_NODE_TYPE_TYPE);
+
+	if (type_node == NULL) {
+		return -1;
+	}
+
+
+
+	fprintf(outfile,
+		"struct jsclass_private {\n"
+		"\n"
+		"};");
+
+
+	return 0;
+}
+
+static int
+output_jsclass(FILE *outfile,
+		     struct binding *binding,
+		       struct webidl_node *webidl_ast)
+{
+	return 0;
+}
+
 static struct binding *binding_new(struct genbind_node *genbind_ast)
 {
 	struct binding *nb;
@@ -605,6 +670,16 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 	output_header_comments(outfile, genbind_ast);
 
 	output_preamble(outfile, genbind_ast);
+
+	res = output_private_declaration(outfile, binding, genbind_ast, webidl_ast);
+	if (res) {
+		return 5;
+	}
+
+	res = output_jsclass(outfile, binding, webidl_ast);
+	if (res) {
+		return 5;
+	}
 
 	res = output_function_body(outfile, binding, webidl_ast);
 	if (res) {
