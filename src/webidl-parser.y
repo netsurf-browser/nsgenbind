@@ -161,7 +161,9 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> UnsignedIntegerType
 %type <node> IntegerType
 
+%type <isit> ReadOnly
 %type <isit> OptionalLong
+%type <isit> Inherit
 
 %%
 
@@ -522,23 +524,46 @@ Attribute:
         Inherit ReadOnly TOK_ATTRIBUTE Type TOK_IDENTIFIER ';'
         {
             struct webidl_node *attribute;
+
             attribute = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $5);
+
+            /* add attributes type */
+            attribute = webidl_node_prepend(attribute, $4); 
+
+            /* deal with readonly modifier */
+            if ($2) {
+                attribute = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER, attribute, (void *)WEBIDL_TYPE_READONLY);
+            }
+
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_ATTRIBUTE, NULL, attribute);
+
         }
         ;
 
  /* [33] */
 Inherit:
         /* empty */
+        {
+            $$ = false;
+        }
         |
         TOK_INHERIT
+        {
+            $$ = true;
+        }
         ;
 
  /* [34] */
 ReadOnly:
         /* empty */
+        {
+            $$ = false;
+        }
         |
         TOK_READONLY
+        {
+            $$ = true;
+        }
         ;
 
  /* [35] */
@@ -1036,7 +1061,7 @@ PrimitiveType:
 UnrestrictedFloatType:
         TOK_UNRESTRICTED FloatType
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_MODIFIER,
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER,
                                  $2,
                                  (void *)WEBIDL_TYPE_MODIFIER_UNRESTRICTED);
         }
@@ -1061,7 +1086,7 @@ FloatType:
 UnsignedIntegerType:
         TOK_UNSIGNED IntegerType
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_MODIFIER,
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER,
                                  $2,
                                  (void *)WEBIDL_TYPE_MODIFIER_UNSIGNED);
         }

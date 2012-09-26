@@ -189,6 +189,22 @@ char *webidl_node_gettext(struct webidl_node *node)
 	}
 }
 
+int
+webidl_node_getint(struct webidl_node *node)
+{
+	if (node != NULL) {
+		switch(node->type) {
+		case WEBIDL_NODE_TYPE_MODIFIER:
+		case WEBIDL_NODE_TYPE_TYPE_BASE:
+			return node->r.number;
+
+		default:
+			break;
+		}
+	}
+	return -1;
+
+}
 struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 {
 	if (node != NULL) {
@@ -249,7 +265,7 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_TYPE_BASE:
 		return "Base";
 
-	case WEBIDL_NODE_TYPE_TYPE_MODIFIER:
+	case WEBIDL_NODE_TYPE_MODIFIER:
 		return "Modifier";
 
 	default:
@@ -267,8 +283,17 @@ int webidl_ast_dump(struct webidl_node *node, int indent)
 
 		txt = webidl_node_gettext(node);
 		if (txt == NULL) {
-			printf("\n");
-			webidl_ast_dump(webidl_node_getnode(node), indent + 2);
+			struct webidl_node *next;
+
+			next = webidl_node_getnode(node);
+
+			if (next != NULL) {
+				printf("\n");
+				webidl_ast_dump(next, indent + 2);
+			} else {
+				/* not txt or node has to be an int */
+				printf(": %d\n", webidl_node_getint(node));
+			}
 		} else {
 			printf(": \"%s\"\n", txt);
 		}
