@@ -336,13 +336,21 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 		fprintf(outfile,
 			"static JSBool JSAPI_NATIVE(%s, JSContext *cx, uintN argc, jsval *vp)\n",
 			webidl_node_gettext(ident_node));
-		fprintf(outfile, "{\n");
-/* 	struct JSCLASS_TYPE *priv;
+		fprintf(outfile, 
+			"{\n");
 
-	priv = JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx,vp), &JSCLASS_OBJECT, NULL);
-	if (priv == NULL)
-		return JS_FALSE;
+		fprintf(outfile, 
+			"        struct jsclass_private *private;\n");
 
+		fprintf(outfile, 
+			"        private = JS_GetInstancePrivate(cx,\n"
+			"                                        JS_THIS_OBJECT(cx,vp),\n"
+			"                                        &jsclass_object,\n"
+			"                                        NULL);\n"
+			"        if (priv == NULL)\n"
+			"		return JS_FALSE;\n");
+
+/*
 
 	JSAPI_SET_RVAL(cx, vp, JSVAL_VOID);
 */
@@ -542,20 +550,33 @@ output_property_body(FILE *outfile,
 	return res;
 }
 
+static int webidl_privatestr_cb(struct genbind_node *node, void *ctx)
+{
+	FILE *outfile = ctx;
+	char *txt;
+	txt = genbind_node_gettext(node);
+	fprintf(outfile, "        %s;\n", txt);
+	return 0;
+}
+
+static int webidl_private_cb(struct genbind_node *node, void *ctx)
+{
+	genbind_node_for_each_type(genbind_node_getnode(node),
+				   GENBIND_NODE_TYPE_STRING,
+				   webidl_privatestr_cb,
+				   ctx);
+	return 0;
+}
+
 static int
 output_private_declaration(FILE *outfile,
 		     struct binding *binding,
 			   struct genbind_node *genbind_ast,
 		       struct webidl_node *webidl_ast)
 {
-/*
-struct jsclass_document_priv {
-	struct html_content *htmlc;
-	dom_document *node;
-};
-*/
 	struct genbind_node *binding_node;
 	struct genbind_node *type_node;
+	struct genbind_node *node_node;
 
 	binding_node = genbind_node_find(genbind_ast,
 					 NULL,
@@ -569,18 +590,20 @@ struct jsclass_document_priv {
 	type_node = genbind_node_find(genbind_node_getnode(binding_node),
 				       NULL,
 				       genbind_cmp_node_type,
-				       (void *)GENBIND_NODE_TYPE_TYPE);
+				       (void *)GENBIND_NODE_TYPE_BINDING_TYPE);
 
 	if (type_node == NULL) {
 		return -1;
 	}
 
+	fprintf(outfile, "struct jsclass_private {\n");
 
+	genbind_node_for_each_type(genbind_node_getnode(binding_node),
+				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
+				   webidl_private_cb,
+				   outfile);
 
-	fprintf(outfile,
-		"struct jsclass_private {\n"
-		"\n"
-		"};");
+	fprintf(outfile, "};\n\n");
 
 
 	return 0;
@@ -591,6 +614,21 @@ output_jsclass(FILE *outfile,
 		     struct binding *binding,
 		       struct webidl_node *webidl_ast)
 {
+	fprintf(outfile,
+		"static JSClass jsclass_object =\n"
+		"{\n"
+		"        \"%s\",\n"
+		"	JSCLASS_NEW_RESOLVE | JSCLASS_HAS_PRIVATE,\n"
+		"	JS_PropertyStub,\n"
+		"	JS_PropertyStub,\n"
+		"	JS_PropertyStub,\n"
+		"	JS_StrictPropertyStub,\n"
+		"        JS_EnumerateStub,\n"
+		"	(JSResolveOp)jsresove_node,\n"
+		"	JS_ConvertStub,\n"
+		"	jsfinalize_document,\n"
+		"	JSCLASS_NO_OPTIONAL_MEMBERS\n"
+		"};\n\n", binding->interface);
 	return 0;
 }
 
@@ -622,7 +660,7 @@ static struct binding *binding_new(struct genbind_node *genbind_ast)
 	interface_node = genbind_node_find(genbind_node_getnode(binding_node),
 				       NULL,
 				       genbind_cmp_node_type,
-				       (void *)GENBIND_NODE_TYPE_TYPE_INTERFACE);
+				       (void *)GENBIND_NODE_TYPE_BINDING_INTERFACE);
 
 	if (interface_node == NULL) {
 		return NULL;

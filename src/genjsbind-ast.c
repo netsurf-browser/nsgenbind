@@ -130,8 +130,8 @@ char *genbind_node_gettext(struct genbind_node *node)
 	case GENBIND_NODE_TYPE_STRING:
 	case GENBIND_NODE_TYPE_PREAMBLE:
 	case GENBIND_NODE_TYPE_IDENT:
-	case GENBIND_NODE_TYPE_TYPE_NODE:
-	case GENBIND_NODE_TYPE_TYPE_INTERFACE:
+	case GENBIND_NODE_TYPE_BINDING_TYPE:
+	case GENBIND_NODE_TYPE_BINDING_INTERFACE:
 		return node->r.text;
 
 	default:
@@ -144,8 +144,7 @@ struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 	switch(node->type) {
 	case GENBIND_NODE_TYPE_HDRCOMMENT:
 	case GENBIND_NODE_TYPE_BINDING:
-	case GENBIND_NODE_TYPE_TYPE:
-	case GENBIND_NODE_TYPE_TYPE_EXTRA:
+	case GENBIND_NODE_TYPE_BINDING_PRIVATE:
 		return node->r.node;
 
 	default:
@@ -177,16 +176,13 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 	case GENBIND_NODE_TYPE_BINDING:
 		return "Binding";
 
-	case GENBIND_NODE_TYPE_TYPE:
+	case GENBIND_NODE_TYPE_BINDING_TYPE:
 		return "Type";
 
-	case GENBIND_NODE_TYPE_TYPE_NODE:
-		return "Node";
+	case GENBIND_NODE_TYPE_BINDING_PRIVATE:
+		return "Private";
 
-	case GENBIND_NODE_TYPE_TYPE_EXTRA:
-		return "Extra";
-
-	case GENBIND_NODE_TYPE_TYPE_INTERFACE:
+	case GENBIND_NODE_TYPE_BINDING_INTERFACE:
 		return "Interface";
 
 	default:

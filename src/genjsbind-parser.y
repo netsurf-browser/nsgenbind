@@ -45,8 +45,7 @@ char *errtxt;
 %token TOK_BINDING
 %token TOK_INTERFACE
 %token TOK_TYPE
-%token TOK_EXTRA
-%token TOK_NODE
+%token TOK_PRIVATE
 
 %token <text> TOK_IDENTIFIER
 %token <text> TOK_STRING_LITERAL
@@ -64,10 +63,8 @@ char *errtxt;
 %type <node> BindingArgs
 %type <node> BindingArg
 %type <node> Type
-%type <node> TypeArgs
-%type <node> Extra
+%type <node> Private
 %type <node> Interface
-%type <node> Node
 
 %%
 
@@ -180,44 +177,24 @@ BindingArg
         : 
         Type
         | 
-        Extra
+        Private
         | 
         Interface
         ;
 
 Type
         :
-        TOK_TYPE TOK_IDENTIFIER '{' TypeArgs '}' ';'
+        TOK_TYPE TOK_IDENTIFIER ';'
         {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE, 
-                                NULL, 
-                                genbind_new_node(GENBIND_NODE_TYPE_IDENT, $4, $2));
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_TYPE, NULL, $2);
         }
         ;
 
-TypeArgs
+Private
         :
-        /* empty */
-        { 
-          $$ = NULL;
-        }
-        |
-        Node
-        ;
-
-Node
-        :
-        TOK_NODE TOK_IDENTIFIER ';'
+        TOK_PRIVATE Strings ';'
         {
-           $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE_NODE, NULL, $2);
-        }
-        ;
-
-Extra
-        :
-        TOK_EXTRA Strings ';'
-        {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE_EXTRA, NULL, $2);
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_PRIVATE, NULL, $2);
         }
         ;
 
@@ -225,7 +202,7 @@ Interface
         : 
         TOK_INTERFACE TOK_IDENTIFIER ';'
         {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE_INTERFACE, NULL, $2);
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_INTERFACE, NULL, $2);
         }
         ;
 

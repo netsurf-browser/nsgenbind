@@ -86,9 +86,7 @@ interface               return TOK_INTERFACE;
 
 type                    return TOK_TYPE;
 
-extra                   return TOK_EXTRA;
-
-node                    return TOK_NODE;
+private                 return TOK_PRIVATE;
 
 {cblockopen}            BEGIN(cblock);
 
