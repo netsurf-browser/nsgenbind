@@ -357,11 +357,6 @@ InterfaceMembers:
                     /* not a member with that ident already present */
                     $$ = webidl_node_prepend($1, $3);
                 } else {            
-
-                    fprintf(stderr,
-			"HERE: New polymorphic member %p, ident node %p (%s), list node %p\n",
-                            (void *)$3, (void *)ident_node, webidl_node_gettext(ident_node), (void *)list_node);
-
                     webidl_node_add(member_node, list_node);
                     $$ = $1; /* updated existing node do not add new one */
                 }
