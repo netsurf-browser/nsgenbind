@@ -132,6 +132,7 @@ char *genbind_node_gettext(struct genbind_node *node)
 	case GENBIND_NODE_TYPE_IDENT:
 	case GENBIND_NODE_TYPE_BINDING_TYPE:
 	case GENBIND_NODE_TYPE_BINDING_INTERFACE:
+	case GENBIND_NODE_TYPE_CBLOCK:
 		return node->r.text;
 
 	default:
@@ -145,6 +146,7 @@ struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 	case GENBIND_NODE_TYPE_HDRCOMMENT:
 	case GENBIND_NODE_TYPE_BINDING:
 	case GENBIND_NODE_TYPE_BINDING_PRIVATE:
+	case GENBIND_NODE_TYPE_OPERATION:
 		return node->r.node;
 
 	default:
@@ -184,6 +186,9 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 
 	case GENBIND_NODE_TYPE_BINDING_INTERFACE:
 		return "Interface";
+
+	case GENBIND_NODE_TYPE_OPERATION:
+		return "Operation";
 
 	default:
 		return "Unknown";

@@ -43,6 +43,7 @@ char *errtxt;
 %token TOK_PREAMBLE
 
 %token TOK_BINDING
+%token TOK_OPERATION
 %token TOK_INTERFACE
 %token TOK_TYPE
 %token TOK_PRIVATE
@@ -65,6 +66,7 @@ char *errtxt;
 %type <node> Type
 %type <node> Private
 %type <node> Interface
+%type <node> Operation
 
 %%
 
@@ -103,6 +105,8 @@ Statement
         Preamble
         | 
         Binding
+        |
+        Operation
         ;
 
  /* [3] load a web IDL file */
@@ -137,7 +141,7 @@ Strings
 
 Preamble
         :
-        TOK_PREAMBLE CBlock ';'
+        TOK_PREAMBLE CBlock 
         {
           $$ = genbind_new_node(GENBIND_NODE_TYPE_PREAMBLE, NULL, $2);
         }
@@ -153,9 +157,22 @@ CBlock
         }
         ;
 
+Operation
+        :
+        TOK_OPERATION TOK_IDENTIFIER CBlock
+        {
+            $$ = genbind_new_node(GENBIND_NODE_TYPE_OPERATION, 
+                                  NULL, 
+                                  genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
+                                                   genbind_new_node(GENBIND_NODE_TYPE_CBLOCK, 
+                                                                    NULL, 
+                                                                    $3), 
+                                                   $2));
+        }
+
 Binding
         :
-        TOK_BINDING TOK_IDENTIFIER '{' BindingArgs '}' ';'
+        TOK_BINDING TOK_IDENTIFIER '{' BindingArgs '}' 
         {
           $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING, 
                                 NULL, 

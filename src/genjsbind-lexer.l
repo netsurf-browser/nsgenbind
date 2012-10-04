@@ -56,9 +56,9 @@ identifier              [A-Z_a-z][0-9A-Z_a-z]*
 
 other                   [^\t\n\r 0-9A-Z_a-z]
 
-cblockopen              \[\[\[
+cblockopen              \%\{
 
-cblockclose             \]\]\]
+cblockclose             \%\}
 
 %x                      cblock
 
@@ -88,6 +88,8 @@ type                    return TOK_TYPE;
 
 private                 return TOK_PRIVATE;
 
+operation               return TOK_OPERATION;
+
 {cblockopen}            BEGIN(cblock);
 
 {identifier}        {
@@ -106,8 +108,8 @@ private                 return TOK_PRIVATE;
 
 .                       /* nothing */
 
-<cblock>[^\]]*          yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
+<cblock>[^\%]*          yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
 <cblock>{cblockclose}   BEGIN(INITIAL);
-<cblock>\]+             yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
+<cblock>\%             yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
 
 %%
