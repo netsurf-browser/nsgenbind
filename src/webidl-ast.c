@@ -31,16 +31,24 @@ struct webidl_node {
 	} r;
 };
 
-/* insert node at beginning of a list */
+/* insert node(s) at beginning of a list */
 struct webidl_node *
-webidl_node_prepend(struct webidl_node *list, struct webidl_node *node)
+webidl_node_prepend(struct webidl_node *list, struct webidl_node *inst)
 {
-	if (node == NULL) {
+	struct webidl_node *end = inst;
+
+	if (inst == NULL) {
 		return list; /* no node to prepend - return existing list */
 	}
 
-	node->l = list;
-	return node;	
+	/* find end of inserted node list */
+	while (end->l != NULL) {
+		end = end->l;
+	}
+
+	end->l = list;
+
+	return inst;
 }
 
 /* append node at end of a list */
@@ -61,13 +69,33 @@ webidl_node_append(struct webidl_node *list, struct webidl_node *node)
 	return list;
 }
 
+/* prepend list to a nodes list
+ *
+ * inserts a list into the beginning of a nodes r list
+ *
+ * CAUTION: if the \a node element is not a node type the node will not be added
+ */
 struct webidl_node *
-webidl_add_interface_member(struct webidl_node *list, struct webidl_node *new)
+webidl_node_add(struct webidl_node *node, struct webidl_node *list)
 {
-	return webidl_node_prepend(list, new);
+	struct webidl_node *node_list;
+
+	node_list = webidl_node_getnode(node);
+	if (node_list == NULL) {
+		/* not a node type node */
+		return list;
+	}
+
+	node->r.node =	webidl_node_prepend(node_list, list);
+
+	return node;
 }
 
-struct webidl_node *webidl_node_new(enum webidl_node_type type, struct webidl_node *l, void *r)
+
+struct webidl_node *
+webidl_node_new(enum webidl_node_type type,
+		struct webidl_node *l,
+		void *r)
 {
 	struct webidl_node *nn;
 	nn = calloc(1, sizeof(struct webidl_node));
@@ -77,11 +105,11 @@ struct webidl_node *webidl_node_new(enum webidl_node_type type, struct webidl_no
 	return nn;
 }
 
-void 
+void
 webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void *r)
 {
 	node->type = type;
-	node->r.value = r; 
+	node->r.value = r;
 }
 
 int
@@ -117,7 +145,7 @@ webidl_node_find(struct webidl_node *node,
 {
 	struct webidl_node *ret;
 
-	if ((node == NULL) || (node == prev)){
+	if ((node == NULL) || (node == prev)) {
 		return NULL;
 	}
 
@@ -143,8 +171,8 @@ int webidl_cmp_node_type(struct webidl_node *node, void *ctx)
 }
 
 struct webidl_node *
-webidl_node_find_type_ident(struct webidl_node *root_node, 
-			    enum webidl_node_type type, 
+webidl_node_find_type_ident(struct webidl_node *root_node,
+			    enum webidl_node_type type,
 			    const char *ident)
 {
 	struct webidl_node *node;
@@ -205,6 +233,13 @@ webidl_node_getint(struct webidl_node *node)
 	return -1;
 
 }
+
+enum webidl_node_type webidl_node_gettype(struct webidl_node *node)
+{
+	return node->type;
+}
+
+
 struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 {
 	if (node != NULL) {
@@ -217,6 +252,7 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 		case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
 		case WEBIDL_NODE_TYPE_ARGUMENT:
 		case WEBIDL_NODE_TYPE_TYPE:
+		case WEBIDL_NODE_TYPE_CONST:
 			return node->r.node;
 		default:
 			break;
@@ -268,6 +304,9 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_MODIFIER:
 		return "Modifier";
 
+	case WEBIDL_NODE_TYPE_CONST:
+		return "Const";
+
 	default:
 		return "Unknown";
 	}
@@ -310,7 +349,7 @@ static FILE *idlopen(const char *filename)
 		if (options->verbose) {
 			printf("Opening IDL file %s\n", filename);
 		}
-		idlfile = fopen(filename, "r"); 
+		idlfile = fopen(filename, "r");
 	} else {
 		char *fullname;
 		int fulllen = strlen(options->idlpath) + strlen(filename) + 2;
@@ -319,7 +358,7 @@ static FILE *idlopen(const char *filename)
 		if (options->verbose) {
 			printf("Opening IDL file %s\n", fullname);
 		}
-		idlfile = fopen(fullname, "r"); 
+		idlfile = fopen(fullname, "r");
 		free(fullname);
 	}
 	return idlfile;
@@ -327,13 +366,13 @@ static FILE *idlopen(const char *filename)
 
 int webidl_parsefile(char *filename, struct webidl_node **webidl_ast)
 {
-	
+
 	FILE *idlfile;
 
 	idlfile = idlopen(filename);
 	if (!idlfile) {
 		fprintf(stderr, "Error opening %s: %s\n",
-			filename, 
+			filename,
 			strerror(errno));
 		return 2;
 	}
@@ -345,7 +384,7 @@ int webidl_parsefile(char *filename, struct webidl_node **webidl_ast)
 
 	/* set flex to read from file */
 	webidl_restart(idlfile);
-	
+
 	/* parse the file */
 	return webidl_parse(webidl_ast);
 }

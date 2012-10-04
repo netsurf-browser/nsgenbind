@@ -236,40 +236,30 @@ Interface:
         {
             /* extend interface with additional members */
             struct webidl_node *interface_node;
+            struct webidl_node *members = NULL;
+
+            if ($3 != NULL) {
+                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, members, $3);
+            }
+
+            members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, members, $5);
+
+
             interface_node = webidl_node_find_type_ident(*webidl_ast,
                                                      WEBIDL_NODE_TYPE_INTERFACE,
                                                      $2);
             if (interface_node == NULL) {
-                struct webidl_node *members;
-                struct webidl_node *ident;
-                struct webidl_node *inheritance = NULL;
+                /* no existing interface - create one with ident */
+                members = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
 
-                if ($3 != NULL) {
-                    inheritance = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, NULL, $3);
-                }
-
-                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, inheritance, $5);
-
-                ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
-
-                $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, ident);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, members);
             } else {
-                struct webidl_node *members;
-                struct webidl_node *inheritance = webidl_node_getnode(interface_node);
-
-                if ($3 != NULL) {
-                    inheritance = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, inheritance, $3);
-                }
-
-                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST,
-                                          inheritance,
-                                          $5);
+                /* update the existing interface */
 
                 /* link member node into interfaces_node */
-                webidl_node_set(interface_node,
-                                WEBIDL_NODE_TYPE_INTERFACE,
-                                members);
-                $$ = NULL; /* updated existing interface do not add it again */
+                webidl_node_add(interface_node, members);
+
+                $$ = NULL; /* updating so no need to add a new node */
             }
         }
         ;
@@ -294,33 +284,28 @@ PartialInterface:
         TOK_INTERFACE TOK_IDENTIFIER '{' InterfaceMembers '}' ';'
         {
             /* extend interface with additional members */
+            struct webidl_node *members;
             struct webidl_node *interface_node;
+
             interface_node = webidl_node_find_type_ident(*webidl_ast,
                                                      WEBIDL_NODE_TYPE_INTERFACE,
                                                      $2);
+
+            members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, $4);
+
             if (interface_node == NULL) {
                 /* doesnt already exist so create it */
-                struct webidl_node *members;
-                struct webidl_node *ident;
 
-                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, $4);
+                members = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
 
-                ident = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
-
-                $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, ident);
-
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, members);
             } else {
-                struct webidl_node *members;
-                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST,
-                                          webidl_node_getnode(interface_node),
-                                          $4);
+                /* update the existing interface */
 
                 /* link member node into interfaces_node */
-                webidl_node_set(interface_node,
-                                WEBIDL_NODE_TYPE_INTERFACE,
-                                members);
+                webidl_node_add(interface_node, members);
 
-                $$ = NULL; /* updated existing interface do not add it again */
+                $$ = NULL; /* updating so no need to add a new node */
             }
         }
         ;
@@ -333,8 +318,54 @@ InterfaceMembers:
         }
         |
         InterfaceMembers ExtendedAttributeList InterfaceMember
+        /* This needs to deal with members with the same identifier which
+         * indicate polymorphism. this is handled in the AST by adding the
+         * argument lists for each polymorphism to the same
+         * WEBIDL_NODE_TYPE_OPERATION
+         *
+         * @todo need to consider qualifer/stringifier compatibility
+         */
         {
-          $$ = webidl_add_interface_member($1, $3);
+            struct webidl_node *member_node;
+            struct webidl_node *ident_node;
+            struct webidl_node *list_node;
+
+            ident_node = webidl_node_find(webidl_node_getnode($3),
+                                          NULL,
+                                          webidl_cmp_node_type,
+                                          (void *)WEBIDL_NODE_TYPE_IDENT);
+
+            list_node = webidl_node_find(webidl_node_getnode($3),
+                                         NULL,
+                                         webidl_cmp_node_type,
+                                         (void *)WEBIDL_NODE_TYPE_LIST);
+
+            if (ident_node == NULL) {
+                /* something with no ident - possibly constructors? */
+                /* @todo understand this abtter */
+
+                $$ = webidl_node_prepend($1, $3);
+            } else if (list_node == NULL) {
+                /* something with no argument list - cannot be polymorphic */
+                $$ = webidl_node_prepend($1, $3);
+            } else {
+                /* has an arguemnt list so can be polymorphic */
+                member_node = webidl_node_find_type_ident($1,
+                                             webidl_node_gettype($3),
+                                             webidl_node_gettext(ident_node));
+                if (member_node == NULL) {
+                    /* not a member with that ident already present */
+                    $$ = webidl_node_prepend($1, $3);
+                } else {            
+
+                    fprintf(stderr,
+			"HERE: New polymorphic member %p, ident node %p (%s), list node %p\n",
+                            (void *)$3, (void *)ident_node, webidl_node_gettext(ident_node), (void *)list_node);
+
+                    webidl_node_add(member_node, list_node);
+                    $$ = $1; /* updated existing node do not add new one */
+                }
+            }
         }
         ;
 
@@ -462,7 +493,18 @@ ImplementsStatement:
 Const:
         TOK_CONST ConstType TOK_IDENTIFIER '=' ConstValue ';'
         {
-            $$ = NULL;
+            struct webidl_node *constant;
+
+            constant = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $3);
+
+            /* add constant type */
+            //constant = webidl_node_prepend(constant, $2); 
+
+            /* add constant value */
+            //constant = webidl_node_prepend(constant, $5); 
+
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_CONST, NULL, constant);
+
         }
         ;
 
@@ -512,6 +554,10 @@ StringifierAttributeOrOperation:
         Attribute
         |
         OperationRest
+        {
+            /* @todo deal with stringifier */
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $1);
+        }
         |
         ';'
         {
@@ -570,7 +616,8 @@ ReadOnly:
 Operation:
         Qualifiers OperationRest
         {
-          $$=$2;
+            /* @todo fix qualifiers */
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $2);
         }
         ;
 
@@ -605,18 +652,15 @@ Special:
 OperationRest:
         ReturnType OptionalIdentifier '(' ArgumentList ')' ';'
         {
-            struct webidl_node *operation;
             struct webidl_node *arglist;
 
             /* put return type in argument list */
             arglist = webidl_node_prepend($4, $1);
 
             /* argument list */
-            operation = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, arglist);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, arglist);
 
-            operation = webidl_node_prepend(operation, $2); /* identifier */
-
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, operation);
+            $$ = webidl_node_prepend($$, $2); /* identifier */
         }
         ;
 

@@ -23,6 +23,7 @@ enum webidl_node_type {
 	WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE,
 	WEBIDL_NODE_TYPE_ATTRIBUTE,
 	WEBIDL_NODE_TYPE_OPERATION,
+	WEBIDL_NODE_TYPE_CONST,
 	WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT,
 	WEBIDL_NODE_TYPE_ARGUMENT,
 	WEBIDL_NODE_TYPE_ELLIPSIS,
@@ -67,13 +68,13 @@ void webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void 
 struct webidl_node *webidl_node_prepend(struct webidl_node *list, struct webidl_node *node);
 struct webidl_node *webidl_node_append(struct webidl_node *list, struct webidl_node *node);
 
-struct webidl_node *webidl_add_interface_member(struct webidl_node *list, struct webidl_node *new);
+struct webidl_node *webidl_node_add(struct webidl_node *node, struct webidl_node *list);
 
 /* node contents acessors */
 char *webidl_node_gettext(struct webidl_node *node);
 struct webidl_node *webidl_node_getnode(struct webidl_node *node);
 int webidl_node_getint(struct webidl_node *node);
-
+enum webidl_node_type webidl_node_gettype(struct webidl_node *node);
 
 /* node searches */
 int webidl_node_for_each_type(struct webidl_node *node,
