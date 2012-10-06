@@ -28,6 +28,35 @@ struct binding {
 	FILE *outfile ; /* output file */
 };
 
+static int webidl_file_cb(struct genbind_node *node, void *ctx)
+{
+	struct webidl_node **webidl_ast = ctx;
+	char *filename;
+
+	filename = genbind_node_gettext(node);
+
+	return webidl_parsefile(filename, webidl_ast);
+
+}
+
+static int
+read_webidl(struct genbind_node *genbind_ast, struct webidl_node **webidl_ast)
+{
+	int res;
+
+	res = genbind_node_for_each_type(genbind_ast,
+					 GENBIND_NODE_TYPE_WEBIDLFILE,
+					 webidl_file_cb,
+					 webidl_ast);
+
+	/* debug dump of web idl AST */
+	if (options->verbose) {
+		webidl_ast_dump(*webidl_ast, 0);
+	}
+	return res;
+}
+
+
 static int webidl_preamble_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -58,41 +87,9 @@ static int webidl_hdrcomment_cb(struct genbind_node *node, void *ctx)
 	return 0;
 }
 
-
-static int webidl_file_cb(struct genbind_node *node, void *ctx)
-{
-	struct webidl_node **webidl_ast = ctx;
-	char *filename;
-
-	filename = genbind_node_gettext(node);
-
-	return webidl_parsefile(filename, webidl_ast);
-
-}
-
-static int
-read_webidl(struct genbind_node *genbind_ast, struct webidl_node **webidl_ast)
-{
-	int res;
-
-	res = genbind_node_for_each_type(genbind_ast,
-					 GENBIND_NODE_TYPE_WEBIDLFILE,
-					 webidl_file_cb,
-					 webidl_ast);
-
-	/* debug dump of web idl AST */
-	if (options->verbose) {
-		webidl_ast_dump(*webidl_ast, 0);
-	}
-	return res;
-}
-
-
-
-
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
-	FILE *outfile = ctx;
+	struct binding *binding = ctx;
 	struct webidl_node *ident_node;
 	struct webidl_node *modifier_node;
 
@@ -102,33 +99,31 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 				      (void *)WEBIDL_NODE_TYPE_IDENT);
 
 	modifier_node = webidl_node_find(webidl_node_getnode(node),
-				      NULL,
-				      webidl_cmp_node_type,
-				      (void *)WEBIDL_NODE_TYPE_MODIFIER);
+					 NULL,
+					 webidl_cmp_node_type,
+					 (void *)WEBIDL_NODE_TYPE_MODIFIER);
 
 	if (ident_node == NULL) {
 		/* properties must have an operator 
-		* http://www.w3.org/TR/WebIDL/#idl-attributes
-		*/
+		 * http://www.w3.org/TR/WebIDL/#idl-attributes
+		 */
 		return 1;
 	} else {
 		if (webidl_node_getint(modifier_node) == WEBIDL_TYPE_READONLY) {
-		fprintf(outfile,
-			"    JSAPI_PS_RO(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
-			webidl_node_gettext(ident_node));
+			fprintf(binding->outfile,
+				"    JSAPI_PS_RO(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
+				webidl_node_gettext(ident_node));
 		} else {
-		fprintf(outfile,
-			"    JSAPI_PS(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
-			webidl_node_gettext(ident_node));
+			fprintf(binding->outfile,
+				"    JSAPI_PS(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
+				webidl_node_gettext(ident_node));
 		}
 	}
 	return 0;
 }
 
 static int
-generate_property_spec(FILE *outfile,
-		       const char *interface,
-		       struct webidl_node *webidl_ast)
+generate_property_spec(struct binding *binding, const char *interface)
 {
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
@@ -136,7 +131,7 @@ generate_property_spec(FILE *outfile,
 
 
 	/* find interface in webidl with correct ident attached */
-	interface_node = webidl_node_find_type_ident(webidl_ast,
+	interface_node = webidl_node_find_type_ident(binding->wi_ast,
 						     WEBIDL_NODE_TYPE_INTERFACE,
 						     interface);
 
@@ -154,14 +149,14 @@ generate_property_spec(FILE *outfile,
 
 	while (members_node != NULL) {
 
-		fprintf(outfile,"    /**** %s ****/\n", interface);
+		fprintf(binding->outfile,"    /**** %s ****/\n", interface);
 
 
 		/* for each function emit a JSAPI_FS()*/
 		webidl_node_for_each_type(webidl_node_getnode(members_node),
 					  WEBIDL_NODE_TYPE_ATTRIBUTE,
 					  webidl_property_spec_cb,
-					  outfile);
+					  binding);
 
 
 		members_node = webidl_node_find(webidl_node_getnode(interface_node),
@@ -177,35 +172,18 @@ generate_property_spec(FILE *outfile,
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return generate_property_spec(outfile, 
-					      webidl_node_gettext(inherit_node),
-					      webidl_ast);
+		return generate_property_spec(binding, 
+					      webidl_node_gettext(inherit_node));
 	}
 
 	return 0;
 }
 
-static int
-output_property_spec(FILE *outfile,
-		     struct binding *binding,
-		       struct webidl_node *webidl_ast)
-{
-	int res;
-	fprintf(outfile,
-		"static JSPropertySpec jsproperties_%s[] = {\n",
-		binding->name);
-
-	res = generate_property_spec(outfile, binding->interface, webidl_ast);
-
-	fprintf(outfile, "    JSAPI_PS_END\n};\n\n");
-
-	return res;
-}
 
 
 static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 {
-	FILE *outfile = ctx;
+	struct binding *binding = ctx;
 	struct webidl_node *ident_node;
 
 	ident_node = webidl_node_find(webidl_node_getnode(node),
@@ -218,7 +196,7 @@ static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 		 * http://www.w3.org/TR/WebIDL/#idl-operations
 		 */
 	} else {
-		fprintf(outfile,
+		fprintf(binding->outfile,
 			"    JSAPI_FS(%s, 0, 0),\n",
 			webidl_node_gettext(ident_node));
 	}
@@ -226,17 +204,14 @@ static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 }
 
 static int
-generate_function_spec(FILE *outfile,
-		       const char *interface,
-		       struct webidl_node *webidl_ast)
+generate_function_spec(struct binding *binding, const char *interface)
 {
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
 	struct webidl_node *inherit_node;
 
-
 	/* find interface in webidl with correct ident attached */
-	interface_node = webidl_node_find_type_ident(webidl_ast,
+	interface_node = webidl_node_find_type_ident(binding->wi_ast,
 						     WEBIDL_NODE_TYPE_INTERFACE,
 						     interface);
 
@@ -253,13 +228,13 @@ generate_function_spec(FILE *outfile,
 					(void *)WEBIDL_NODE_TYPE_LIST);
 	while (members_node != NULL) { 
 
-		fprintf(outfile,"    /**** %s ****/\n", interface);
+		fprintf(binding->outfile,"    /**** %s ****/\n", interface);
 
 		/* for each function emit a JSAPI_FS()*/
 		webidl_node_for_each_type(webidl_node_getnode(members_node),
 					  WEBIDL_NODE_TYPE_OPERATION,
 					  webidl_func_spec_cb,
-					  outfile);
+					  binding);
 
 		members_node = webidl_node_find(webidl_node_getnode(interface_node),
 						members_node,
@@ -274,36 +249,19 @@ generate_function_spec(FILE *outfile,
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return generate_function_spec(outfile, 
-					      webidl_node_gettext(inherit_node),
-					      webidl_ast);
+		return generate_function_spec(binding,
+					      webidl_node_gettext(inherit_node));
 	}
 
 	return 0;
 }
 
-static int
-output_function_spec(FILE *outfile,
-		     struct binding *binding,
-		       struct webidl_node *webidl_ast)
-{
-	int res;
-	fprintf(outfile,
-		"static JSFunctionSpec jsfunctions_%s[] = {\n",
-		binding->name);
-
-	res = generate_function_spec(outfile, binding->interface, webidl_ast);
-
-	fprintf(outfile, "   JSAPI_FS_END\n};\n\n");
-
-	return res;
-}
 
 
 
 static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 {
-	FILE *outfile = ctx;
+	struct binding *binding = ctx;
 	struct webidl_node *ident_node;
 
 	ident_node = webidl_node_find(webidl_node_getnode(node),
@@ -318,16 +276,16 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 	} else {
 		/* normal operation with identifier */
 
-		fprintf(outfile,
+		fprintf(binding->outfile,
 			"static JSBool JSAPI_NATIVE(%s, JSContext *cx, uintN argc, jsval *vp)\n",
 			webidl_node_gettext(ident_node));
-		fprintf(outfile, 
+		fprintf(binding->outfile, 
 			"{\n");
 
-		fprintf(outfile, 
+		fprintf(binding->outfile, 
 			"        struct jsclass_private *private;\n");
 
-		fprintf(outfile, 
+		fprintf(binding->outfile, 
 			"        private = JS_GetInstancePrivate(cx,\n"
 			"                                        JS_THIS_OBJECT(cx,vp),\n"
 			"                                        &jsclass_object,\n"
@@ -341,7 +299,7 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 */
 
 
-		fprintf(outfile, "}\n\n");
+		fprintf(binding->outfile, "}\n\n");
 
 	}
 	return 0;
@@ -352,7 +310,7 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 
 static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 {
-	FILE *outfile = ctx;
+	struct binding *binding = ctx;
 	struct webidl_node *ident_node;
 	struct webidl_node *modifier_node;
 
@@ -377,32 +335,84 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 	if (webidl_node_getint(modifier_node) != WEBIDL_TYPE_READONLY) {
 		/* no readonly so a set function is required */
 
-		fprintf(outfile,
+		fprintf(binding->outfile,
 			"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
 			webidl_node_gettext(ident_node));
-		fprintf(outfile, 
+		fprintf(binding->outfile, 
 			"{\n"
 			"        return JS_FALSE;\n"
 			"}\n\n");
 	}
 
-	fprintf(outfile,
+	fprintf(binding->outfile,
 		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
 		webidl_node_gettext(ident_node));
-	fprintf(outfile, 
+	fprintf(binding->outfile, 
 		"{\n"
 		"	JS_SET_RVAL(cx, vp, JSVAL_NULL);\n"
 		"	return JS_TRUE;\n");
-	fprintf(outfile, "}\n\n");
+	fprintf(binding->outfile, "}\n\n");
 	
 
 	return 0;
 }
 
+
+static int webidl_privatestr_cb(struct genbind_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+
+	fprintf(binding->outfile, "        %s;\n", genbind_node_gettext(node));
+
+	return 0;
+}
+
+static int webidl_private_cb(struct genbind_node *node, void *ctx)
+{
+	genbind_node_for_each_type(genbind_node_getnode(node),
+				   GENBIND_NODE_TYPE_STRING,
+				   webidl_privatestr_cb,
+				   ctx);
+	return 0;
+}
+
+
+
+
 static int
-generate_property_body(FILE *outfile,
-		       const char *interface,
-		       struct webidl_node *webidl_ast)
+output_property_spec(struct binding *binding)
+{
+	int res;
+
+	fprintf(binding->outfile,
+		"static JSPropertySpec jsproperties_%s[] = {\n",
+		binding->name);
+
+	res = generate_property_spec(binding, binding->interface);
+
+	fprintf(binding->outfile, "    JSAPI_PS_END\n};\n\n");
+
+	return res;
+}
+
+static int
+output_function_spec(struct binding *binding)
+{
+	int res;
+
+	fprintf(binding->outfile,
+		"static JSFunctionSpec jsfunctions_%s[] = {\n",
+		binding->name);
+
+	res = generate_function_spec(binding, binding->interface);
+
+	fprintf(binding->outfile, "   JSAPI_FS_END\n};\n\n");
+
+	return res;
+}
+
+static int
+output_property_body(struct binding *binding, const char *interface)
 {
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
@@ -410,7 +420,7 @@ generate_property_body(FILE *outfile,
 
 
 	/* find interface in webidl with correct ident attached */
-	interface_node = webidl_node_find_type_ident(webidl_ast,
+	interface_node = webidl_node_find_type_ident(binding->wi_ast,
 						     WEBIDL_NODE_TYPE_INTERFACE,
 						     interface);
 
@@ -428,13 +438,13 @@ generate_property_body(FILE *outfile,
 
 	while (members_node != NULL) {
 
-		fprintf(outfile,"/**** %s ****/\n", interface);
+		fprintf(binding->outfile,"/**** %s ****/\n", interface);
 
 		/* for each function emit property body */
 		webidl_node_for_each_type(webidl_node_getnode(members_node),
 					  WEBIDL_NODE_TYPE_ATTRIBUTE,
 					  webidl_property_body_cb,
-					  outfile);
+					  binding);
 
 
 		members_node = webidl_node_find(webidl_node_getnode(interface_node),
@@ -450,41 +460,10 @@ generate_property_body(FILE *outfile,
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return generate_property_body(outfile, 
-					      webidl_node_gettext(inherit_node),
-					      webidl_ast);
+		return output_property_body(binding, 
+					    webidl_node_gettext(inherit_node));
 	}
 
-	return 0;
-}
-
-static int
-output_property_body(FILE *outfile,
-		     struct binding *binding,
-		       struct webidl_node *webidl_ast)
-{
-	int res;
-
-	res = generate_property_body(outfile, binding->interface, webidl_ast);
-
-	return res;
-}
-
-static int webidl_privatestr_cb(struct genbind_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-
-	fprintf(binding->outfile, "        %s;\n", genbind_node_gettext(node));
-
-	return 0;
-}
-
-static int webidl_private_cb(struct genbind_node *node, void *ctx)
-{
-	genbind_node_for_each_type(genbind_node_getnode(node),
-				   GENBIND_NODE_TYPE_STRING,
-				   webidl_privatestr_cb,
-				   ctx);
 	return 0;
 }
 
@@ -513,13 +492,13 @@ output_function_body(struct binding *binding, const char *interface)
 					(void *)WEBIDL_NODE_TYPE_LIST);
 	while (members_node != NULL) { 
 
-		fprintf(outfile,"/**** %s ****/\n", interface);
+		fprintf(binding->outfile,"/**** %s ****/\n", interface);
 
 		/* for each function emit a JSAPI_FS()*/
 		webidl_node_for_each_type(webidl_node_getnode(members_node),
 					  WEBIDL_NODE_TYPE_OPERATION,
 					  webidl_function_body_cb,
-					  outfile);
+					  binding);
 
 		members_node = webidl_node_find(webidl_node_getnode(interface_node),
 						members_node,
@@ -567,9 +546,8 @@ output_private_declaration(struct binding *binding)
 {
 	struct genbind_node *binding_node;
 	struct genbind_node *type_node;
-	struct genbind_node *node_node;
 
-	binding_node = genbind_node_find(binding->g_ast,
+	binding_node = genbind_node_find(binding->gb_ast,
 					 NULL,
 					 genbind_cmp_node_type,
 					 (void *)GENBIND_NODE_TYPE_BINDING);
@@ -587,14 +565,14 @@ output_private_declaration(struct binding *binding)
 		return -1;
 	}
 
-	fprintf(outfile, "struct jsclass_private {\n");
+	fprintf(binding->outfile, "struct jsclass_private {\n");
 
 	genbind_node_for_each_type(genbind_node_getnode(binding_node),
 				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 				   webidl_private_cb,
 				   binding);
 
-	fprintf(outfile, "};\n\n");
+	fprintf(binding->outfile, "};\n\n");
 
 
 	return 0;
@@ -727,7 +705,7 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 		return 9;
 	}
 
-	res = output_property_body(binding);
+	res = output_property_body(binding, binding->interface);
 	if (res) {
 		return 10;
 	}
@@ -737,7 +715,7 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 		return 11;
 	}
 
-	res = output_property_spec(outfile, binding, webidl_ast);
+	res = output_property_spec(binding);
 	if (res) {
 		return 12;
 	}
