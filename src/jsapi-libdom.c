@@ -263,6 +263,7 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
 	struct webidl_node *ident_node;
+	struct genbind_node *operation_node;
 
 	ident_node = webidl_node_find(webidl_node_getnode(node),
 				      NULL,
@@ -297,6 +298,24 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 
   JSAPI_SET_RVAL(cx, vp, JSVAL_VOID);
 */
+
+		operation_node = genbind_node_find_type_ident(binding->gb_ast,
+							      NULL,
+					      GENBIND_NODE_TYPE_OPERATION,
+					      webidl_node_gettext(ident_node));
+
+		if (operation_node != NULL) {
+			struct genbind_node *code_node;
+
+			code_node = genbind_node_find_type(genbind_node_getnode(operation_node),
+					 NULL,
+					 GENBIND_NODE_TYPE_CBLOCK);
+			if (code_node != NULL) {
+				fprintf(binding->outfile,
+					"%s\n",
+					genbind_node_gettext(code_node));
+			}
+		}
 
 
 		fprintf(binding->outfile, "}\n\n");
@@ -585,6 +604,9 @@ output_preamble(struct binding *binding)
 				   GENBIND_NODE_TYPE_PREAMBLE,
 				   webidl_preamble_cb,
 				   binding);
+
+	fprintf(binding->outfile,"\n\n");
+
 	return 0;
 }
 

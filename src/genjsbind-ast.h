@@ -57,6 +57,17 @@ genbind_node_find(struct genbind_node *node,
 		  genbind_callback_t *cb,
 		  void *ctx);
 
+struct genbind_node *
+genbind_node_find_type(struct genbind_node *node,
+		       struct genbind_node *prev,
+		       enum genbind_node_type type);
+
+struct genbind_node *
+genbind_node_find_type_ident(struct genbind_node *node,
+			     struct genbind_node *prev,
+			     enum genbind_node_type type,
+			     const char *ident);
+
 int genbind_node_for_each_type(struct genbind_node *node, enum genbind_node_type type, genbind_callback_t *cb, void *ctx);
 
 char *genbind_node_gettext(struct genbind_node *node);

@@ -54,6 +54,7 @@ struct genbind_node *genbind_node_link(struct genbind_node *tgt, struct genbind_
 	return tgt;
 }
 
+
 struct genbind_node *
 genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r)
 {
@@ -89,6 +90,7 @@ genbind_node_for_each_type(struct genbind_node *node,
 	return 0;
 }
 
+
 /* exported interface defined in genjsbind-ast.h */
 struct genbind_node *
 genbind_node_find(struct genbind_node *node,
@@ -114,6 +116,53 @@ genbind_node_find(struct genbind_node *node,
 	}
 
 	return NULL;
+}
+
+/* exported interface defined in genjsbind-ast.h */
+struct genbind_node *
+genbind_node_find_type(struct genbind_node *node,
+		       struct genbind_node *prev,
+		       enum genbind_node_type type)
+{
+	return genbind_node_find(node,
+				 prev,
+				 genbind_cmp_node_type,
+				 (void *)type);
+}
+
+struct genbind_node *
+genbind_node_find_type_ident(struct genbind_node *node,
+			     struct genbind_node *prev,
+			     enum genbind_node_type type,
+			     const char *ident)
+{
+	struct genbind_node *found_node;
+	struct genbind_node *ident_node;
+
+	found_node = genbind_node_find(node,
+				       prev,
+				       genbind_cmp_node_type,
+				       (void *)type);
+
+	while (found_node != NULL) {
+
+		ident_node = genbind_node_find(genbind_node_getnode(found_node),
+					       NULL,
+					       genbind_cmp_node_type,
+					       (void *)GENBIND_NODE_TYPE_IDENT);
+		if (ident_node != NULL) {
+			if (strcmp(ident_node->r.text, ident) == 0)
+				break;
+		}
+
+		/* look for next matching node */
+		found_node = genbind_node_find(node,
+					       found_node,
+					       genbind_cmp_node_type,
+					       (void *)type);
+
+	}
+	return found_node;
 }
 
 int genbind_cmp_node_type(struct genbind_node *node, void *ctx)
@@ -190,6 +239,9 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 	case GENBIND_NODE_TYPE_OPERATION:
 		return "Operation";
 
+	case GENBIND_NODE_TYPE_CBLOCK:
+		return "CBlock";
+
 	default:
 		return "Unknown";
 	}
@@ -197,7 +249,7 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 
 int genbind_ast_dump(struct genbind_node *node, int indent)
 {
-	const char *SPACES="                                                                               ";	
+	const char *SPACES="                                                                               ";
 	char *txt;
 
 	while (node != NULL) {
