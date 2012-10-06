@@ -71,8 +71,8 @@ static int webidl_hdrcomments_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
 
-	fprintf(binding->outfile, 
-		HDR_COMMENT_SEP"%s", 
+	fprintf(binding->outfile,
+		HDR_COMMENT_SEP"%s",
 		genbind_node_gettext(node));
 
 	return 0;
@@ -104,7 +104,7 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 					 (void *)WEBIDL_NODE_TYPE_MODIFIER);
 
 	if (ident_node == NULL) {
-		/* properties must have an operator 
+		/* properties must have an operator
 		 * http://www.w3.org/TR/WebIDL/#idl-attributes
 		 */
 		return 1;
@@ -172,7 +172,7 @@ generate_property_spec(struct binding *binding, const char *interface)
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return generate_property_spec(binding, 
+		return generate_property_spec(binding,
 					      webidl_node_gettext(inherit_node));
 	}
 
@@ -226,7 +226,7 @@ generate_function_spec(struct binding *binding, const char *interface)
 					NULL,
 					webidl_cmp_node_type,
 					(void *)WEBIDL_NODE_TYPE_LIST);
-	while (members_node != NULL) { 
+	while (members_node != NULL) {
 
 		fprintf(binding->outfile,"    /**** %s ****/\n", interface);
 
@@ -279,13 +279,13 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 		fprintf(binding->outfile,
 			"static JSBool JSAPI_NATIVE(%s, JSContext *cx, uintN argc, jsval *vp)\n",
 			webidl_node_gettext(ident_node));
-		fprintf(binding->outfile, 
+		fprintf(binding->outfile,
 			"{\n");
 
-		fprintf(binding->outfile, 
+		fprintf(binding->outfile,
 			"        struct jsclass_private *private;\n");
 
-		fprintf(binding->outfile, 
+		fprintf(binding->outfile,
 			"        private = JS_GetInstancePrivate(cx,\n"
 			"                                        JS_THIS_OBJECT(cx,vp),\n"
 			"                                        &jsclass_object,\n"
@@ -295,7 +295,7 @@ static int webidl_function_body_cb(struct webidl_node *node, void *ctx)
 
 /*
 
-	JSAPI_SET_RVAL(cx, vp, JSVAL_VOID);
+  JSAPI_SET_RVAL(cx, vp, JSVAL_VOID);
 */
 
 
@@ -320,7 +320,7 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 				      (void *)WEBIDL_NODE_TYPE_IDENT);
 
 	if (ident_node == NULL) {
-		/* properties must have an operator 
+		/* properties must have an operator
 		 * http://www.w3.org/TR/WebIDL/#idl-attributes
 		 */
 		return 1;
@@ -338,7 +338,7 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 		fprintf(binding->outfile,
 			"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
 			webidl_node_gettext(ident_node));
-		fprintf(binding->outfile, 
+		fprintf(binding->outfile,
 			"{\n"
 			"        return JS_FALSE;\n"
 			"}\n\n");
@@ -347,12 +347,12 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 	fprintf(binding->outfile,
 		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
 		webidl_node_gettext(ident_node));
-	fprintf(binding->outfile, 
+	fprintf(binding->outfile,
 		"{\n"
 		"	JS_SET_RVAL(cx, vp, JSVAL_NULL);\n"
 		"	return JS_TRUE;\n");
 	fprintf(binding->outfile, "}\n\n");
-	
+
 
 	return 0;
 }
@@ -460,7 +460,7 @@ output_property_body(struct binding *binding, const char *interface)
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return output_property_body(binding, 
+		return output_property_body(binding,
 					    webidl_node_gettext(inherit_node));
 	}
 
@@ -490,7 +490,7 @@ output_function_body(struct binding *binding, const char *interface)
 					NULL,
 					webidl_cmp_node_type,
 					(void *)WEBIDL_NODE_TYPE_LIST);
-	while (members_node != NULL) { 
+	while (members_node != NULL) {
 
 		fprintf(binding->outfile,"/**** %s ****/\n", interface);
 
@@ -513,7 +513,7 @@ output_function_body(struct binding *binding, const char *interface)
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return output_function_body(binding, 
+		return output_function_body(binding,
 					    webidl_node_gettext(inherit_node));
 	}
 
@@ -532,7 +532,7 @@ output_jsclass(struct binding *binding)
 		"	JS_PropertyStub,\n"
 		"	JS_PropertyStub,\n"
 		"	JS_StrictPropertyStub,\n"
-		"        JS_EnumerateStub,\n"
+		"	JS_EnumerateStub,\n"
 		"	(JSResolveOp)jsresove_node,\n"
 		"	JS_ConvertStub,\n"
 		"	jsfinalize_document,\n"
@@ -557,9 +557,9 @@ output_private_declaration(struct binding *binding)
 	}
 
 	type_node = genbind_node_find(genbind_node_getnode(binding_node),
-				       NULL,
-				       genbind_cmp_node_type,
-				       (void *)GENBIND_NODE_TYPE_BINDING_TYPE);
+				      NULL,
+				      genbind_cmp_node_type,
+				      (void *)GENBIND_NODE_TYPE_BINDING_TYPE);
 
 	if (type_node == NULL) {
 		return -1;
@@ -630,9 +630,9 @@ binding_new(char *outfilename, struct genbind_node *genbind_ast)
 	}
 
 	interface_node = genbind_node_find(genbind_node_getnode(binding_node),
-				       NULL,
-				       genbind_cmp_node_type,
-				       (void *)GENBIND_NODE_TYPE_BINDING_INTERFACE);
+					   NULL,
+					   genbind_cmp_node_type,
+					   (void *)GENBIND_NODE_TYPE_BINDING_INTERFACE);
 	if (interface_node == NULL) {
 		return NULL;
 	}
