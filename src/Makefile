@@ -1,7 +1,7 @@
 CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/ -g
 
 # Sources in this directory
-DIR_SOURCES := genjsbind.c webidl-ast.c genjsbind-ast.c jsapi-libdom.c
+DIR_SOURCES := genjsbind.c webidl-ast.c genjsbind-ast.c jsapi-libdom.c jsapi-libdom-operator.c
 
 SOURCES := $(SOURCES) $(BUILDDIR)/genjsbind-parser.c $(BUILDDIR)/genjsbind-lexer.c $(BUILDDIR)/webidl-parser.c $(BUILDDIR)/webidl-lexer.c
 

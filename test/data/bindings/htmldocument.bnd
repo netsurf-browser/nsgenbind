@@ -37,10 +37,7 @@ operation write %{
     if (document->htmlc->parser != NULL) {
         dom_hubbub_parser_insert_chunk(document->htmlc->parser, (uint8_t *)txt, length);
     }
-    JSAPI_SET_RVAL(cx, vp, JSVAL_VOID);
-
-    return JS_TRUE;
-    %}
+%}
 
 binding document {
     type js_libdom; /* the binding type */
