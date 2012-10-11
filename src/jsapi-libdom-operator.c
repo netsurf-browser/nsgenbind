@@ -17,8 +17,13 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
+/** creates all the variable definitions 
+ * 
+ * generate functions variables (including return value) with default
+ * values as appropriate 
+ */
 static void 
-define_ret_value(struct binding *binding, struct webidl_node *operator_list)
+output_variable_definitions(struct binding *binding, struct webidl_node *operator_list)
 {
 	operator_list = operator_list;
 	fprintf(binding->outfile, "\tjsval jsretval = JSVAL_VOID;\n");
@@ -28,23 +33,42 @@ static void
 output_operation_input(struct binding *binding, 
 		       struct webidl_node *operation_list)
 {
-/*
-    if (!JS_ConvertArguments(cx, argc, JSAPI_ARGV(cx, vp), "S", &u16_txt)) {
-        return JS_FALSE;
-    }
 
-    JSString_to_char(u16_txt, txt, length);
+	struct webidl_node *arglist_node;
+	struct webidl_node *arg_node = NULL;
 
-*/
-
-	struct webidl_node *arglist;
-
-	arglist = webidl_node_find(operation_list,
+	arglist_node = webidl_node_find(operation_list,
 				   NULL,
 				   webidl_cmp_node_type,
 				   (void *)WEBIDL_NODE_TYPE_LIST);
 
-	arglist = webidl_node_getnode(arglist);
+	if (arglist_node == NULL) {
+		return; /* @todo check if this is broken AST */
+	}
+
+	arglist = webidl_node_getnode(arglist_node);
+
+	arg_node = webidl_node_for_each_type(arglist,
+					     arg_node,
+					     WEBIDL_NODE_TYPE_ARGUMENT);
+	while (arg_node != NULL) {
+
+/*
+  if (!JS_ConvertArguments(cx, argc, JSAPI_ARGV(cx, vp), "S", &u16_txt)) {
+  return JS_FALSE;
+  }
+
+  JSString_to_char(u16_txt, txt, length);
+
+*/
+
+
+		arg_node = webidl_node_for_each_type(arglist,
+						     arg_node,
+						     WEBIDL_NODE_TYPE_ARGUMENT);
+	}
+
+
 
 }
 
@@ -92,8 +116,7 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 		fprintf(binding->outfile,
 			"\tstruct jsclass_private *private;\n");
 
-		/* creates the return value variable with a default value */
-		define_ret_value(binding, webidl_node_getnode(node));
+		output_variable_definitions(binding, webidl_node_getnode(node));
 
 		fprintf(binding->outfile,
 			"\n"
@@ -102,7 +125,7 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 			"\t\t\t&jsclass_object,\n"
 			"\t\t\tNULL);\n"
 			"\tif (priv == NULL)\n"
-			"\t\treturn JS_FALSE;\n");
+			"\t\treturn JS_FALSE;\n\n");
 
 
 		output_operation_input(binding, webidl_node_getnode(node));

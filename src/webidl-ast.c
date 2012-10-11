@@ -137,6 +137,14 @@ webidl_node_for_each_type(struct webidl_node *node,
 }
 
 /* exported interface defined in genjsbind-ast.h */
+int webidl_cmp_node_type(struct webidl_node *node, void *ctx)
+{
+	if (node->type == (enum webidl_node_type)ctx)
+		return 1;
+	return 0;
+}
+
+/* exported interface defined in genjsbind-ast.h */
 struct webidl_node *
 webidl_node_find(struct webidl_node *node,
 		  struct webidl_node *prev,
@@ -163,12 +171,19 @@ webidl_node_find(struct webidl_node *node,
 	return NULL;
 }
 
-int webidl_cmp_node_type(struct webidl_node *node, void *ctx)
+
+/* exported interface defined in genjsbind-ast.h */
+struct webidl_node *
+webidl_node_find_type(struct webidl_node *node,
+		  struct webidl_node *prev,
+		  enum webidl_node_type type)
 {
-	if (node->type == (enum webidl_node_type)ctx)
-		return 1;
-	return 0;
+	return webidl_node_find(node,
+				prev,
+				webidl_cmp_node_type,
+				(void *)type);
 }
+
 
 struct webidl_node *
 webidl_node_find_type_ident(struct webidl_node *root_node,

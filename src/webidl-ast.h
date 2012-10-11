@@ -89,6 +89,11 @@ webidl_node_find(struct webidl_node *node,
 		 void *ctx);
 
 struct webidl_node *
+webidl_node_find_type(struct webidl_node *node,
+		  struct webidl_node *prev,
+		      enum webidl_node_type type);
+
+struct webidl_node *
 webidl_node_find_type_ident(struct webidl_node *root_node, 
 			    enum webidl_node_type type, 
 			    const char *ident);
