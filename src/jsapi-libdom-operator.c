@@ -23,10 +23,38 @@
  * values as appropriate 
  */
 static void 
-output_variable_definitions(struct binding *binding, struct webidl_node *operator_list)
+output_variable_definitions(struct binding *binding, struct webidl_node *operation_list)
 {
-	operator_list = operator_list;
+	struct webidl_node *arglist_node;
+	struct webidl_node *arglist; /* argument list */
+	struct webidl_node *arg_node = NULL;
+
+	/* return value */
 	fprintf(binding->outfile, "\tjsval jsretval = JSVAL_VOID;\n");
+
+	/* input variables */
+	arglist_node = webidl_node_find(operation_list,
+				   NULL,
+				   webidl_cmp_node_type,
+				   (void *)WEBIDL_NODE_TYPE_LIST);
+
+	if (arglist_node == NULL) {
+		return; /* @todo check if this is broken AST */
+	}
+
+	arglist = webidl_node_getnode(arglist_node);
+
+	arg_node = webidl_node_find_type(arglist,
+					     arg_node,
+					     WEBIDL_NODE_TYPE_ARGUMENT);
+	while (arg_node != NULL) {
+		/* generate variable to hold the argument */
+
+		arg_node = webidl_node_find_type(arglist,
+						 arg_node,
+						 WEBIDL_NODE_TYPE_ARGUMENT);
+	}
+
 }
 
 static void 
@@ -35,6 +63,7 @@ output_operation_input(struct binding *binding,
 {
 
 	struct webidl_node *arglist_node;
+	struct webidl_node *arglist; /* argument list */
 	struct webidl_node *arg_node = NULL;
 
 	arglist_node = webidl_node_find(operation_list,
@@ -48,7 +77,7 @@ output_operation_input(struct binding *binding,
 
 	arglist = webidl_node_getnode(arglist_node);
 
-	arg_node = webidl_node_for_each_type(arglist,
+	arg_node = webidl_node_find_type(arglist,
 					     arg_node,
 					     WEBIDL_NODE_TYPE_ARGUMENT);
 	while (arg_node != NULL) {
@@ -63,9 +92,9 @@ output_operation_input(struct binding *binding,
 */
 
 
-		arg_node = webidl_node_for_each_type(arglist,
-						     arg_node,
-						     WEBIDL_NODE_TYPE_ARGUMENT);
+		arg_node = webidl_node_find_type(arglist,
+						 arg_node,
+						 WEBIDL_NODE_TYPE_ARGUMENT);
 	}
 
 
