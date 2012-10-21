@@ -32,6 +32,8 @@ typedef int (genbind_callback_t)(struct genbind_node *node, void *ctx);
 
 int genbind_cmp_node_type(struct genbind_node *node, void *ctx);
 
+FILE *genbindopen(const char *filename);
+
 int genbind_parsefile(char *infilename, struct genbind_node **ast);
 
 char *genbind_strapp(char *a, char *b);

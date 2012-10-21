@@ -267,6 +267,66 @@ int genbind_ast_dump(struct genbind_node *node, int indent)
 	return 0;
 }
 
+FILE *genbindopen(const char *filename)
+{
+	FILE *genfile;
+	char *fullname;
+	int fulllen;
+	static char *prevfilepath = NULL;
+
+	/* try filename raw */
+	genfile = fopen(filename, "r");
+	if (genfile != NULL) {
+		if (options->verbose) {
+			printf("Opened Genbind file %s\n", filename);
+		}
+		if (prevfilepath == NULL) {
+			fullname = strrchr(filename, '/');
+			if (fullname == NULL) {
+				fulllen = strlen(filename);
+			} else {
+				fulllen = fullname - filename;
+			}
+			prevfilepath = strndup(filename,fulllen);
+		}
+		return genfile;
+	}
+
+	/* try based on previous filename */
+	if (prevfilepath != NULL) {
+		fulllen = strlen(prevfilepath) + strlen(filename) + 2;
+		fullname = malloc(fulllen);
+		snprintf(fullname, fulllen, "%s/%s", prevfilepath, filename);
+		if (options->debug) {
+			printf("Attempting to open Genbind file %s\n", fullname);
+		}
+		genfile = fopen(fullname, "r");
+		if (genfile != NULL) {
+			if (options->verbose) {
+				printf("Opened Genbind file %s\n", fullname);
+			}
+			free(fullname);
+			return genfile;
+		}
+		free(fullname);
+	}
+
+	/* try on idl path */
+	if (options->idlpath != NULL) {
+		fulllen = strlen(options->idlpath) + strlen(filename) + 2;
+		fullname = malloc(fulllen);
+		snprintf(fullname, fulllen, "%s/%s", options->idlpath, filename);
+		genfile = fopen(fullname, "r");
+		if ((genfile != NULL) && options->verbose) {
+			printf("Opend Genbind file %s\n", fullname);
+		}
+
+		free(fullname);
+	}
+
+	return genfile;
+}
+
 int genbind_parsefile(char *infilename, struct genbind_node **ast)
 {
 	FILE *infile;
@@ -279,10 +339,7 @@ int genbind_parsefile(char *infilename, struct genbind_node **ast)
 		}
 		infile = stdin;
 	} else {
-		if (options->verbose) {
-			printf("Opening binding file %s\n", options->infilename);
-		}
-		infile = fopen(infilename, "r");
+		infile = genbindopen(infilename);
 	}
 
 	if (!infile) {

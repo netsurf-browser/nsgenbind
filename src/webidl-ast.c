@@ -359,23 +359,25 @@ int webidl_ast_dump(struct webidl_node *node, int indent)
 static FILE *idlopen(const char *filename)
 {
 	FILE *idlfile;
+	char *fullname;
+	int fulllen; 
 
 	if (options->idlpath == NULL) {
 		if (options->verbose) {
 			printf("Opening IDL file %s\n", filename);
 		}
-		idlfile = fopen(filename, "r");
-	} else {
-		char *fullname;
-		int fulllen = strlen(options->idlpath) + strlen(filename) + 2;
-		fullname = malloc(fulllen);
-		snprintf(fullname, fulllen, "%s/%s", options->idlpath, filename);
-		if (options->verbose) {
-			printf("Opening IDL file %s\n", fullname);
-		}
-		idlfile = fopen(fullname, "r");
-		free(fullname);
+		return fopen(filename, "r");
+	} 
+
+	fulllen = strlen(options->idlpath) + strlen(filename) + 2;
+	fullname = malloc(fulllen);
+	snprintf(fullname, fulllen, "%s/%s", options->idlpath, filename);
+	if (options->verbose) {
+		printf("Opening IDL file %s\n", fullname);
 	}
+	idlfile = fopen(fullname, "r");
+	free(fullname);
+	
 	return idlfile;
 }
 

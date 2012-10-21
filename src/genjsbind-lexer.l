@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "genjsbind-parser.h"
+#include "genjsbind-ast.h"
 
 #define YY_USER_ACTION yylloc->first_line = yylloc->last_line; \
     yylloc->first_column = yylloc->last_column + 1; \
@@ -60,7 +61,12 @@ cblockopen              \%\{
 
 cblockclose             \%\}
 
+/* used for #include directive */
+poundsign           ^{whitespace}*#
+
 %x                      cblock
+
+%x                      incl
 
 %%
 
@@ -104,12 +110,45 @@ operation               return TOK_OPERATION;
 
 {multicomment}          /* nothing */
 
+{poundsign}include  BEGIN(incl);
+
 {other}                 return (int) yytext[0];
 
 .                       /* nothing */
 
 <cblock>[^\%]*          yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
 <cblock>{cblockclose}   BEGIN(INITIAL);
-<cblock>\%             yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
+<cblock>\%              yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
+
+
+<incl>[ \t]*\"      /* eat the whitespace and open quotes */
+
+<incl>[^\t\n\"]+    { 
+                        /* got the include file name */
+                        yyin = genbindopen(yytext);
+     
+                        if (! yyin) {
+                            fprintf(stderr, "Unable to open include %s\n", yytext);
+                            exit(3);
+                        }
+     			yypush_buffer_state(yy_create_buffer( yyin, YY_BUF_SIZE ));
+     
+                        BEGIN(INITIAL);
+                    }
+
+<incl>\n                BEGIN(INITIAL);
+
+<incl>.                 /* nothing */
+
+<<EOF>>             {
+     			yypop_buffer_state();
+     
+                        if ( !YY_CURRENT_BUFFER ) {
+                            yyterminate();
+                        } else {
+                            BEGIN(incl);
+                        }
+
+                    }
 
 %%
