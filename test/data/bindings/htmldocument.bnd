@@ -20,7 +20,7 @@ preamble %{
 
 #include "javascript/jsapi.h"
 
-    %}
+%}
 
 operation write %{
 	LOG(("content %p parser %p writing %s",
@@ -37,8 +37,8 @@ binding document {
     /* parameters to constructor value stored in private
      * context structure.
      */
-    private "dom_document *node";
-    private "struct html_content *htmlc"; 
+    private "dom_document *" node;
+    private "struct html_content *" htmlc; 
 
     interface Document; /* Web IDL interface to generate */
 }

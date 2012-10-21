@@ -209,9 +209,11 @@ Type
 
 Private
         :
-        TOK_PRIVATE Strings ';'
+        TOK_PRIVATE TOK_STRING_LITERAL TOK_IDENTIFIER ';'
         {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_PRIVATE, NULL, $2);
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_PRIVATE, NULL, 
+                 genbind_new_node(GENBIND_NODE_TYPE_IDENT,  
+                   genbind_new_node(GENBIND_NODE_TYPE_STRING, NULL, $2), $3));
         }
         ;
 

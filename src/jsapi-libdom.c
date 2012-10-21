@@ -306,21 +306,31 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 }
 
 
-static int webidl_privatestr_cb(struct genbind_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-
-	fprintf(binding->outfile, "        %s;\n", genbind_node_gettext(node));
-
-	return 0;
-}
 
 static int webidl_private_cb(struct genbind_node *node, void *ctx)
 {
-	genbind_node_for_each_type(genbind_node_getnode(node),
-				   GENBIND_NODE_TYPE_STRING,
-				   webidl_privatestr_cb,
-				   ctx);
+	struct binding *binding = ctx;
+	struct genbind_node *ident_node;
+	struct genbind_node *type_node;
+
+
+	ident_node = genbind_node_find_type(genbind_node_getnode(node),
+					    NULL,
+					    GENBIND_NODE_TYPE_IDENT);
+	if (ident_node == NULL)
+		return -1; /* bad AST */
+
+	type_node = genbind_node_find_type(genbind_node_getnode(node),
+					    NULL,
+					    GENBIND_NODE_TYPE_STRING);
+	if (type_node == NULL)
+		return -1; /* bad AST */
+
+	fprintf(binding->outfile, 
+		"        %s%s;\n", 
+		genbind_node_gettext(type_node),
+		genbind_node_gettext(ident_node));
+
 	return 0;
 }
 
@@ -512,26 +522,23 @@ binding_new(char *outfilename, struct genbind_node *genbind_ast)
 	struct webidl_node *webidl_ast = NULL;
 	int res;
 
-	binding_node = genbind_node_find(genbind_ast,
+	binding_node = genbind_node_find_type(genbind_ast,
 					 NULL,
-					 genbind_cmp_node_type,
-					 (void *)GENBIND_NODE_TYPE_BINDING);
+					 GENBIND_NODE_TYPE_BINDING);
 	if (binding_node == NULL) {
 		return NULL;
 	}
 
-	ident_node = genbind_node_find(genbind_node_getnode(binding_node),
-				       NULL,
-				       genbind_cmp_node_type,
-				       (void *)GENBIND_NODE_TYPE_IDENT);
+	ident_node = genbind_node_find_type(genbind_node_getnode(binding_node),
+					    NULL,
+					    GENBIND_NODE_TYPE_IDENT);
 	if (ident_node == NULL) {
 		return NULL;
 	}
 
-	interface_node = genbind_node_find(genbind_node_getnode(binding_node),
+	interface_node = genbind_node_find_type(genbind_node_getnode(binding_node),
 					   NULL,
-					   genbind_cmp_node_type,
-					   (void *)GENBIND_NODE_TYPE_BINDING_INTERFACE);
+					   GENBIND_NODE_TYPE_BINDING_INTERFACE);
 	if (interface_node == NULL) {
 		return NULL;
 	}
