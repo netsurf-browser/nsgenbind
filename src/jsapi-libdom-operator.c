@@ -17,13 +17,13 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
-/** creates all the variable definitions 
- * 
+/** creates all the variable definitions
+ *
  * generate functions variables (including return value) with default
- * values as appropriate 
+ * values as appropriate
  */
-static void 
-output_variable_definitions(struct binding *binding, 
+static void
+output_variable_definitions(struct binding *binding,
 			    struct webidl_node *operation_list)
 {
 	struct webidl_node *arglist_node;
@@ -64,7 +64,137 @@ output_variable_definitions(struct binding *binding,
 		arg_type_base = webidl_node_find_type(webidl_node_getnode(arg_type),
 						      NULL,
 						      WEBIDL_NODE_TYPE_TYPE_BASE);
-			
+
+		webidl_arg_type = webidl_node_getint(arg_type_base);
+
+		switch (webidl_arg_type) {
+		case WEBIDL_TYPE_USER:
+			fprintf(stderr, "Unsupported: WEBIDL_TYPE_USER\n");
+			break;
+
+		case WEBIDL_TYPE_BOOL:
+			/* JSBool */
+			fprintf(binding->outfile,
+				"\tjsBool %s = JS_FALSE;\n",
+				webidl_node_gettext(arg_ident));
+
+			break;
+
+		case WEBIDL_TYPE_BYTE:
+			fprintf(stderr, "Unsupported: WEBIDL_TYPE_BYTE\n");
+			break;
+
+		case WEBIDL_TYPE_OCTET:
+			fprintf(stderr, "Unsupported: WEBIDL_TYPE_OCTET\n");
+			break;
+
+		case WEBIDL_TYPE_FLOAT:
+		case WEBIDL_TYPE_DOUBLE:
+			/* double */
+			fprintf(binding->outfile,
+				"\tdouble %s = 0;\n",
+				webidl_node_gettext(arg_ident));
+			break;
+
+		case WEBIDL_TYPE_SHORT:
+			fprintf(stderr, "Unsupported: WEBIDL_TYPE_SHORT\n");
+			break;
+
+		case WEBIDL_TYPE_LONGLONG:
+			fprintf(stderr, "Unsupported: WEBIDL_TYPE_LONGLONG\n");
+			break;
+
+		case WEBIDL_TYPE_LONG:
+			/* int32_t  */
+			fprintf(binding->outfile,
+				"\tint32_t %s = 0;\n",
+				webidl_node_gettext(arg_ident));
+			break;
+
+		case WEBIDL_TYPE_STRING:
+			/* JSString * */
+			fprintf(binding->outfile,
+				"\tJSString *%1$s_jsstr = NULL;\n"
+				"\tint %1$s_len = 0;\n"
+				"\tchar *%1$s = NULL;\n",
+				webidl_node_gettext(arg_ident));
+			break;
+
+		case WEBIDL_TYPE_SEQUENCE:
+			fprintf(stderr, "Unsupported: WEBIDL_TYPE_SEQUENCE\n");
+			break;
+
+		case WEBIDL_TYPE_OBJECT:
+			/* JSObject * */
+			fprintf(binding->outfile,
+				"\tJSObject *%s = NULL;\n",
+				webidl_node_gettext(arg_ident));
+			break;
+
+		case WEBIDL_TYPE_DATE:
+			fprintf(stderr, "Unsupported: WEBIDL_TYPE_DATE\n");
+			break;
+
+		case WEBIDL_TYPE_VOID:
+			fprintf(stderr, "Unsupported: WEBIDL_TYPE_VOID\n");
+			break;
+
+		default:
+			break;
+		}
+
+
+		/* next argument */
+		arg_node = webidl_node_find_type(arglist,
+						 arg_node,
+						 WEBIDL_NODE_TYPE_ARGUMENT);
+	}
+
+}
+
+/** generate code to process operation input from javascript */
+static void
+output_operation_input(struct binding *binding,
+		       struct webidl_node *operation_list)
+{
+	struct webidl_node *arglist_node;
+	struct webidl_node *arglist; /* argument list */
+	struct webidl_node *arg_node = NULL;
+	struct webidl_node *arg_ident = NULL;
+	struct webidl_node *arg_type = NULL;
+	struct webidl_node *arg_type_base = NULL;
+	enum webidl_type webidl_arg_type;
+
+	int arg_cur = 0; /* current position in the input argument vector */
+
+	/* input variables */
+	arglist_node = webidl_node_find_type(operation_list,
+					     NULL,
+					     WEBIDL_NODE_TYPE_LIST);
+
+	if (arglist_node == NULL) {
+		return; /* @todo check if this is broken AST */
+	}
+
+	arglist = webidl_node_getnode(arglist_node);
+
+	arg_node = webidl_node_find_type(arglist,
+					 arg_node,
+					 WEBIDL_NODE_TYPE_ARGUMENT);
+	while (arg_node != NULL) {
+		/* generate variable to hold the argument */
+		arg_ident = webidl_node_find_type(webidl_node_getnode(arg_node),
+						  NULL,
+						  WEBIDL_NODE_TYPE_IDENT);
+
+		arg_type = webidl_node_find_type(webidl_node_getnode(arg_node),
+						 NULL,
+						 WEBIDL_NODE_TYPE_TYPE);
+
+		arg_type_base = webidl_node_find_type(webidl_node_getnode(arg_type),
+						      NULL,
+						      WEBIDL_NODE_TYPE_TYPE_BASE);
+
 		webidl_arg_type = webidl_node_getint(arg_type_base);
 
 		switch (webidl_arg_type) {
@@ -73,8 +203,11 @@ output_variable_definitions(struct binding *binding,
 
 		case WEBIDL_TYPE_BOOL:
 			/* JSBool */
-			fprintf(binding->outfile, 
-				"\tjsBool %s = JS_FALSE;\n",
+			fprintf(binding->outfile,
+				"\tif (!JS_ValueToBoolean(cx, argv[%d], &%s)) {\n"
+				"\t\treturn JS_FALSE\n"
+				"\t}\n",
+				arg_cur,
 				webidl_node_gettext(arg_ident));
 
 			break;
@@ -86,7 +219,7 @@ output_variable_definitions(struct binding *binding,
 		case WEBIDL_TYPE_FLOAT:
 		case WEBIDL_TYPE_DOUBLE:
 			/* double */
-			fprintf(binding->outfile, 
+			fprintf(binding->outfile,
 				"\tdouble %s = 0;\n",
 				webidl_node_gettext(arg_ident));
 			break;
@@ -97,16 +230,22 @@ output_variable_definitions(struct binding *binding,
 
 		case WEBIDL_TYPE_LONG:
 			/* int32_t  */
-			fprintf(binding->outfile, 
+			fprintf(binding->outfile,
 				"\tint32_t %s = 0;\n",
 				webidl_node_gettext(arg_ident));
 			break;
 
 		case WEBIDL_TYPE_STRING:
 			/* JSString * */
-			fprintf(binding->outfile, 
-				"\tJSString *%s = NULL;\n",
-				webidl_node_gettext(arg_ident));
+			fprintf(binding->outfile,
+				"\t%1$s_jsstr = JS_ValueToString(cx, argv[%2$d]);\n"
+				"\tif (%1$s_jsstr == NULL) {\n"
+				"\t\treturn JS_FALSE\n"
+				"\t}\n\n"
+				"\tJSString_to_char(%1$s_jsstr, %1$s, %1$s_len);\n",
+				webidl_node_gettext(arg_ident),
+				arg_cur);
+
 			break;
 
 		case WEBIDL_TYPE_SEQUENCE:
@@ -114,7 +253,7 @@ output_variable_definitions(struct binding *binding,
 
 		case WEBIDL_TYPE_OBJECT:
 			/* JSObject * */
-			fprintf(binding->outfile, 
+			fprintf(binding->outfile,
 				"\tJSObject *%s = NULL;\n",
 				webidl_node_gettext(arg_ident));
 			break;
@@ -126,62 +265,21 @@ output_variable_definitions(struct binding *binding,
 		default:
 			break;
 		}
-		
+
 
 		/* next argument */
 		arg_node = webidl_node_find_type(arglist,
 						 arg_node,
 						 WEBIDL_NODE_TYPE_ARGUMENT);
+
+		arg_cur++;
 	}
-
-}
-
-static void 
-output_operation_input(struct binding *binding, 
-		       struct webidl_node *operation_list)
-{
-
-	struct webidl_node *arglist_node;
-	struct webidl_node *arglist; /* argument list */
-	struct webidl_node *arg_node = NULL;
-
-	arglist_node = webidl_node_find(operation_list,
-				   NULL,
-				   webidl_cmp_node_type,
-				   (void *)WEBIDL_NODE_TYPE_LIST);
-
-	if (arglist_node == NULL) {
-		return; /* @todo check if this is broken AST */
-	}
-
-	arglist = webidl_node_getnode(arglist_node);
-
-	arg_node = webidl_node_find_type(arglist,
-					     arg_node,
-					     WEBIDL_NODE_TYPE_ARGUMENT);
-	while (arg_node != NULL) {
-
-/*
-  if (!JS_ConvertArguments(cx, argc, JSAPI_ARGV(cx, vp), "S", &u16_txt)) {
-  return JS_FALSE;
-  }
-
-  JSString_to_char(u16_txt, txt, length);
-
-*/
-
-
-		arg_node = webidl_node_find_type(arglist,
-						 arg_node,
-						 WEBIDL_NODE_TYPE_ARGUMENT);
-	}
-
 
 
 }
 
-static void 
-output_operation_code_block(struct binding *binding, 
+static void
+output_operation_code_block(struct binding *binding,
 			    struct genbind_node *operation_list)
 {
 	struct genbind_node *code_node;
@@ -223,6 +321,9 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 
 		fprintf(binding->outfile,
 			"\tstruct jsclass_private *private;\n");
+
+		fprintf(binding->outfile,
+			"\tjsval *argv = JSAPI_ARGV(cx, vp);\n");
 
 		output_variable_definitions(binding, webidl_node_getnode(node));
 
