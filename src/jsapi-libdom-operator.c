@@ -333,7 +333,7 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 			"\t\t\tJS_THIS_OBJECT(cx,vp),\n"
 			"\t\t\t&jsclass_object,\n"
 			"\t\t\tNULL);\n"
-			"\tif (priv == NULL)\n"
+			"\tif (private == NULL)\n"
 			"\t\treturn JS_FALSE;\n\n");
 
 

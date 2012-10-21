@@ -335,7 +335,63 @@ static int webidl_private_cb(struct genbind_node *node, void *ctx)
 }
 
 
+static int
+output_con_de_structors(struct binding *binding)
+{
+	int res = 0;
 
+	fprintf(binding->outfile,
+		"static void jsclass_finalize(JSContext *cx, JSObject *obj)\n"
+		"{"
+		"\tstruct jsclass_private *private;\n"
+		"\n"
+		"\tprivate = JS_GetInstancePrivate(cx, obj, &jsclass_object, NULL);\n"
+		"\tif (private != NULL) {\n"
+		"\t\tfree(private);\n"
+		"\t}\n"
+		"}\n\n");
+
+	fprintf(binding->outfile,
+		"JSObject *jsapi_new_%s(JSContext *cx, JSObject *parent, struct html_content *htmlc)\n"
+		"{\n"
+		"\tJSObject *jsobject;\n"
+		"\tstruct jsclass_private *private;\n"
+		"\n"
+		"\tprivate = malloc(sizeof(struct jsclass_private));\n"
+		"\tif (private == NULL) {\n"
+		"\t\treturn NULL;\n"
+		"\t}\n"
+		"\tprivate->htmlc = htmlc;\n"
+		"\tprivate->node = htmlc->document;\n"
+		"\t\n"
+		"\tjsobject = JS_InitClass(cx,\n"
+		"\t\tparent,\n"
+		"\t\tNULL,\n"
+		"\t\t&jsclass_object,\n"
+		"\t\tNULL,\n"
+		"\t\t0,\n"
+		"\t\tjsclass_properties,\n"
+		"\t\tjsclass_function, \n"
+		"\t\tNULL, \n"
+		"\t\tNULL);\n"
+		"\tif (jsdocument == NULL) {\n"
+		"\t\tfree(document);\n"
+		"\t\treturn NULL;\n"
+		"\t}\n"
+		"\n"
+		"\t/* attach private pointer */\n"
+		"\tif (JS_SetPrivate(cx, jsobject, private) != JS_TRUE) {\n"
+		"\t\tfree(private);\n"
+		"\t\treturn NULL;\n"
+		"\t}\n"
+		"\n"
+		"\treturn jsobject;\n"
+		"}\n",
+		binding->name);
+
+
+	return res;
+}
 
 static int
 output_property_spec(struct binding *binding)
@@ -343,8 +399,7 @@ output_property_spec(struct binding *binding)
 	int res;
 
 	fprintf(binding->outfile,
-		"static JSPropertySpec jsproperties_%s[] = {\n",
-		binding->name);
+		"static JSPropertySpec jsclass_properties[] = {\n");
 
 	res = generate_property_spec(binding, binding->interface);
 
@@ -359,8 +414,7 @@ output_function_spec(struct binding *binding)
 	int res;
 
 	fprintf(binding->outfile,
-		"static JSFunctionSpec jsfunctions_%s[] = {\n",
-		binding->name);
+		"static JSFunctionSpec jsclass_functions[] = {\n");
 
 	res = generate_function_spec(binding, binding->interface);
 
@@ -441,7 +495,7 @@ output_jsclass(struct binding *binding)
 		"	JS_EnumerateStub,\n"
 		"	(JSResolveOp)jsresove_node,\n"
 		"	JS_ConvertStub,\n"
-		"	jsfinalize_document,\n"
+		"	jsclass_finalize,\n"
 		"	JSCLASS_NO_OPTIONAL_MEMBERS\n"
 		"};\n\n", binding->interface);
 	return 0;
@@ -624,6 +678,11 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 	res = output_property_spec(binding);
 	if (res) {
 		return 12;
+	}
+
+	res = output_con_de_structors(binding);
+	if (res) {
+		return 13;
 	}
 
 	fclose(binding->outfile);
