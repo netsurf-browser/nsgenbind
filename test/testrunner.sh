@@ -12,7 +12,7 @@ TESTDIR=$2
 # locations
 LOGFILE=${BUILDDIR}/testlog
 
-GENJSBIND=${BUILDDIR}/genjsbind
+GENJSBIND=${BUILDDIR}/nsgenbind
 
 BINDINGDIR=${TESTDIR}/data/bindings
 BINDINGTESTS=$(ls ${BINDINGDIR}/*.bnd)
