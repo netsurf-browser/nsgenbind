@@ -1,6 +1,6 @@
 /* AST generator for the WEB IDL parser
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
@@ -136,7 +136,7 @@ webidl_node_for_each_type(struct webidl_node *node,
 	return 0;
 }
 
-/* exported interface defined in genjsbind-ast.h */
+/* exported interface defined in webidl-ast.h */
 int webidl_cmp_node_type(struct webidl_node *node, void *ctx)
 {
 	if (node->type == (enum webidl_node_type)ctx)
@@ -144,7 +144,7 @@ int webidl_cmp_node_type(struct webidl_node *node, void *ctx)
 	return 0;
 }
 
-/* exported interface defined in genjsbind-ast.h */
+/* exported interface defined in webidl-ast.h */
 struct webidl_node *
 webidl_node_find(struct webidl_node *node,
 		  struct webidl_node *prev,
@@ -172,7 +172,7 @@ webidl_node_find(struct webidl_node *node,
 }
 
 
-/* exported interface defined in genjsbind-ast.h */
+/* exported interface defined in webidl-ast.h */
 struct webidl_node *
 webidl_node_find_type(struct webidl_node *node,
 		  struct webidl_node *prev,

@@ -1,7 +1,7 @@
 %{
 /* parser for the binding generation config file 
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
@@ -10,14 +10,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "genjsbind-parser.h"
-#include "genjsbind-lexer.h"
+#include "nsgenbind-parser.h"
+#include "nsgenbind-lexer.h"
 #include "webidl-ast.h"
-#include "genjsbind-ast.h"
+#include "nsgenbind-ast.h"
 
 char *errtxt;
 
- static void genjsbind_error(YYLTYPE *locp, struct genbind_node **genbind_ast, const char *str)
+ static void nsgenbind_error(YYLTYPE *locp, struct genbind_node **genbind_ast, const char *str)
 {
     locp = locp;
     genbind_ast = genbind_ast;

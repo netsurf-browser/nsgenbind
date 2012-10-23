@@ -1,5 +1,5 @@
 # Define the component name
-COMPONENT := genjsbind
+COMPONENT := nsgenbind
 # And the component type
 COMPONENT_TYPE := binary
 # Component version
@@ -34,5 +34,5 @@ endif
 # Grab the core makefile
 include $(NSBUILD)/Makefile.top
 
-# Add extra install rules for our pkg-config control file and the library itself
+# Add extra install rules for binary
 INSTALL_ITEMS := $(INSTALL_ITEMS) /bin:$(BUILDDIR)/$(COMPONENT)$(EXEEXT)

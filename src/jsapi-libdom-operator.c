@@ -1,6 +1,6 @@
 /* operator body generation
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
@@ -13,7 +13,7 @@
 #include <stdlib.h>
 
 #include "options.h"
-#include "genjsbind-ast.h"
+#include "nsgenbind-ast.h"
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 

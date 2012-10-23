@@ -1,13 +1,13 @@
 /* binding file AST interface 
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsnsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
  */
 
-#ifndef genjsbind_genjsbind_ast_h
-#define genjsbind_genjsbind_ast_h
+#ifndef nsgenbind_nsgenbind_ast_h
+#define nsgenbind_nsgenbind_ast_h
 
 enum genbind_node_type {
 	GENBIND_NODE_TYPE_ROOT = 0,

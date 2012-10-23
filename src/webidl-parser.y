@@ -2,7 +2,7 @@
 
 /* This is a bison parser for Web IDL
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>

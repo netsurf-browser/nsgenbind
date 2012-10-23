@@ -1,6 +1,6 @@
 /* binding generator AST implementation for parser
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
@@ -15,14 +15,14 @@
 #include <errno.h>
 #include <string.h>
 
-#include "genjsbind-ast.h"
+#include "nsgenbind-ast.h"
 #include "options.h"
 
 /* parser and lexer interface */
-extern int genjsbind_debug;
-extern int genjsbind__flex_debug;
-extern void genjsbind_restart(FILE*);
-extern int genjsbind_parse(struct genbind_node **genbind_ast);
+extern int nsgenbind_debug;
+extern int nsgenbind__flex_debug;
+extern void nsgenbind_restart(FILE*);
+extern int nsgenbind_parse(struct genbind_node **genbind_ast);
 
 /* terminal nodes have a value only */
 struct genbind_node {
@@ -91,7 +91,7 @@ genbind_node_for_each_type(struct genbind_node *node,
 }
 
 
-/* exported interface defined in genjsbind-ast.h */
+/* exported interface defined in nsgenbind-ast.h */
 struct genbind_node *
 genbind_node_find(struct genbind_node *node,
 		  struct genbind_node *prev,
@@ -118,7 +118,7 @@ genbind_node_find(struct genbind_node *node,
 	return NULL;
 }
 
-/* exported interface defined in genjsbind-ast.h */
+/* exported interface defined in nsgenbind-ast.h */
 struct genbind_node *
 genbind_node_find_type(struct genbind_node *node,
 		       struct genbind_node *prev,
@@ -350,14 +350,14 @@ int genbind_parsefile(char *infilename, struct genbind_node **ast)
 	}
 
 	if (options->debug) {
-		genjsbind_debug = 1;
-		genjsbind__flex_debug = 1;
+		nsgenbind_debug = 1;
+		nsgenbind__flex_debug = 1;
 	}
 
 	/* set flex to read from file */
-	genjsbind_restart(infile);
+	nsgenbind_restart(infile);
 
 	/* process binding */
-	return genjsbind_parse(ast);
+	return nsgenbind_parse(ast);
 
 }

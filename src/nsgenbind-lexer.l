@@ -2,7 +2,7 @@
 
 /* lexer for the binding generation config file 
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
@@ -12,8 +12,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "genjsbind-parser.h"
-#include "genjsbind-ast.h"
+#include "nsgenbind-parser.h"
+#include "nsgenbind-ast.h"
 
 #define YY_USER_ACTION yylloc->first_line = yylloc->last_line; \
     yylloc->first_column = yylloc->last_column + 1; \
@@ -28,7 +28,7 @@
 %option bison-locations
 %option nodefault
 %option warn
-%option prefix="genjsbind_"
+%option prefix="nsgenbind_"
 %option nounput
 %option noinput
 %option noyywrap

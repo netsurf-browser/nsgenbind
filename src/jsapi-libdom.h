@@ -1,13 +1,13 @@
 /* binding generator output
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
  */
 
-#ifndef genjsbind_jsapi_libdom_h
-#define genjsbind_jsapi_libdom_h
+#ifndef nsgenbind_jsapi_libdom_h
+#define nsgenbind_jsapi_libdom_h
 
 struct binding {
 	struct genbind_node *gb_ast;

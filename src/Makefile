@@ -1,9 +1,9 @@
 CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/ -g
 
 # Sources in this directory
-DIR_SOURCES := genjsbind.c webidl-ast.c genjsbind-ast.c jsapi-libdom.c jsapi-libdom-operator.c
+DIR_SOURCES := nsgenbind.c webidl-ast.c nsgenbind-ast.c jsapi-libdom.c jsapi-libdom-operator.c
 
-SOURCES := $(SOURCES) $(BUILDDIR)/genjsbind-parser.c $(BUILDDIR)/genjsbind-lexer.c $(BUILDDIR)/webidl-parser.c $(BUILDDIR)/webidl-lexer.c
+SOURCES := $(SOURCES) $(BUILDDIR)/nsgenbind-parser.c $(BUILDDIR)/nsgenbind-lexer.c $(BUILDDIR)/webidl-parser.c $(BUILDDIR)/webidl-lexer.c
 
 $(BUILDDIR)/%-lexer.c $(BUILDDIR)/%-lexer.h: src/%-lexer.l
 	$(VQ)$(ECHO) "    FLEX: $<"

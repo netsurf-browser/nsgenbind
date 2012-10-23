@@ -1,6 +1,6 @@
 /* binding generator main and command line parsing
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
@@ -14,7 +14,7 @@
 #include <getopt.h>
 #include <errno.h>
 
-#include "genjsbind-ast.h"
+#include "nsgenbind-ast.h"
 #include "jsapi-libdom.h"
 #include "options.h"
 

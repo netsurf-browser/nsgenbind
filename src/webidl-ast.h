@@ -1,13 +1,13 @@
 /* Web IDL AST interface 
  *
- * This file is part of nsgenjsbind.
+ * This file is part of nsgenbind.
  * Licensed under the MIT License,
  *                http://www.opensource.org/licenses/mit-license.php
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
  */
 
-#ifndef genjsbind_webidl_ast_h
-#define genjsbind_webidl_ast_h
+#ifndef nsgenbind_webidl_ast_h
+#define nsgenbind_webidl_ast_h
 
 enum webidl_node_type {
 	/* generic node types which define structure or attributes */
