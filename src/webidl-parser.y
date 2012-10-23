@@ -388,7 +388,7 @@ DictionaryMembers:
 
  /* [13] */
 DictionaryMember:
-        Type TOK_IDENTIFIER Default ";"
+        Type TOK_IDENTIFIER Default ';'
         ;
 
  /* [14] */
