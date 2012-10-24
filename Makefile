@@ -35,4 +35,4 @@ endif
 include $(NSBUILD)/Makefile.top
 
 # Add extra install rules for binary
-INSTALL_ITEMS := $(INSTALL_ITEMS) /bin:$(BUILDDIR)/$(COMPONENT)$(EXEEXT)
+INSTALL_ITEMS := $(INSTALL_ITEMS) /bin:$(OUTPUT)
