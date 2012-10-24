@@ -326,9 +326,55 @@ static int webidl_private_cb(struct genbind_node *node, void *ctx)
 	if (type_node == NULL)
 		return -1; /* bad AST */
 
-	fprintf(binding->outfile, 
-		"        %s%s;\n", 
+	fprintf(binding->outfile,
+		"        %s%s;\n",
 		genbind_node_gettext(type_node),
+		genbind_node_gettext(ident_node));
+
+	return 0;
+}
+
+static int webidl_private_param_cb(struct genbind_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+	struct genbind_node *ident_node;
+	struct genbind_node *type_node;
+
+
+	ident_node = genbind_node_find_type(genbind_node_getnode(node),
+					    NULL,
+					    GENBIND_NODE_TYPE_IDENT);
+	if (ident_node == NULL)
+		return -1; /* bad AST */
+
+	type_node = genbind_node_find_type(genbind_node_getnode(node),
+					    NULL,
+					    GENBIND_NODE_TYPE_STRING);
+	if (type_node == NULL)
+		return -1; /* bad AST */
+
+	fprintf(binding->outfile,
+		",\n\t\t%s%s",
+		genbind_node_gettext(type_node),
+		genbind_node_gettext(ident_node));
+
+	return 0;
+}
+
+static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+	struct genbind_node *ident_node;
+	struct genbind_node *type_node;
+
+	ident_node = genbind_node_find_type(genbind_node_getnode(node),
+					    NULL,
+					    GENBIND_NODE_TYPE_IDENT);
+	if (ident_node == NULL)
+		return -1; /* bad AST */
+
+	fprintf(binding->outfile,
+		"\tprivate->%1$s = %1$s;\n",
 		genbind_node_gettext(ident_node));
 
 	return 0;
@@ -339,7 +385,18 @@ static int
 output_con_de_structors(struct binding *binding)
 {
 	int res = 0;
+	struct genbind_node *binding_node;
 
+	binding_node = genbind_node_find(binding->gb_ast,
+					 NULL,
+					 genbind_cmp_node_type,
+					 (void *)GENBIND_NODE_TYPE_BINDING);
+
+	if (binding_node == NULL) {
+		return -1;
+	}
+
+	/* finalize */
 	fprintf(binding->outfile,
 		"static void jsclass_finalize(JSContext *cx, JSObject *obj)\n"
 		"{"
@@ -351,8 +408,26 @@ output_con_de_structors(struct binding *binding)
 		"\t}\n"
 		"}\n\n");
 
+	/* resolve */
 	fprintf(binding->outfile,
-		"JSObject *jsapi_new_%s(JSContext *cx, JSObject *parent, struct html_content *htmlc)\n"
+		"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)\n"
+		"{\n"
+		"\t*objp = NULL;\n"
+		"\treturn JS_TRUE;\n"
+		"}\n\n");
+
+	/* constructor */
+	fprintf(binding->outfile,
+		"JSObject *jsapi_new_%s(JSContext *cx,\n\t\tJSObject *parent",
+		binding->interface);
+
+	genbind_node_for_each_type(genbind_node_getnode(binding_node),
+				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
+				   webidl_private_param_cb,
+				   binding);
+
+	fprintf(binding->outfile,
+		")\n"
 		"{\n"
 		"\tJSObject *jsobject;\n"
 		"\tstruct jsclass_private *private;\n"
@@ -360,10 +435,15 @@ output_con_de_structors(struct binding *binding)
 		"\tprivate = malloc(sizeof(struct jsclass_private));\n"
 		"\tif (private == NULL) {\n"
 		"\t\treturn NULL;\n"
-		"\t}\n"
-		"\tprivate->htmlc = htmlc;\n"
-		"\tprivate->node = htmlc->document;\n"
-		"\t\n"
+		"\t}\n");
+
+	genbind_node_for_each_type(genbind_node_getnode(binding_node),
+				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
+				   webidl_private_assign_cb,
+				   binding);
+
+	fprintf(binding->outfile,
+		"\n"
 		"\tjsobject = JS_InitClass(cx,\n"
 		"\t\tparent,\n"
 		"\t\tNULL,\n"
@@ -371,11 +451,11 @@ output_con_de_structors(struct binding *binding)
 		"\t\tNULL,\n"
 		"\t\t0,\n"
 		"\t\tjsclass_properties,\n"
-		"\t\tjsclass_function, \n"
+		"\t\tjsclass_functions, \n"
 		"\t\tNULL, \n"
 		"\t\tNULL);\n"
-		"\tif (jsdocument == NULL) {\n"
-		"\t\tfree(document);\n"
+		"\tif (jsobject == NULL) {\n"
+		"\t\tfree(private);\n"
 		"\t\treturn NULL;\n"
 		"\t}\n"
 		"\n"
@@ -386,8 +466,7 @@ output_con_de_structors(struct binding *binding)
 		"\t}\n"
 		"\n"
 		"\treturn jsobject;\n"
-		"}\n",
-		binding->name);
+		"}\n");
 
 
 	return res;
@@ -504,7 +583,7 @@ output_jsclass(struct binding *binding)
 		"	JS_ConvertStub,\n"
 		"	jsclass_finalize,\n"
 		"	JSCLASS_NO_OPTIONAL_MEMBERS\n"
-		"};\n\n", binding->interface);
+		"};\n\n", binding->name);
 	return 0;
 }
 
