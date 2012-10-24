@@ -205,7 +205,7 @@ output_operation_input(struct binding *binding,
 			/* JSBool */
 			fprintf(binding->outfile,
 				"\tif (!JS_ValueToBoolean(cx, argv[%d], &%s)) {\n"
-				"\t\treturn JS_FALSE\n"
+				"\t\treturn JS_FALSE;\n"
 				"\t}\n",
 				arg_cur,
 				webidl_node_gettext(arg_ident));
@@ -240,7 +240,7 @@ output_operation_input(struct binding *binding,
 			fprintf(binding->outfile,
 				"\t%1$s_jsstr = JS_ValueToString(cx, argv[%2$d]);\n"
 				"\tif (%1$s_jsstr == NULL) {\n"
-				"\t\treturn JS_FALSE\n"
+				"\t\treturn JS_FALSE;\n"
 				"\t}\n\n"
 				"\tJSString_to_char(%1$s_jsstr, %1$s, %1$s_len);\n",
 				webidl_node_gettext(arg_ident),

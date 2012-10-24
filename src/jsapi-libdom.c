@@ -483,6 +483,13 @@ output_property_body(struct binding *binding, const char *interface)
 static int
 output_jsclass(struct binding *binding)
 {
+	/* forward declare the resolver and finalizer */
+	fprintf(binding->outfile,
+		"static void jsclass_finalize(JSContext *cx, JSObject *obj);");
+	fprintf(binding->outfile,
+		"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);");
+
+	/* output the class */
 	fprintf(binding->outfile,
 		"static JSClass jsclass_object =\n"
 		"{\n"
@@ -493,7 +500,7 @@ output_jsclass(struct binding *binding)
 		"	JS_PropertyStub,\n"
 		"	JS_StrictPropertyStub,\n"
 		"	JS_EnumerateStub,\n"
-		"	(JSResolveOp)jsresove_node,\n"
+		"	(JSResolveOp)jsclass_resolve,\n"
 		"	JS_ConvertStub,\n"
 		"	jsclass_finalize,\n"
 		"	JSCLASS_NO_OPTIONAL_MEMBERS\n"
