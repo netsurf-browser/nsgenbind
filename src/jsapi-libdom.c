@@ -402,11 +402,12 @@ output_con_de_structors(struct binding *binding)
 		"{"
 		"\tstruct jsclass_private *private;\n"
 		"\n"
-		"\tprivate = JS_GetInstancePrivate(cx, obj, &jsclass_object, NULL);\n"
+		"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n"
 		"\tif (private != NULL) {\n"
 		"\t\tfree(private);\n"
 		"\t}\n"
-		"}\n\n");
+		"}\n\n", 
+		binding->interface);
 
 	/* resolve */
 	fprintf(binding->outfile,
@@ -447,7 +448,7 @@ output_con_de_structors(struct binding *binding)
 		"\tjsobject = JS_InitClass(cx,\n"
 		"\t\tparent,\n"
 		"\t\tNULL,\n"
-		"\t\t&jsclass_object,\n"
+		"\t\t&JSClass_%s,\n"
 		"\t\tNULL,\n"
 		"\t\t0,\n"
 		"\t\tjsclass_properties,\n"
@@ -466,7 +467,8 @@ output_con_de_structors(struct binding *binding)
 		"\t}\n"
 		"\n"
 		"\treturn jsobject;\n"
-		"}\n");
+		"}\n",
+		binding->interface);
 
 
 	return res;
@@ -564,15 +566,14 @@ output_jsclass(struct binding *binding)
 {
 	/* forward declare the resolver and finalizer */
 	fprintf(binding->outfile,
-		"static void jsclass_finalize(JSContext *cx, JSObject *obj);");
+		"static void jsclass_finalize(JSContext *cx, JSObject *obj);\n");
 	fprintf(binding->outfile,
-		"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);");
+		"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
 
 	/* output the class */
 	fprintf(binding->outfile,
-		"static JSClass jsclass_object =\n"
-		"{\n"
-		"        \"%s\",\n"
+		"JSClass JSClass_%1$s = {\n"
+		"        \"%1$s\",\n"
 		"	JSCLASS_NEW_RESOLVE | JSCLASS_HAS_PRIVATE,\n"
 		"	JS_PropertyStub,\n"
 		"	JS_PropertyStub,\n"
@@ -583,7 +584,8 @@ output_jsclass(struct binding *binding)
 		"	JS_ConvertStub,\n"
 		"	jsclass_finalize,\n"
 		"	JSCLASS_NO_OPTIONAL_MEMBERS\n"
-		"};\n\n", binding->name);
+		"};\n\n", 
+		binding->interface);
 	return 0;
 }
 

@@ -26,12 +26,14 @@ static void
 output_variable_definitions(struct binding *binding,
 			    struct webidl_node *operation_list)
 {
+	struct webidl_node *operation_ident;
 	struct webidl_node *arglist_node;
 	struct webidl_node *arglist; /* argument list */
 	struct webidl_node *arg_node = NULL;
 	struct webidl_node *arg_ident = NULL;
 	struct webidl_node *arg_type = NULL;
 	struct webidl_node *arg_type_base = NULL;
+	struct webidl_node *arg_type_ident = NULL;
 	enum webidl_type webidl_arg_type;
 
 	/* return value */
@@ -69,7 +71,27 @@ output_variable_definitions(struct binding *binding,
 
 		switch (webidl_arg_type) {
 		case WEBIDL_TYPE_USER:
-			fprintf(stderr, "Unsupported: WEBIDL_TYPE_USER\n");
+			if (options->verbose) {
+
+			operation_ident = webidl_node_find_type(operation_list,
+						  NULL,
+						  WEBIDL_NODE_TYPE_IDENT);
+
+			arg_type_ident = webidl_node_find_type(webidl_node_getnode(arg_type),
+						  NULL,
+						  WEBIDL_NODE_TYPE_IDENT);
+
+			fprintf(stderr, 
+				"User type: %s:%s %s\n",
+				webidl_node_gettext(operation_ident),
+				webidl_node_gettext(arg_type_ident),
+				webidl_node_gettext(arg_ident));
+			}
+			/* User type - jsobject then */
+			fprintf(binding->outfile,
+				"\tJSObject *%s = NULL;\n",
+				webidl_node_gettext(arg_ident));
+
 			break;
 
 		case WEBIDL_TYPE_BOOL:
@@ -199,6 +221,14 @@ output_operation_input(struct binding *binding,
 
 		switch (webidl_arg_type) {
 		case WEBIDL_TYPE_USER:
+			fprintf(binding->outfile,
+				"\tif ((!JSVAL_IS_NULL(argv[%1$d])) ||\n"
+				"\t\t(JSVAL_IS_PRIMITIVE(argv[%1$d]))) {\n"
+				"\t\treturn JS_FALSE;\n"
+				"\t}\n"
+				"\t%2$s = JSVAL_TO_OBJECT(argv[%1$d]);\n",
+				arg_cur,
+				webidl_node_gettext(arg_ident));
 			break;
 
 		case WEBIDL_TYPE_BOOL:
@@ -331,10 +361,11 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 			"\n"
 			"\tprivate = JS_GetInstancePrivate(cx,\n"
 			"\t\t\tJS_THIS_OBJECT(cx,vp),\n"
-			"\t\t\t&jsclass_object,\n"
+			"\t\t\t&JSClass_%s,\n"
 			"\t\t\tNULL);\n"
 			"\tif (private == NULL)\n"
-			"\t\treturn JS_FALSE;\n\n");
+			"\t\treturn JS_FALSE;\n\n",
+			binding->interface);
 
 
 		output_operation_input(binding, webidl_node_getnode(node));
