@@ -417,9 +417,32 @@ output_con_de_structors(struct binding *binding)
 		"\treturn JS_TRUE;\n"
 		"}\n\n");
 
+	/* class Initialisor */
+	fprintf(binding->outfile,
+		"JSObject *jsapi_InitClass_%1$s(JSContext *cx, JSObject *parent)\n"
+		"{\n"
+		"\tJSObject *jsobject;\n"
+		"\n"
+		"\tjsobject = JS_InitClass(cx,\n"
+		"\t\tparent,\n"
+		"\t\tNULL,\n"
+		"\t\t&JSClass_%1$s,\n"
+		"\t\tNULL,\n"
+		"\t\t0,\n"
+		"\t\tjsclass_properties,\n"
+		"\t\tjsclass_functions, \n"
+		"\t\tNULL, \n"
+		"\t\tNULL);\n"
+		"\treturn jsobject;\n"
+		"}\n\n",
+		binding->interface);
+
+
 	/* constructor */
 	fprintf(binding->outfile,
-		"JSObject *jsapi_new_%s(JSContext *cx,\n\t\tJSObject *parent",
+		"JSObject *jsapi_new_%s(JSContext *cx,\n"
+		"\t\tJSObject *proto,\n"
+		"\t\tJSObject *parent",
 		binding->interface);
 
 	genbind_node_for_each_type(genbind_node_getnode(binding_node),
@@ -445,16 +468,7 @@ output_con_de_structors(struct binding *binding)
 
 	fprintf(binding->outfile,
 		"\n"
-		"\tjsobject = JS_InitClass(cx,\n"
-		"\t\tparent,\n"
-		"\t\tNULL,\n"
-		"\t\t&JSClass_%s,\n"
-		"\t\tNULL,\n"
-		"\t\t0,\n"
-		"\t\tjsclass_properties,\n"
-		"\t\tjsclass_functions, \n"
-		"\t\tNULL, \n"
-		"\t\tNULL);\n"
+		"\tjsobject = JS_NewObject(cx, &JSClass_%s, proto, parent);\n"
 		"\tif (jsobject == NULL) {\n"
 		"\t\tfree(private);\n"
 		"\t\treturn NULL;\n"
