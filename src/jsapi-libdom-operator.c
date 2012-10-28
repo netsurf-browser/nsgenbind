@@ -360,9 +360,9 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 		fprintf(binding->outfile,
 			"\n"
 			"\tprivate = JS_GetInstancePrivate(cx,\n"
-			"\t\t\tJS_THIS_OBJECT(cx,vp),\n"
+			"\t\t\tJSAPI_THIS_OBJECT(cx,vp),\n"
 			"\t\t\t&JSClass_%s,\n"
-			"\t\t\tNULL);\n"
+			"\t\t\targv);\n"
 			"\tif (private == NULL)\n"
 			"\t\treturn JS_FALSE;\n\n",
 			binding->interface);
