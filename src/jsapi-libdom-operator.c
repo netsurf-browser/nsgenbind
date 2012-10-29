@@ -308,23 +308,6 @@ output_operation_input(struct binding *binding,
 
 }
 
-static void
-output_operation_code_block(struct binding *binding,
-			    struct genbind_node *operation_list)
-{
-	struct genbind_node *code_node;
-
-	code_node = genbind_node_find_type(operation_list,
-					   NULL,
-					   GENBIND_NODE_TYPE_CBLOCK);
-	if (code_node != NULL) {
-		fprintf(binding->outfile,
-			"%s\n",
-			genbind_node_gettext(code_node));
-	}
-}
-
-
 static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -376,8 +359,8 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 					      webidl_node_gettext(ident_node));
 
 		if (operation_node != NULL) {
-			output_operation_code_block(binding,
-				    genbind_node_getnode(operation_node));
+			output_code_block(binding,
+					  genbind_node_getnode(operation_node));
 
 		}
 

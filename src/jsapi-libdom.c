@@ -384,16 +384,6 @@ static int
 output_class_operations(struct binding *binding)
 {
 	int res = 0;
-	struct genbind_node *binding_node;
-
-	binding_node = genbind_node_find(binding->gb_ast,
-					 NULL,
-					 genbind_cmp_node_type,
-					 (void *)GENBIND_NODE_TYPE_BINDING);
-
-	if (binding_node == NULL) {
-		return -1;
-	}
 
 	/* finalize */
 	fprintf(binding->outfile,
@@ -418,40 +408,62 @@ output_class_operations(struct binding *binding)
 	return res;
 }
 
+void
+output_code_block(struct binding *binding, struct genbind_node *codelist)
+{
+	struct genbind_node *code_node;
+
+	code_node = genbind_node_find_type(codelist,
+					   NULL,
+					   GENBIND_NODE_TYPE_CBLOCK);
+	if (code_node != NULL) {
+		fprintf(binding->outfile,
+			"%s\n",
+			genbind_node_gettext(code_node));
+	}
+}
+
+/** generate class initialiser which create the javascript class prototype */
 static int
 output_class_init(struct binding *binding)
 {
 	int res = 0;
-	struct genbind_node *binding_node;
-
-	binding_node = genbind_node_find(binding->gb_ast,
-					 NULL,
-					 genbind_cmp_node_type,
-					 (void *)GENBIND_NODE_TYPE_BINDING);
-
-	if (binding_node == NULL) {
-		return -1;
-	}
+	struct genbind_node *api_node;
 
 	/* class Initialisor */
 	fprintf(binding->outfile,
 		"JSObject *jsapi_InitClass_%1$s(JSContext *cx, JSObject *parent)\n"
 		"{\n"
-		"\tJSObject *jsobject;\n"
-		"\n"
-		"\tjsobject = JS_InitClass(cx,\n"
-		"\t\tparent,\n"
-		"\t\tNULL,\n"
-		"\t\t&JSClass_%1$s,\n"
-		"\t\tNULL,\n"
-		"\t\t0,\n"
-		"\t\tjsclass_properties,\n"
-		"\t\tjsclass_functions, \n"
-		"\t\tNULL, \n"
-		"\t\tNULL);\n"
-		"\treturn jsobject;\n"
-		"}\n\n",
+		"\tJSObject *prototype;\n",
 		binding->interface);
+
+	api_node = genbind_node_find_type_ident(binding->gb_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_API,
+						      "init");
+
+	if (api_node != NULL) {
+		output_code_block(binding, genbind_node_getnode(api_node));
+	} else {
+		fprintf(binding->outfile,
+			"\n"
+			"\tprototype = JS_InitClass(cx,\n"
+			"\t\tparent,\n"
+			"\t\tNULL,\n"
+			"\t\t&JSClass_%1$s,\n"
+			"\t\tNULL,\n"
+			"\t\t0,\n"
+			"\t\tjsclass_properties,\n"
+			"\t\tjsclass_functions, \n"
+			"\t\tNULL, \n"
+			"\t\tNULL);\n",
+			binding->interface);
+	}
+
+	fprintf(binding->outfile,
+		"\treturn prototype;\n"
+		"}\n\n");
+
 	return res;
 }
 
@@ -460,6 +472,7 @@ output_class_new(struct binding *binding)
 {
 	int res = 0;
 	struct genbind_node *binding_node;
+	struct genbind_node *api_node;
 
 	binding_node = genbind_node_find(binding->gb_ast,
 					 NULL,
@@ -474,7 +487,7 @@ output_class_new(struct binding *binding)
 	/* constructor */
 	fprintf(binding->outfile,
 		"JSObject *jsapi_new_%s(JSContext *cx,\n"
-		"\t\tJSObject *proto,\n"
+		"\t\tJSObject *prototype,\n"
 		"\t\tJSObject *parent",
 		binding->interface);
 
@@ -486,7 +499,7 @@ output_class_new(struct binding *binding)
 	fprintf(binding->outfile,
 		")\n"
 		"{\n"
-		"\tJSObject *jsobject;\n"
+		"\tJSObject *newobject;\n"
 		"\tstruct jsclass_private *private;\n"
 		"\n"
 		"\tprivate = malloc(sizeof(struct jsclass_private));\n"
@@ -499,23 +512,34 @@ output_class_new(struct binding *binding)
 				   webidl_private_assign_cb,
 				   binding);
 
+	api_node = genbind_node_find_type_ident(binding->gb_ast,
+						NULL,
+						GENBIND_NODE_TYPE_API,
+						"new");
+
+	if (api_node != NULL) {
+		output_code_block(binding, genbind_node_getnode(api_node));
+	} else {
+		fprintf(binding->outfile,
+			"\n"
+			"\tnewobject = JS_NewObject(cx, &JSClass_%s, prototype, parent);\n"
+			"\tif (newobject == NULL) {\n"
+			"\t\tfree(private);\n"
+			"\t\treturn NULL;\n"
+			"\t}\n",
+			binding->interface);
+	}
+
 	fprintf(binding->outfile,
 		"\n"
-		"\tjsobject = JS_NewObject(cx, &JSClass_%s, proto, parent);\n"
-		"\tif (jsobject == NULL) {\n"
-		"\t\tfree(private);\n"
-		"\t\treturn NULL;\n"
-		"\t}\n"
-		"\n"
 		"\t/* attach private pointer */\n"
-		"\tif (JS_SetPrivate(cx, jsobject, private) != JS_TRUE) {\n"
+		"\tif (JS_SetPrivate(cx, newobject, private) != JS_TRUE) {\n"
 		"\t\tfree(private);\n"
 		"\t\treturn NULL;\n"
 		"\t}\n"
 		"\n"
-		"\treturn jsobject;\n"
-		"}\n",
-		binding->interface);
+		"\treturn newobject;\n"
+		"}\n");
 
 
 	return res;
