@@ -129,6 +129,7 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 	struct binding *binding = ctx;
 	struct webidl_node *ident_node;
 	struct webidl_node *modifier_node;
+	struct genbind_node *property_node;
 
 	ident_node = webidl_node_find(webidl_node_getnode(node),
 				      NULL,
@@ -160,13 +161,71 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 			"}\n\n");
 	}
 
+	/* property getter */
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
+		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"{\n",
 		webidl_node_gettext(ident_node));
+
+	/* return value */
+	fprintf(binding->outfile, "\tjsval jsretval = JSVAL_NULL;\n");
+
+	/* get context */
 	fprintf(binding->outfile,
-		"{\n"
-		"	JS_SET_RVAL(cx, vp, JSVAL_NULL);\n"
-		"	return JS_TRUE;\n");
+		"\tstruct jsclass_private *private;\n"
+		"\n"
+		"\tprivate = JS_GetInstancePrivate(cx,\n"
+		"\t\tobj,\n"
+		"\t\t&JSClass_%s,\n"
+		"\t\tNULL);\n"
+		"\tif (private == NULL)\n"
+		"\t\treturn JS_FALSE;\n\n", 
+		binding->interface);
+
+	property_node = genbind_node_find_type_ident(binding->gb_ast,
+				      NULL,
+				      GENBIND_NODE_TYPE_GETTER,
+				      webidl_node_gettext(ident_node));
+
+	if (property_node != NULL) {
+		/* binding source block */
+		output_code_block(binding, genbind_node_getnode(property_node));
+	} else {
+		/* examine internal variables and see if they are gettable */
+		struct genbind_node *binding_node;
+		struct genbind_node *internal_node = NULL;
+
+		binding_node = genbind_node_find_type(binding->gb_ast,
+						 NULL,
+						 GENBIND_NODE_TYPE_BINDING);
+
+		if (binding_node != NULL) {
+			internal_node = genbind_node_find_type_ident(genbind_node_getnode(binding_node),
+				      NULL,
+				      GENBIND_NODE_TYPE_BINDING_INTERNAL,
+				      webidl_node_gettext(ident_node));
+
+		}
+
+		if (internal_node != NULL) {
+			/** @todo fetching from internal entries ought to be type sensitive */
+			fprintf(binding->outfile,
+				"\tjsretval = OBJECT_TO_JSVAL(private->%s);\n",
+				webidl_node_gettext(ident_node));
+		} else {
+			fprintf(stderr, 
+				"Warning: property/attribute getter %s.%s has no implementation\n",
+				binding->interface,
+				webidl_node_gettext(ident_node));
+		}
+
+	}
+
+
+	fprintf(binding->outfile,
+		"\tJS_SET_RVAL(cx, vp, jsretval);\n"
+		"\treturn JS_TRUE;\n");
+
 	fprintf(binding->outfile, "}\n\n");
 
 

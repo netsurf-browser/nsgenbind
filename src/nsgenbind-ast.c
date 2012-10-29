@@ -198,6 +198,8 @@ struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 	case GENBIND_NODE_TYPE_BINDING_INTERNAL:
 	case GENBIND_NODE_TYPE_OPERATION:
 	case GENBIND_NODE_TYPE_API:
+	case GENBIND_NODE_TYPE_GETTER:
+	case GENBIND_NODE_TYPE_SETTER:
 		return node->r.node;
 
 	default:
@@ -246,6 +248,12 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 
 	case GENBIND_NODE_TYPE_API:
 		return "API";
+
+	case GENBIND_NODE_TYPE_GETTER:
+		return "Getter";
+
+	case GENBIND_NODE_TYPE_SETTER:
+		return "Setter";
 
 	case GENBIND_NODE_TYPE_CBLOCK:
 		return "CBlock";

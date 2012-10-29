@@ -362,6 +362,11 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 			output_code_block(binding,
 					  genbind_node_getnode(operation_node));
 
+		} else {
+			fprintf(stderr, 
+				"Warning: function/operation %s.%s has no implementation\n",
+				binding->interface,
+				webidl_node_gettext(ident_node));
 		}
 
 		/* set return value an return true */

@@ -45,6 +45,8 @@ char *errtxt;
 %token TOK_API
 %token TOK_BINDING
 %token TOK_OPERATION
+%token TOK_GETTER
+%token TOK_SETTER
 %token TOK_INTERFACE
 %token TOK_TYPE
 %token TOK_PRIVATE
@@ -71,6 +73,8 @@ char *errtxt;
 %type <node> Interface
 %type <node> Operation
 %type <node> Api
+%type <node> Getter
+%type <node> Setter
 
 %%
 
@@ -113,6 +117,10 @@ Statement
         Operation
         |
         Api
+        |
+        Getter
+        |
+        Setter
         ;
 
  /* [3] load a web IDL file */
@@ -181,6 +189,32 @@ Api
         TOK_API TOK_IDENTIFIER CBlock
         {
             $$ = genbind_new_node(GENBIND_NODE_TYPE_API, 
+                     NULL, 
+                     genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
+                         genbind_new_node(GENBIND_NODE_TYPE_CBLOCK, 
+                                          NULL, 
+                                          $3), 
+                         $2));
+        }
+
+Getter
+        :
+        TOK_GETTER TOK_IDENTIFIER CBlock
+        {
+            $$ = genbind_new_node(GENBIND_NODE_TYPE_GETTER, 
+                     NULL, 
+                     genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
+                         genbind_new_node(GENBIND_NODE_TYPE_CBLOCK, 
+                                          NULL, 
+                                          $3), 
+                         $2));
+        }
+
+Setter
+        :
+        TOK_SETTER TOK_IDENTIFIER CBlock
+        {
+            $$ = genbind_new_node(GENBIND_NODE_TYPE_SETTER, 
                      NULL, 
                      genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
                          genbind_new_node(GENBIND_NODE_TYPE_CBLOCK, 

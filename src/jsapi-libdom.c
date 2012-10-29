@@ -159,15 +159,6 @@ generate_function_spec(struct binding *binding, const char *interface)
 }
 
 
-
-
-
-
-
-
-
-
-
 static int webidl_private_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;

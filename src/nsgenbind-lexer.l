@@ -100,6 +100,10 @@ operation               return TOK_OPERATION;
 
 api                     return TOK_API;
 
+getter                  return TOK_GETTER;
+
+setter                  return TOK_SETTER;
+
 {cblockopen}            BEGIN(cblock);
 
 {identifier}        {
