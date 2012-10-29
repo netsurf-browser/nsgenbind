@@ -94,7 +94,11 @@ type                    return TOK_TYPE;
 
 private                 return TOK_PRIVATE;
 
+internal                return TOK_INTERNAL;
+
 operation               return TOK_OPERATION;
+
+api                     return TOK_API;
 
 {cblockopen}            BEGIN(cblock);
 

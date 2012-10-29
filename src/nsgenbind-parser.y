@@ -42,11 +42,13 @@ char *errtxt;
 %token TOK_HDR_COMMENT
 %token TOK_PREAMBLE
 
+%token TOK_API
 %token TOK_BINDING
 %token TOK_OPERATION
 %token TOK_INTERFACE
 %token TOK_TYPE
 %token TOK_PRIVATE
+%token TOK_INTERNAL
 
 %token <text> TOK_IDENTIFIER
 %token <text> TOK_STRING_LITERAL
@@ -65,8 +67,10 @@ char *errtxt;
 %type <node> BindingArg
 %type <node> Type
 %type <node> Private
+%type <node> Internal
 %type <node> Interface
 %type <node> Operation
+%type <node> Api
 
 %%
 
@@ -107,6 +111,8 @@ Statement
         Binding
         |
         Operation
+        |
+        Api
         ;
 
  /* [3] load a web IDL file */
@@ -162,12 +168,25 @@ Operation
         TOK_OPERATION TOK_IDENTIFIER CBlock
         {
             $$ = genbind_new_node(GENBIND_NODE_TYPE_OPERATION, 
-                                  NULL, 
-                                  genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
-                                                   genbind_new_node(GENBIND_NODE_TYPE_CBLOCK, 
-                                                                    NULL, 
-                                                                    $3), 
-                                                   $2));
+                     NULL, 
+                     genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
+                         genbind_new_node(GENBIND_NODE_TYPE_CBLOCK, 
+                                          NULL, 
+                                          $3), 
+                         $2));
+        }
+
+Api
+        :
+        TOK_API TOK_IDENTIFIER CBlock
+        {
+            $$ = genbind_new_node(GENBIND_NODE_TYPE_API, 
+                     NULL, 
+                     genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
+                         genbind_new_node(GENBIND_NODE_TYPE_CBLOCK, 
+                                          NULL, 
+                                          $3), 
+                         $2));
         }
 
 Binding
@@ -196,6 +215,8 @@ BindingArg
         | 
         Private
         | 
+        Internal
+        | 
         Interface
         ;
 
@@ -212,6 +233,16 @@ Private
         TOK_PRIVATE TOK_STRING_LITERAL TOK_IDENTIFIER ';'
         {
           $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_PRIVATE, NULL, 
+                 genbind_new_node(GENBIND_NODE_TYPE_IDENT,  
+                   genbind_new_node(GENBIND_NODE_TYPE_STRING, NULL, $2), $3));
+        }
+        ;
+
+Internal
+        :
+        TOK_INTERNAL TOK_STRING_LITERAL TOK_IDENTIFIER ';'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_INTERNAL, NULL, 
                  genbind_new_node(GENBIND_NODE_TYPE_IDENT,  
                    genbind_new_node(GENBIND_NODE_TYPE_STRING, NULL, $2), $3));
         }

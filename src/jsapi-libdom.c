@@ -365,7 +365,6 @@ static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
 	struct genbind_node *ident_node;
-	struct genbind_node *type_node;
 
 	ident_node = genbind_node_find_type(genbind_node_getnode(node),
 					    NULL,
@@ -382,7 +381,7 @@ static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
 
 
 static int
-output_con_de_structors(struct binding *binding)
+output_class_operations(struct binding *binding)
 {
 	int res = 0;
 	struct genbind_node *binding_node;
@@ -416,6 +415,23 @@ output_con_de_structors(struct binding *binding)
 		"\t*objp = NULL;\n"
 		"\treturn JS_TRUE;\n"
 		"}\n\n");
+	return res;
+}
+
+static int
+output_class_init(struct binding *binding)
+{
+	int res = 0;
+	struct genbind_node *binding_node;
+
+	binding_node = genbind_node_find(binding->gb_ast,
+					 NULL,
+					 genbind_cmp_node_type,
+					 (void *)GENBIND_NODE_TYPE_BINDING);
+
+	if (binding_node == NULL) {
+		return -1;
+	}
 
 	/* class Initialisor */
 	fprintf(binding->outfile,
@@ -436,6 +452,23 @@ output_con_de_structors(struct binding *binding)
 		"\treturn jsobject;\n"
 		"}\n\n",
 		binding->interface);
+	return res;
+}
+
+static int
+output_class_new(struct binding *binding)
+{
+	int res = 0;
+	struct genbind_node *binding_node;
+
+	binding_node = genbind_node_find(binding->gb_ast,
+					 NULL,
+					 genbind_cmp_node_type,
+					 (void *)GENBIND_NODE_TYPE_BINDING);
+
+	if (binding_node == NULL) {
+		return -1;
+	}
 
 
 	/* constructor */
@@ -634,6 +667,11 @@ output_private_declaration(struct binding *binding)
 				   webidl_private_cb,
 				   binding);
 
+	genbind_node_for_each_type(genbind_node_getnode(binding_node),
+				   GENBIND_NODE_TYPE_BINDING_INTERNAL,
+				   webidl_private_cb,
+				   binding);
+
 	fprintf(binding->outfile, "};\n\n");
 
 
@@ -782,9 +820,19 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 		return 12;
 	}
 
-	res = output_con_de_structors(binding);
+	res = output_class_operations(binding);
 	if (res) {
 		return 13;
+	}
+
+	res = output_class_init(binding);
+	if (res) {
+		return 14;
+	}
+
+	res = output_class_new(binding);
+	if (res) {
+		return 15;
 	}
 
 	fclose(binding->outfile);
