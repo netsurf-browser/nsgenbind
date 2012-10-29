@@ -17,6 +17,9 @@ struct binding {
 	FILE *outfile ; /* output file */
 };
 
+/** output code block from a node */
+void output_code_block(struct binding *binding, struct genbind_node *codelist);
+
 /* Generate jsapi native function bodys
  *
  * web IDL describes methods as operators
@@ -34,11 +37,12 @@ struct binding {
  */
 int output_operator_body(struct binding *binding, const char *interface);
 
+int output_property_spec(struct binding *binding);
+int output_property_body(struct binding *binding, const char *interface);
+
 /** Generate binding between jsapi and netsurf libdom */
 int jsapi_libdom_output(char *outfile, struct genbind_node *genbind_root);
 
-/** output code block from a node */
-void output_code_block(struct binding *binding, struct genbind_node *codelist);
 
 
 #endif
