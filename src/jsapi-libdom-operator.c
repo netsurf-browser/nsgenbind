@@ -162,6 +162,13 @@ output_variable_definitions(struct binding *binding,
 	arg_node = webidl_node_find_type(arglist,
 					 arg_node,
 					 WEBIDL_NODE_TYPE_ARGUMENT);
+
+	/* at least one argument or private need to generate argv variable */
+	if ((arg_node != NULL) || binding->has_private) {
+		fprintf(binding->outfile,
+			"\tjsval *argv = JSAPI_ARGV(cx, vp);\n");
+	}
+
 	while (arg_node != NULL) {
 		/* generate variable to hold the argument */
 		arg_ident = webidl_node_find_type(webidl_node_getnode(arg_node),
@@ -440,9 +447,6 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 			webidl_node_gettext(ident_node));
 		fprintf(binding->outfile,
 			"{\n");
-
-		fprintf(binding->outfile,
-			"\tjsval *argv = JSAPI_ARGV(cx, vp);\n");
 
 		output_variable_definitions(binding, webidl_node_getnode(node));
 
