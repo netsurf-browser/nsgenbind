@@ -1,4 +1,4 @@
-/* operator body generation
+/* function/operator generation
  *
  * This file is part of nsgenbind.
  * Licensed under the MIT License,
@@ -16,6 +16,115 @@
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
+
+static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+	struct webidl_node *ident_node;
+
+	ident_node = webidl_node_find(webidl_node_getnode(node),
+				      NULL,
+				      webidl_cmp_node_type,
+				      (void *)WEBIDL_NODE_TYPE_IDENT);
+
+	if (ident_node == NULL) {
+		/* operation without identifier - must have special keyword
+		 * http://www.w3.org/TR/WebIDL/#idl-operations
+		 */
+	} else {
+		fprintf(binding->outfile,
+			"    JSAPI_FS(%s, 0, 0),\n",
+			webidl_node_gettext(ident_node));
+	}
+	return 0;
+}
+
+
+static int generate_function_spec(struct binding *binding, const char *interface);
+
+/* callback to emit implements operator spec */
+static int webidl_function_spec_implements_cb(struct webidl_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+
+	return generate_function_spec(binding, webidl_node_gettext(node));
+}
+
+static int
+generate_function_spec(struct binding *binding, const char *interface)
+{
+	struct webidl_node *interface_node;
+	struct webidl_node *members_node;
+	struct webidl_node *inherit_node;
+	int res = 0;
+
+	/* find interface in webidl with correct ident attached */
+	interface_node = webidl_node_find_type_ident(binding->wi_ast,
+						     WEBIDL_NODE_TYPE_INTERFACE,
+						     interface);
+
+	if (interface_node == NULL) {
+		fprintf(stderr,
+			"Unable to find interface %s in loaded WebIDL\n",
+			interface);
+		return -1;
+	}
+
+	members_node = webidl_node_find(webidl_node_getnode(interface_node),
+					NULL,
+					webidl_cmp_node_type,
+					(void *)WEBIDL_NODE_TYPE_LIST);
+	while (members_node != NULL) {
+
+		fprintf(binding->outfile,"    /**** %s ****/\n", interface);
+
+		/* for each function emit a JSAPI_FS()*/
+		webidl_node_for_each_type(webidl_node_getnode(members_node),
+					  WEBIDL_NODE_TYPE_OPERATION,
+					  webidl_func_spec_cb,
+					  binding);
+
+		members_node = webidl_node_find(webidl_node_getnode(interface_node),
+						members_node,
+						webidl_cmp_node_type,
+						(void *)WEBIDL_NODE_TYPE_LIST);
+	}
+
+	/* check for inherited nodes and insert them too */
+	inherit_node = webidl_node_find(webidl_node_getnode(interface_node),
+					NULL,
+					webidl_cmp_node_type,
+					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
+
+	if (inherit_node != NULL) {
+		res = generate_function_spec(binding,
+					      webidl_node_gettext(inherit_node));
+	}
+
+	if (res == 0) {
+		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
+					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
+					webidl_function_spec_implements_cb,
+					binding);
+	}
+
+	return res;
+}
+
+int output_function_spec(struct binding *binding)
+{
+	int res;
+
+	fprintf(binding->outfile,
+		"static JSFunctionSpec jsclass_functions[] = {\n");
+
+	res = generate_function_spec(binding, binding->interface);
+
+	fprintf(binding->outfile, "   JSAPI_FS_END\n};\n\n");
+
+	return res;
+}
+
 
 /** creates all the variable definitions
  *
@@ -261,7 +370,7 @@ output_operation_input(struct binding *binding,
 		case WEBIDL_TYPE_LONG:
 			/* int32_t  */
 			fprintf(binding->outfile,
-				"\tint32_t %s = 0;\n",
+				"\t%s = 0;\n",
 				webidl_node_gettext(arg_ident));
 			break;
 
@@ -333,23 +442,22 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 			"{\n");
 
 		fprintf(binding->outfile,
-			"\tstruct jsclass_private *private;\n");
-
-		fprintf(binding->outfile,
 			"\tjsval *argv = JSAPI_ARGV(cx, vp);\n");
 
 		output_variable_definitions(binding, webidl_node_getnode(node));
 
-		fprintf(binding->outfile,
-			"\n"
-			"\tprivate = JS_GetInstancePrivate(cx,\n"
-			"\t\t\tJSAPI_THIS_OBJECT(cx,vp),\n"
-			"\t\t\t&JSClass_%s,\n"
-			"\t\t\targv);\n"
-			"\tif (private == NULL)\n"
-			"\t\treturn JS_FALSE;\n\n",
-			binding->interface);
-
+		if (binding->has_private) {
+			fprintf(binding->outfile,
+				"\tstruct jsclass_private *private;\n"
+				"\n"
+				"\tprivate = JS_GetInstancePrivate(cx,\n"
+				"\t\t\tJSAPI_THIS_OBJECT(cx,vp),\n"
+				"\t\t\t&JSClass_%s,\n"
+				"\t\t\targv);\n"
+				"\tif (private == NULL)\n"
+				"\t\treturn JS_FALSE;\n\n",
+				binding->interface);
+		}
 
 		output_operation_input(binding, webidl_node_getnode(node));
 
@@ -378,7 +486,13 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 	return 0;
 }
 
+/* callback to emit implements operator bodys */
+static int webidl_implements_cb(struct webidl_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
 
+	return output_operator_body(binding, webidl_node_gettext(node));
+}
 
 /* exported interface documented in jsapi-libdom.h */
 int
@@ -387,6 +501,7 @@ output_operator_body(struct binding *binding, const char *interface)
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
 	struct webidl_node *inherit_node;
+	int res = 0;
 
 	/* find interface in webidl with correct ident attached */
 	interface_node = webidl_node_find_type_ident(binding->wi_ast,
@@ -421,15 +536,21 @@ output_operator_body(struct binding *binding, const char *interface)
 	}
 
 	/* check for inherited nodes and insert them too */
-	inherit_node = webidl_node_find(webidl_node_getnode(interface_node),
+	inherit_node = webidl_node_find_type(webidl_node_getnode(interface_node),
 					NULL,
-					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
+					WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return output_operator_body(binding,
-					    webidl_node_gettext(inherit_node));
+		res = output_operator_body(binding,
+					   webidl_node_gettext(inherit_node));
 	}
 
-	return 0;
+	if (res == 0) {
+		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
+					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
+					webidl_implements_cb,
+					binding);
+	}
+
+	return res;
 }

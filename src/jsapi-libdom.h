@@ -12,8 +12,12 @@
 struct binding {
 	struct genbind_node *gb_ast;
 	struct webidl_node *wi_ast;
+
 	const char *name; /* name of the binding */
 	const char *interface; /* webidl interface binding is for */
+
+	bool has_private; /* true if the binding requires a private structure */
+
 	FILE *outfile ; /* output file */
 };
 
@@ -36,6 +40,7 @@ void output_code_block(struct binding *binding, struct genbind_node *codelist);
  * @param interface The interface to generate operator bodys for
  */
 int output_operator_body(struct binding *binding, const char *interface);
+int output_function_spec(struct binding *binding);
 
 int output_property_spec(struct binding *binding);
 int output_property_body(struct binding *binding, const char *interface);

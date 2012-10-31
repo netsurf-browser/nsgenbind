@@ -100,7 +100,7 @@ genbind_node_find(struct genbind_node *node,
 {
 	struct genbind_node *ret;
 
-	if (node == NULL) {
+	if ((node == NULL) || (node == prev)) {
 		return NULL;
 	}
 
@@ -139,27 +139,21 @@ genbind_node_find_type_ident(struct genbind_node *node,
 	struct genbind_node *found_node;
 	struct genbind_node *ident_node;
 
-	found_node = genbind_node_find(node,
-				       prev,
-				       genbind_cmp_node_type,
-				       (void *)type);
+	found_node = genbind_node_find_type(node, prev, type);
+
 
 	while (found_node != NULL) {
 
-		ident_node = genbind_node_find(genbind_node_getnode(found_node),
+		ident_node = genbind_node_find_type(genbind_node_getnode(found_node),
 					       NULL,
-					       genbind_cmp_node_type,
-					       (void *)GENBIND_NODE_TYPE_IDENT);
+					       GENBIND_NODE_TYPE_IDENT);
 		if (ident_node != NULL) {
 			if (strcmp(ident_node->r.text, ident) == 0)
 				break;
 		}
 
 		/* look for next matching node */
-		found_node = genbind_node_find(node,
-					       found_node,
-					       genbind_cmp_node_type,
-					       (void *)type);
+		found_node = genbind_node_find_type(node, found_node, type);
 
 	}
 	return found_node;

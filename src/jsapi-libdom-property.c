@@ -52,13 +52,22 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 	return 0;
 }
 
+static int generate_property_spec(struct binding *binding, const char *interface);
+/* callback to emit implements property spec */
+static int webidl_property_spec_implements_cb(struct webidl_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+
+	return generate_property_spec(binding, webidl_node_gettext(node));
+}
+
 static int
 generate_property_spec(struct binding *binding, const char *interface)
 {
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
 	struct webidl_node *inherit_node;
-
+	int res = 0;
 
 	/* find interface in webidl with correct ident attached */
 	interface_node = webidl_node_find_type_ident(binding->wi_ast,
@@ -102,11 +111,18 @@ generate_property_spec(struct binding *binding, const char *interface)
 					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return generate_property_spec(binding,
+		res = generate_property_spec(binding,
 					      webidl_node_gettext(inherit_node));
 	}
 
-	return 0;
+	if (res == 0) {
+		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
+					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
+					webidl_property_spec_implements_cb,
+					binding);
+	}
+
+	return res;
 }
 
 int
@@ -131,11 +147,9 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 	struct webidl_node *modifier_node;
 	struct genbind_node *property_node;
 
-	ident_node = webidl_node_find(webidl_node_getnode(node),
-				      NULL,
-				      webidl_cmp_node_type,
-				      (void *)WEBIDL_NODE_TYPE_IDENT);
-
+	ident_node = webidl_node_find_type(webidl_node_getnode(node),
+					   NULL,
+					   WEBIDL_NODE_TYPE_IDENT);
 	if (ident_node == NULL) {
 		/* properties must have an operator
 		 * http://www.w3.org/TR/WebIDL/#idl-attributes
@@ -143,10 +157,9 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 		return 1;
 	}
 
-	modifier_node = webidl_node_find(webidl_node_getnode(node),
-					 NULL,
-					 webidl_cmp_node_type,
-					 (void *)WEBIDL_NODE_TYPE_MODIFIER);
+	modifier_node = webidl_node_find_type(webidl_node_getnode(node),
+					      NULL,
+					      WEBIDL_NODE_TYPE_MODIFIER);
 
 
 	if (webidl_node_getint(modifier_node) != WEBIDL_TYPE_READONLY) {
@@ -170,17 +183,19 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 	/* return value */
 	fprintf(binding->outfile, "\tjsval jsretval = JSVAL_NULL;\n");
 
-	/* get context */
-	fprintf(binding->outfile,
-		"\tstruct jsclass_private *private;\n"
-		"\n"
-		"\tprivate = JS_GetInstancePrivate(cx,\n"
-		"\t\tobj,\n"
-		"\t\t&JSClass_%s,\n"
-		"\t\tNULL);\n"
-		"\tif (private == NULL)\n"
-		"\t\treturn JS_FALSE;\n\n", 
-		binding->interface);
+	if (binding->has_private) {
+		/* get context */
+		fprintf(binding->outfile,
+			"\tstruct jsclass_private *private;\n"
+			"\n"
+			"\tprivate = JS_GetInstancePrivate(cx,\n"
+			"\t\tobj,\n"
+			"\t\t&JSClass_%s,\n"
+			"\t\tNULL);\n"
+			"\tif (private == NULL)\n"
+			"\t\treturn JS_FALSE;\n\n", 
+			binding->interface);
+	}
 
 	property_node = genbind_node_find_type_ident(binding->gb_ast,
 				      NULL,
@@ -232,6 +247,13 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 	return 0;
 }
 
+/* callback to emit implements property bodys */
+static int webidl_implements_cb(struct webidl_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+
+	return output_property_body(binding, webidl_node_gettext(node));
+}
 
 int
 output_property_body(struct binding *binding, const char *interface)
@@ -239,7 +261,7 @@ output_property_body(struct binding *binding, const char *interface)
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
 	struct webidl_node *inherit_node;
-
+	int res = 0;
 
 	/* find interface in webidl with correct ident attached */
 	interface_node = webidl_node_find_type_ident(binding->wi_ast,
@@ -253,11 +275,9 @@ output_property_body(struct binding *binding, const char *interface)
 		return -1;
 	}
 
-	members_node = webidl_node_find(webidl_node_getnode(interface_node),
+	members_node = webidl_node_find_type(webidl_node_getnode(interface_node),
 					NULL,
-					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_LIST);
-
+					WEBIDL_NODE_TYPE_LIST);
 	while (members_node != NULL) {
 
 		fprintf(binding->outfile,"/**** %s ****/\n", interface);
@@ -269,22 +289,27 @@ output_property_body(struct binding *binding, const char *interface)
 					  binding);
 
 
-		members_node = webidl_node_find(webidl_node_getnode(interface_node),
+		members_node = webidl_node_find_type(webidl_node_getnode(interface_node),
 						members_node,
-						webidl_cmp_node_type,
-						(void *)WEBIDL_NODE_TYPE_LIST);
+						WEBIDL_NODE_TYPE_LIST);
 
 	}
 	/* check for inherited nodes and insert them too */
-	inherit_node = webidl_node_find(webidl_node_getnode(interface_node),
+	inherit_node = webidl_node_find_type(webidl_node_getnode(interface_node),
 					NULL,
-					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
+					WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		return output_property_body(binding,
+		res = output_property_body(binding,
 					    webidl_node_gettext(inherit_node));
 	}
 
-	return 0;
+	if (res == 0) {
+		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
+					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
+					webidl_implements_cb,
+					binding);
+	}
+
+	return res;
 }

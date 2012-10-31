@@ -193,26 +193,19 @@ webidl_node_find_type_ident(struct webidl_node *root_node,
 	struct webidl_node *node;
 	struct webidl_node *ident_node;
 
-	node = webidl_node_find(root_node,
-				NULL,
-				webidl_cmp_node_type,
-				(void *)type);
+	node = webidl_node_find_type(root_node,	NULL, type);
 
 	while (node != NULL) {
 
-		ident_node = webidl_node_find(webidl_node_getnode(node),
+		ident_node = webidl_node_find_type(webidl_node_getnode(node),
 					      NULL,
-					      webidl_cmp_node_type,
-					      (void *)WEBIDL_NODE_TYPE_IDENT);
+					      WEBIDL_NODE_TYPE_IDENT);
 		if (ident_node != NULL) {
 			if (strcmp(ident_node->r.text, ident) == 0)
 				break;
 		}
 
-		node = webidl_node_find(root_node,
-					node,
-					webidl_cmp_node_type,
-					(void *)type);
+		node = webidl_node_find_type(root_node,	node, type);
 
 	}
 	return node;
@@ -224,7 +217,7 @@ char *webidl_node_gettext(struct webidl_node *node)
 	switch(node->type) {
 	case WEBIDL_NODE_TYPE_IDENT:
 	case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
-
+	case WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS:
 		return node->r.text;
 
 	default:
@@ -288,6 +281,9 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 
 	case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
 		return "Inherit";
+
+	case WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS:
+		return "Implements";
 
 	case WEBIDL_NODE_TYPE_INTERFACE:
 		return "Interface";

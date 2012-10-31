@@ -167,22 +167,9 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %%
 
- /* default rule to add built AST to passed in one */
-Input:
-        Definitions
-        {
-            *webidl_ast = webidl_node_prepend(*webidl_ast, $1);
-        }
-        |
-        error
-        {
-            fprintf(stderr, "%d: %s\n", yylloc.first_line, errtxt);
-            free(errtxt);
-            YYABORT ;
-        }
-        ;
-
- /* [1] altered from original grammar to be left recusive, */
+ /* [1] default rule to add built AST to passed in one, altered from
+  *   original grammar to be left recusive, 
+  */
 Definitions:
         /* empty */
         {
@@ -191,7 +178,14 @@ Definitions:
         |
         Definitions ExtendedAttributeList Definition
         {
-          $$ = webidl_node_prepend($1, $3);
+          $$ = *webidl_ast = webidl_node_prepend(*webidl_ast, $3);
+        }
+        |
+        error
+        {
+            fprintf(stderr, "%d: %s\n", yylloc.first_line, errtxt);
+            free(errtxt);
+            YYABORT ;
         }
         ;
 
@@ -248,6 +242,7 @@ Interface:
             interface_node = webidl_node_find_type_ident(*webidl_ast,
                                                      WEBIDL_NODE_TYPE_INTERFACE,
                                                      $2);
+ 
             if (interface_node == NULL) {
                 /* no existing interface - create one with ident */
                 members = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
@@ -480,7 +475,31 @@ Typedef:
 ImplementsStatement:
         TOK_IDENTIFIER TOK_IMPLEMENTS TOK_IDENTIFIER ';'
         {
-            $$ = NULL;
+            /* extend interface with implements members */
+            struct webidl_node *implements;
+            struct webidl_node *interface_node;
+
+
+            interface_node = webidl_node_find_type_ident(*webidl_ast,
+                                                     WEBIDL_NODE_TYPE_INTERFACE,
+                                                     $1);
+
+            implements = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS, NULL, $3);
+
+            if (interface_node == NULL) {
+                /* interface doesnt already exist so create it */
+
+                implements = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, implements, $1);
+
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, implements);
+            } else {
+                /* update the existing interface */
+
+                /* link implements node into interfaces_node */
+                webidl_node_add(interface_node, implements);
+
+                $$ = NULL; /* updating so no need to add a new node */
+            }
         }
         ;
 
