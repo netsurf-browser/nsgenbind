@@ -17,6 +17,9 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
+#define WARN(msg, args...) fprintf(stderr, "%s: warning:"msg"\n", __func__, ## args);
+
+
 static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -125,6 +128,219 @@ int output_function_spec(struct binding *binding)
 	return res;
 }
 
+static int output_return(struct binding *binding,
+			 const char *ident,
+			 struct webidl_node *node)
+{
+	struct webidl_node *arglist_node = NULL;
+	struct webidl_node *type_node = NULL;
+	struct webidl_node *type_base = NULL;
+	enum webidl_type webidl_arg_type;
+
+	arglist_node = webidl_node_find_type(node,
+					NULL,
+					WEBIDL_NODE_TYPE_LIST);
+
+	if (arglist_node == NULL) {
+		return -1; /* @todo check if this is broken AST */
+	}
+
+	type_node = webidl_node_find_type(webidl_node_getnode(arglist_node),
+					 NULL,
+					 WEBIDL_NODE_TYPE_TYPE);
+
+	type_base = webidl_node_find_type(webidl_node_getnode(type_node),
+					      NULL,
+					      WEBIDL_NODE_TYPE_TYPE_BASE);
+
+	webidl_arg_type = webidl_node_getint(type_base);
+
+	switch (webidl_arg_type) {
+	case WEBIDL_TYPE_USER:
+		/* User type are represented with jsobject */
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
+			ident);
+
+		break;
+
+	case WEBIDL_TYPE_BOOL:
+		/* JSBool */
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(%s));\n",
+			ident);
+
+		break;
+
+	case WEBIDL_TYPE_BYTE:
+		WARN("Unhandled type WEBIDL_TYPE_BYTE");
+		break;
+
+	case WEBIDL_TYPE_OCTET:
+		WARN("Unhandled type WEBIDL_TYPE_OCTET");
+		break;
+
+	case WEBIDL_TYPE_FLOAT:
+	case WEBIDL_TYPE_DOUBLE:
+		/* double */
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(%s));\n",
+			ident);
+		break;
+
+	case WEBIDL_TYPE_SHORT:
+		WARN("Unhandled type WEBIDL_TYPE_SHORT");
+		break;
+
+	case WEBIDL_TYPE_LONGLONG:
+		WARN("Unhandled type WEBIDL_TYPE_LONGLONG");
+		break;
+
+	case WEBIDL_TYPE_LONG:
+		/* int32_t  */
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
+			ident);
+		break;
+
+	case WEBIDL_TYPE_STRING:
+		/* JSString * */
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, STRING_TO_JSVAL(%s));\n",
+			ident);
+		break;
+
+	case WEBIDL_TYPE_SEQUENCE:
+		WARN("Unhandled type WEBIDL_TYPE_SEQUENCE");
+		break;
+
+	case WEBIDL_TYPE_OBJECT:
+		/* JSObject * */
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
+			ident);
+		break;
+
+	case WEBIDL_TYPE_DATE:
+		WARN("Unhandled type WEBIDL_TYPE_DATE");
+		break;
+
+	case WEBIDL_TYPE_VOID:
+		/* specifically requires no value */
+		break;
+
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+
+/* generate variable declaration of the correct type with appropriate default */
+static int output_return_declaration(struct binding *binding,
+				     const char *ident,
+				     struct webidl_node *node)
+{
+	struct webidl_node *arglist_node = NULL;
+	struct webidl_node *type_node = NULL;
+	struct webidl_node *type_base = NULL;
+	struct webidl_node *type_name = NULL;
+	enum webidl_type webidl_arg_type;
+
+	arglist_node = webidl_node_find_type(node,
+					NULL,
+					WEBIDL_NODE_TYPE_LIST);
+
+	if (arglist_node == NULL) {
+		return -1; /* @todo check if this is broken AST */
+	}
+
+	type_node = webidl_node_find_type(webidl_node_getnode(arglist_node),
+					 NULL,
+					 WEBIDL_NODE_TYPE_TYPE);
+
+	type_base = webidl_node_find_type(webidl_node_getnode(type_node),
+					      NULL,
+					      WEBIDL_NODE_TYPE_TYPE_BASE);
+
+	webidl_arg_type = webidl_node_getint(type_base);
+
+	switch (webidl_arg_type) {
+	case WEBIDL_TYPE_USER:
+		/* User type are represented with jsobject */
+		type_name = webidl_node_find_type(webidl_node_getnode(type_node),
+						  NULL,
+						  WEBIDL_NODE_TYPE_IDENT);
+		fprintf(binding->outfile,
+			"\tJSObject *%s = NULL; /* %s */\n",
+			ident,
+			webidl_node_gettext(type_name));
+
+		break;
+
+	case WEBIDL_TYPE_BOOL:
+		/* JSBool */
+		fprintf(binding->outfile, "\tJSBool %s = JS_FALSE;\n",ident);
+
+		break;
+
+	case WEBIDL_TYPE_BYTE:
+		WARN("Unhandled type WEBIDL_TYPE_BYTE");
+		break;
+
+	case WEBIDL_TYPE_OCTET:
+		WARN("Unhandled type WEBIDL_TYPE_OCTET");
+		break;
+
+	case WEBIDL_TYPE_FLOAT:
+	case WEBIDL_TYPE_DOUBLE:
+		/* double */
+		fprintf(binding->outfile, "\tdouble %s = 0;\n",	ident);
+		break;
+
+	case WEBIDL_TYPE_SHORT:
+		WARN("Unhandled type WEBIDL_TYPE_SHORT");
+		break;
+
+	case WEBIDL_TYPE_LONGLONG:
+		WARN("Unhandled type WEBIDL_TYPE_LONGLONG");
+		break;
+
+	case WEBIDL_TYPE_LONG:
+		/* int32_t  */
+		fprintf(binding->outfile, "\tint32_t %s = 0;\n", ident);
+		break;
+
+	case WEBIDL_TYPE_STRING:
+		/* JSString * */
+		fprintf(binding->outfile,
+			"\tJSString *%s = NULL;\n",
+			ident);
+		break;
+
+	case WEBIDL_TYPE_SEQUENCE:
+		WARN("Unhandled type WEBIDL_TYPE_SEQUENCE");
+		break;
+
+	case WEBIDL_TYPE_OBJECT:
+		/* JSObject * */
+		fprintf(binding->outfile, "\tJSObject *%s = NULL;\n", ident);
+		break;
+
+	case WEBIDL_TYPE_DATE:
+		WARN("Unhandled type WEBIDL_TYPE_DATE");
+		break;
+
+	case WEBIDL_TYPE_VOID:
+		/* specifically requires no value */
+		break;
+
+	default:
+		break;
+	}
+	return 0;
+}
 
 /** creates all the variable definitions
  *
@@ -144,9 +360,6 @@ output_variable_definitions(struct binding *binding,
 	struct webidl_node *arg_type_base = NULL;
 	struct webidl_node *arg_type_ident = NULL;
 	enum webidl_type webidl_arg_type;
-
-	/* return value */
-	fprintf(binding->outfile, "\tjsval jsretval = JSVAL_VOID;\n");
 
 	/* input variables */
 	arglist_node = webidl_node_find_type(operation_list,
@@ -197,7 +410,7 @@ output_variable_definitions(struct binding *binding,
 						  NULL,
 						  WEBIDL_NODE_TYPE_IDENT);
 
-			fprintf(stderr, 
+			fprintf(stderr,
 				"User type: %s:%s %s\n",
 				webidl_node_gettext(operation_ident),
 				webidl_node_gettext(arg_type_ident),
@@ -448,6 +661,9 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 		fprintf(binding->outfile,
 			"{\n");
 
+		/* return value declaration */
+		output_return_declaration(binding, "jsret", webidl_node_getnode(node));
+
 		output_variable_definitions(binding, webidl_node_getnode(node));
 
 		if (binding->has_private) {
@@ -475,15 +691,16 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 					  genbind_node_getnode(operation_node));
 
 		} else {
-			fprintf(stderr, 
-				"Warning: function/operation %s.%s has no implementation\n",
+			fprintf(stderr,
+				"warning: operation %s.%s has no implementation\n",
 				binding->interface,
 				webidl_node_gettext(ident_node));
 		}
 
+		output_return(binding, "jsret", webidl_node_getnode(node));
+
 		/* set return value an return true */
 		fprintf(binding->outfile,
-			"\tJSAPI_SET_RVAL(cx, vp, jsretval);\n"
 			"\treturn JS_TRUE;\n"
 			"}\n\n");
 	}
