@@ -159,7 +159,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_USER:
 		/* User type are represented with jsobject */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
+			"\tJSAPI_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
 			ident);
 
 		break;
@@ -167,7 +167,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_BOOL:
 		/* JSBool */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(%s));\n",
+			"\tJSAPI_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(%s));\n",
 			ident);
 
 		break;
@@ -184,7 +184,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_DOUBLE:
 		/* double */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(%s));\n",
+			"\tJSAPI_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
@@ -199,14 +199,14 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_LONG:
 		/* int32_t  */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
+			"\tJSAPI_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
 	case WEBIDL_TYPE_STRING:
 		/* JSString * */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, STRING_TO_JSVAL(%s));\n",
+			"\tJSAPI_SET_RVAL(cx, vp, STRING_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
@@ -217,7 +217,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_OBJECT:
 		/* JSObject * */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
+			"\tJSAPI_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
