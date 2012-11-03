@@ -29,7 +29,6 @@ static int webidl_file_cb(struct genbind_node *node, void *ctx)
 	filename = genbind_node_gettext(node);
 
 	return webidl_parsefile(filename, webidl_ast);
-
 }
 
 static int
@@ -154,7 +153,7 @@ static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
 
 
 static int
-output_class_operations(struct binding *binding)
+output_api_operations(struct binding *binding)
 {
 	int res = 0;
 
@@ -169,17 +168,19 @@ output_class_operations(struct binding *binding)
 			"\tif (private != NULL) {\n"
 			"\t\tfree(private);\n"
 			"\t}\n"
-			"}\n\n", 
+			"}\n\n",
 			binding->interface);
 	}
 
-	/* resolve */
-	fprintf(binding->outfile,
-		"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)\n"
-		"{\n"
-		"\t*objp = NULL;\n"
-		"\treturn JS_TRUE;\n"
-		"}\n\n");
+	if (binding->has_resolve) {
+		/* resolve */
+		fprintf(binding->outfile,
+			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)\n"
+			"{\n"
+			"\t*objp = NULL;\n"
+			"\treturn JS_TRUE;\n"
+			"}\n\n");
+	}
 	return res;
 }
 
@@ -328,63 +329,71 @@ output_class_new(struct binding *binding)
 	return res;
 }
 
-
-
-
-
 static int
 output_jsclass(struct binding *binding)
 {
+	if (binding->has_resolve) {
+		/* forward declare the resolver */
+		fprintf(binding->outfile,
+			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
+	}
+
 	if (binding->has_private) {
 
-		/* forward declare the resolver and finalizer */
+		/* forward declare the finalizer */
 		fprintf(binding->outfile,
-			"static void jsclass_finalize(JSContext *cx, JSObject *obj);\n");
-	
-		fprintf(binding->outfile,
-			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
-
-
-		/* output the class */
-		fprintf(binding->outfile,
-			"JSClass JSClass_%1$s = {\n"
-			"        \"%1$s\",\n"
-			"	JSCLASS_NEW_RESOLVE | JSCLASS_HAS_PRIVATE,\n"
-			"	JS_PropertyStub,\n"
-			"	JS_PropertyStub,\n"
-			"	JS_PropertyStub,\n"
-			"	JS_StrictPropertyStub,\n"
-			"	JS_EnumerateStub,\n"
-			"	(JSResolveOp)jsclass_resolve,\n"
-			"	JS_ConvertStub,\n"
-			"	jsclass_finalize,\n"
-			"	JSCLASS_NO_OPTIONAL_MEMBERS\n"
-			"};\n\n", 
-			binding->interface);
-	} else {
-		/* forward declare the resolver */
-	
-		fprintf(binding->outfile,
-			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
-
-
-		/* output the class */
-		fprintf(binding->outfile,
-			"JSClass JSClass_%1$s = {\n"
-			"        \"%1$s\",\n"
-			"	JSCLASS_NEW_RESOLVE,\n"
-			"	JS_PropertyStub,\n"
-			"	JS_PropertyStub,\n"
-			"	JS_PropertyStub,\n"
-			"	JS_StrictPropertyStub,\n"
-			"	JS_EnumerateStub,\n"
-			"	(JSResolveOp)jsclass_resolve,\n"
-			"	JS_ConvertStub,\n"
-			"	JS_FinalizeStub,\n"
-			"	JSCLASS_NO_OPTIONAL_MEMBERS\n"
-			"};\n\n", 
-			binding->interface);
+			"static void jsclass_finalize(JSContext *cx, JSObject *obj);\n\n");
 	}
+
+	/* output the class */
+	fprintf(binding->outfile,
+		"JSClass JSClass_%1$s = {\n"
+		"\t\"%1$s\",\n",
+		binding->interface);
+
+	/* generate class flags */
+	if (binding->has_global) {
+		fprintf(binding->outfile, "\tJSCLASS_GLOBAL_FLAGS");
+	} else {
+		fprintf(binding->outfile, "\t0");
+	}
+
+	if (binding->has_resolve) {
+		fprintf(binding->outfile, " | JSCLASS_NEW_RESOLVE");
+	}
+
+	if (binding->has_private) {
+		fprintf(binding->outfile, " | JSCLASS_HAS_PRIVATE");
+	}
+
+	fprintf(binding->outfile, ",\n");
+
+	/* stubs */
+	fprintf(binding->outfile,
+		"\tJS_PropertyStub,\n"
+		"\tJS_PropertyStub,\n"
+		"\tJS_PropertyStub,\n"
+		"\tJS_StrictPropertyStub,\n"
+		"\tJS_EnumerateStub,\n");
+
+	/* resolver */
+	if (binding->has_resolve) {
+		fprintf(binding->outfile, "\t(JSResolveOp)jsclass_resolve,\n");
+	} else {
+		fprintf(binding->outfile, "\tJS_ResolveStub,\n");
+	}
+
+	fprintf(binding->outfile, "\tJS_ConvertStub,\n");
+
+	if (binding->has_private) {
+		fprintf(binding->outfile, "\tjsclass_finalize,\n");
+	} else {
+		fprintf(binding->outfile, "\tJS_FinalizeStub,\n");
+	}
+
+	fprintf(binding->outfile,
+		"\tJSCLASS_NO_OPTIONAL_MEMBERS\n"
+		"};\n\n");
 	return 0;
 }
 
@@ -480,7 +489,37 @@ binding_has_private(struct genbind_node *binding_node)
 	if (node != NULL) {
 		return true;
 	}
-	return false;	
+	return false;
+}
+
+static bool
+binding_has_resolve(struct binding *binding)
+{
+	struct genbind_node *api_node;
+
+	api_node = genbind_node_find_type_ident(binding->gb_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_API,
+						      "resolve");
+	if (api_node != NULL) {
+		return true;
+	}
+	return false;
+}
+
+static bool
+binding_has_global(struct binding *binding)
+{
+	struct genbind_node *api_node;
+
+	api_node = genbind_node_find_type_ident(binding->gb_ast,
+						NULL,
+						GENBIND_NODE_TYPE_API,
+						"global");
+	if (api_node != NULL) {
+		return true;
+	}
+	return false;
 }
 
 static struct binding *
@@ -543,6 +582,8 @@ binding_new(char *outfilename, struct genbind_node *genbind_ast)
 	nb->interface = genbind_node_gettext(interface_node);
 	nb->outfile = outfile;
 	nb->has_private = binding_has_private(binding_node);
+	nb->has_resolve = binding_has_resolve(nb);
+	nb->has_global = binding_has_global(nb);
 	return nb;
 }
 
@@ -598,7 +639,7 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 		return 12;
 	}
 
-	res = output_class_operations(binding);
+	res = output_api_operations(binding);
 	if (res) {
 		return 13;
 	}

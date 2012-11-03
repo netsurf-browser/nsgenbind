@@ -17,6 +17,8 @@ struct binding {
 	const char *interface; /* webidl interface binding is for */
 
 	bool has_private; /* true if the binding requires a private structure */
+	bool has_resolve; /* true if the binding api requires a resolve */
+	bool has_global; /* true if the binding is for a global */
 
 	FILE *outfile ; /* output file */
 };
