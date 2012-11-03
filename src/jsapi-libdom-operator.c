@@ -206,7 +206,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_STRING:
 		/* JSString * */
 		fprintf(binding->outfile,
-			"\tJSAPI_SET_RVAL(cx, vp, STRING_TO_JSVAL(%s));\n",
+			"\tJSAPI_SET_RVAL(cx, vp, JSAPI_STRING_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
