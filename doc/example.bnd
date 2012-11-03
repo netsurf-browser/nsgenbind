@@ -173,7 +173,7 @@ setter baz %{
  *  JSObject *jsapi_InitClass_HTMLElement(JSContext *cx, JSObject *parent)
  */
 api init %{
-  %}
+%}
 
 /* implementation of the c instance creation
  *
@@ -199,11 +199,11 @@ api init %{
  *
  */
 api new %{
-  %}
+%}
 
 /* additional code in the instance finalise operation.
  *
- * The body is copied verbatum into the output 
+ * The body is copied verbatim into the output 
  *
  * Prototype is 
  * void jsclass_finalize(JSContext *cx, JSObject *obj)
@@ -211,7 +211,7 @@ api new %{
  * private is available (if appropriate) and freed after the body
  */
 api finalise %{
-  %}
+%}
 
 /* resolver code
  *
@@ -219,11 +219,18 @@ api finalise %{
  *  JSResolveOp with JSCLASS_NEW_RESOLVE specified and must provide a
  *  complete implementation.
  *
- * The body is copied verbatum into the output 
+ * The body is copied verbatim into the output 
  *
  * Prototype is:
  * JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)
  *
  */
 api resolve %{
-  %}
+%}
+
+/* mark the generated interface as a a global object
+ *
+ * The body is discarded.
+ */
+api global %{
+%}
