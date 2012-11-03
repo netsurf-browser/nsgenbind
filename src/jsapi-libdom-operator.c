@@ -536,6 +536,7 @@ output_operation_input(struct binding *binding,
 	struct webidl_node *arg_ident = NULL;
 	struct webidl_node *arg_type = NULL;
 	struct webidl_node *arg_type_base = NULL;
+	struct webidl_node *type_mod = NULL;
 	enum webidl_type webidl_arg_type;
 
 	int arg_cur = 0; /* current position in the input argument vector */
@@ -611,9 +612,21 @@ output_operation_input(struct binding *binding,
 
 		case WEBIDL_TYPE_LONG:
 			/* int32_t  */
-			fprintf(binding->outfile,
-				"\t%s = 0;\n",
-				webidl_node_gettext(arg_ident));
+			type_mod = webidl_node_find_type(webidl_node_getnode(arg_type),
+							 NULL,
+							 WEBIDL_NODE_TYPE_MODIFIER);
+			if ((type_mod != NULL) && 
+			    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
+				fprintf(binding->outfile, 
+					"\tJS_ValueToECMAUint32(cx, argv[%d], &%s);\n", 
+					arg_cur,
+					webidl_node_gettext(arg_ident));
+			} else {
+				fprintf(binding->outfile, 
+					"\tJS_ValueToECMAInt32(cx, argv[%d], &%s);\n", 
+					arg_cur,
+					webidl_node_gettext(arg_ident));
+			}
 			break;
 
 		case WEBIDL_TYPE_STRING:
