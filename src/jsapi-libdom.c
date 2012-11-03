@@ -161,23 +161,43 @@ output_api_operations(struct binding *binding)
 		/* finalizer only required if there is a private to free */
 		fprintf(binding->outfile,
 			"static void jsclass_finalize(JSContext *cx, JSObject *obj)\n"
-			"{"
+			"{\n"
 			"\tstruct jsclass_private *private;\n"
 			"\n"
-			"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n"
+			"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
+			binding->interface);
+
+		if (binding->finalise != NULL) {
+			output_code_block(binding, genbind_node_getnode(binding->finalise));
+		}
+
+		fprintf(binding->outfile,
 			"\tif (private != NULL) {\n"
 			"\t\tfree(private);\n"
 			"\t}\n"
-			"}\n\n",
-			binding->interface);
+			"}\n\n");
+	} else if (binding->finalise != NULL) {
+		/* finaliser without private data */
+		fprintf(binding->outfile,
+			"static void jsclass_finalize(JSContext *cx, JSObject *obj)\n"
+			"{\n");
+
+		output_code_block(binding, genbind_node_getnode(binding->finalise));
+
+		fprintf(binding->outfile,
+			"}\n\n");
+
 	}
 
-	if (binding->has_resolve) {
-		/* resolve */
+	if (binding->resolve != NULL) {
+		/* generate resolver entry */
 		fprintf(binding->outfile,
 			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)\n"
-			"{\n"
-			"\t*objp = NULL;\n"
+			"{\n");
+
+		output_code_block(binding, genbind_node_getnode(binding->resolve));
+
+		fprintf(binding->outfile,
 			"\treturn JS_TRUE;\n"
 			"}\n\n");
 	}
@@ -332,13 +352,13 @@ output_class_new(struct binding *binding)
 static int
 output_jsclass(struct binding *binding)
 {
-	if (binding->has_resolve) {
+	if (binding->resolve != NULL) {
 		/* forward declare the resolver */
 		fprintf(binding->outfile,
 			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
 	}
 
-	if (binding->has_private) {
+	if (binding->has_private || (binding->finalise != NULL)) {
 
 		/* forward declare the finalizer */
 		fprintf(binding->outfile,
@@ -358,7 +378,7 @@ output_jsclass(struct binding *binding)
 		fprintf(binding->outfile, "\t0");
 	}
 
-	if (binding->has_resolve) {
+	if (binding->resolve != NULL) {
 		fprintf(binding->outfile, " | JSCLASS_NEW_RESOLVE");
 	}
 
@@ -377,7 +397,7 @@ output_jsclass(struct binding *binding)
 		"\tJS_EnumerateStub,\n");
 
 	/* resolver */
-	if (binding->has_resolve) {
+	if (binding->resolve != NULL) {
 		fprintf(binding->outfile, "\t(JSResolveOp)jsclass_resolve,\n");
 	} else {
 		fprintf(binding->outfile, "\tJS_ResolveStub,\n");
@@ -385,7 +405,7 @@ output_jsclass(struct binding *binding)
 
 	fprintf(binding->outfile, "\tJS_ConvertStub,\n");
 
-	if (binding->has_private) {
+	if (binding->has_private || (binding->finalise != NULL)) {
 		fprintf(binding->outfile, "\tjsclass_finalize,\n");
 	} else {
 		fprintf(binding->outfile, "\tJS_FinalizeStub,\n");
@@ -493,21 +513,6 @@ binding_has_private(struct genbind_node *binding_node)
 }
 
 static bool
-binding_has_resolve(struct binding *binding)
-{
-	struct genbind_node *api_node;
-
-	api_node = genbind_node_find_type_ident(binding->gb_ast,
-						      NULL,
-						      GENBIND_NODE_TYPE_API,
-						      "resolve");
-	if (api_node != NULL) {
-		return true;
-	}
-	return false;
-}
-
-static bool
 binding_has_global(struct binding *binding)
 {
 	struct genbind_node *api_node;
@@ -582,8 +587,15 @@ binding_new(char *outfilename, struct genbind_node *genbind_ast)
 	nb->interface = genbind_node_gettext(interface_node);
 	nb->outfile = outfile;
 	nb->has_private = binding_has_private(binding_node);
-	nb->has_resolve = binding_has_resolve(nb);
 	nb->has_global = binding_has_global(nb);
+	nb->resolve = genbind_node_find_type_ident(genbind_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_API,
+						      "resolve");
+	nb->finalise = genbind_node_find_type_ident(genbind_ast,
+						    NULL,
+						    GENBIND_NODE_TYPE_API,
+						    "finalise");
 	return nb;
 }
 
