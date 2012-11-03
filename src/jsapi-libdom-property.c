@@ -251,6 +251,7 @@ static int output_return_declaration(struct binding *binding,
 	struct webidl_node *type_node = NULL;
 	struct webidl_node *type_base = NULL;
 	struct webidl_node *type_name = NULL;
+	struct webidl_node *type_mod = NULL;
 	enum webidl_type webidl_arg_type;
 
 	type_node = webidl_node_find_type(webidl_node_getnode(node),
@@ -306,7 +307,20 @@ static int output_return_declaration(struct binding *binding,
 
 	case WEBIDL_TYPE_LONG:
 		/* int32_t  */
-		fprintf(binding->outfile, "\tint32_t %s = 0;\n", ident);
+		type_mod = webidl_node_find_type(webidl_node_getnode(type_node),
+						 NULL,
+						 WEBIDL_NODE_TYPE_MODIFIER);
+		if ((type_mod != NULL) && 
+		    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
+			fprintf(binding->outfile, 
+				"\tuint32_t %s = 0;\n", 
+				ident);
+		} else {
+			fprintf(binding->outfile, 
+				"\tint32_t %s = 0;\n", 
+				ident);
+		}
+
 		break;
 
 	case WEBIDL_TYPE_STRING:

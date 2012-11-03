@@ -244,9 +244,10 @@ static int output_return_declaration(struct binding *binding,
 {
 	struct webidl_node *arglist_node = NULL;
 	struct webidl_node *type_node = NULL;
-	struct webidl_node *type_base = NULL;
 	struct webidl_node *type_name = NULL;
+	struct webidl_node *type_base = NULL;
 	enum webidl_type webidl_arg_type;
+	struct webidl_node *type_mod = NULL;
 
 	arglist_node = webidl_node_find_type(node,
 					NULL,
@@ -265,6 +266,7 @@ static int output_return_declaration(struct binding *binding,
 					      WEBIDL_NODE_TYPE_TYPE_BASE);
 
 	webidl_arg_type = webidl_node_getint(type_base);
+
 
 	switch (webidl_arg_type) {
 	case WEBIDL_TYPE_USER:
@@ -309,7 +311,15 @@ static int output_return_declaration(struct binding *binding,
 
 	case WEBIDL_TYPE_LONG:
 		/* int32_t  */
-		fprintf(binding->outfile, "\tint32_t %s = 0;\n", ident);
+		type_mod = webidl_node_find_type(webidl_node_getnode(type_node),
+					      NULL,
+					      WEBIDL_NODE_TYPE_MODIFIER);
+		if ((type_mod != NULL) && 
+		    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
+			fprintf(binding->outfile, "\tuint32_t %s = 0;\n", ident);
+		} else {
+			fprintf(binding->outfile, "\tint32_t %s = 0;\n", ident);
+		}
 		break;
 
 	case WEBIDL_TYPE_STRING:
@@ -360,6 +370,7 @@ output_variable_definitions(struct binding *binding,
 	struct webidl_node *arg_type_base = NULL;
 	struct webidl_node *arg_type_ident = NULL;
 	enum webidl_type webidl_arg_type;
+	struct webidl_node *type_mod = NULL;
 
 	/* input variables */
 	arglist_node = webidl_node_find_type(operation_list,
@@ -457,9 +468,20 @@ output_variable_definitions(struct binding *binding,
 
 		case WEBIDL_TYPE_LONG:
 			/* int32_t  */
-			fprintf(binding->outfile,
-				"\tint32_t %s = 0;\n",
-				webidl_node_gettext(arg_ident));
+			type_mod = webidl_node_find_type(webidl_node_getnode(arg_type),
+							 NULL,
+							 WEBIDL_NODE_TYPE_MODIFIER);
+			if ((type_mod != NULL) && 
+			    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
+				fprintf(binding->outfile, 
+					"\tuint32_t %s = 0;\n", 
+					webidl_node_gettext(arg_ident));
+			} else {
+				fprintf(binding->outfile, 
+					"\tint32_t %s = 0;\n", 
+					webidl_node_gettext(arg_ident));
+			}
+
 			break;
 
 		case WEBIDL_TYPE_STRING:
