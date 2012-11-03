@@ -36,7 +36,7 @@ static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 		 */
 	} else {
 		fprintf(binding->outfile,
-			"    JSAPI_FS(%s, 0, 0),\n",
+			"\tJSAPI_FS(%s, 0, 0),\n",
 			webidl_node_gettext(ident_node));
 	}
 	return 0;
@@ -79,7 +79,7 @@ generate_function_spec(struct binding *binding, const char *interface)
 					(void *)WEBIDL_NODE_TYPE_LIST);
 	while (members_node != NULL) {
 
-		fprintf(binding->outfile,"    /**** %s ****/\n", interface);
+		fprintf(binding->outfile,"\t/**** %s ****/\n", interface);
 
 		/* for each function emit a JSAPI_FS()*/
 		webidl_node_for_each_type(webidl_node_getnode(members_node),
@@ -123,7 +123,7 @@ int output_function_spec(struct binding *binding)
 
 	res = generate_function_spec(binding, binding->interface);
 
-	fprintf(binding->outfile, "   JSAPI_FS_END\n};\n\n");
+	fprintf(binding->outfile, "\tJSAPI_FS_END\n};\n\n");
 
 	return res;
 }

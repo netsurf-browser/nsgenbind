@@ -17,6 +17,9 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
+#define WARN(msg, args...) fprintf(stderr, "%s: warning:"msg"\n", __func__, ## args);
+
+
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -41,11 +44,11 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 	} else {
 		if (webidl_node_getint(modifier_node) == WEBIDL_TYPE_READONLY) {
 			fprintf(binding->outfile,
-				"    JSAPI_PS_RO(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
+				"\tJSAPI_PS_RO(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
 				webidl_node_gettext(ident_node));
 		} else {
 			fprintf(binding->outfile,
-				"    JSAPI_PS(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
+				"\tJSAPI_PS(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
 				webidl_node_gettext(ident_node));
 		}
 	}
@@ -88,7 +91,7 @@ generate_property_spec(struct binding *binding, const char *interface)
 
 	while (members_node != NULL) {
 
-		fprintf(binding->outfile,"    /**** %s ****/\n", interface);
+		fprintf(binding->outfile,"\t/**** %s ****/\n", interface);
 
 
 		/* for each function emit a JSAPI_FS()*/
@@ -135,12 +138,10 @@ output_property_spec(struct binding *binding)
 
 	res = generate_property_spec(binding, binding->interface);
 
-	fprintf(binding->outfile, "    JSAPI_PS_END\n};\n\n");
+	fprintf(binding->outfile, "\tJSAPI_PS_END\n};\n\n");
 
 	return res;
 }
-
-#define WARN(msg, args...) fprintf(stderr, "%s: warning:"msg"\n", __func__, ## args);
 
 static int output_return(struct binding *binding,
 			 const char *ident,
