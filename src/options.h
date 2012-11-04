@@ -12,6 +12,8 @@
 struct options {
 	char *outfilename;
 	char *infilename;
+	char *depfilename;
+	FILE *depfilehandle;
 	char *idlpath;
 	bool verbose;
 	bool debug;

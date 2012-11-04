@@ -30,7 +30,7 @@ static struct options* process_cmdline(int argc, char **argv)
 		return NULL;
 	}
 
-	while ((opt = getopt(argc, argv, "vdI:o:")) != -1) {
+	while ((opt = getopt(argc, argv, "vDd:I:o:")) != -1) {
 		switch (opt) {
 		case 'I':
 			options->idlpath = strdup(optarg);
@@ -40,17 +40,21 @@ static struct options* process_cmdline(int argc, char **argv)
 			options->outfilename = strdup(optarg);
 			break;
 
+		case 'd':
+			options->depfilename = strdup(optarg);
+			break;
+
 		case 'v':
 			options->verbose = true;
 			break;
 
-		case 'd':
+		case 'D':
 			options->debug = true;
 			break;
 
 		default: /* '?' */
 			fprintf(stderr, 
-			     "Usage: %s [-I idlpath] [-o filename] inputfile\n",
+			     "Usage: %s [-d depfilename] [-I idlpath] [-o filename] inputfile\n",
 				argv[0]);
 			free(options);
 			return NULL;
@@ -87,6 +91,32 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
+	if (options->depfilename != NULL &&
+	    options->outfilename == NULL) {
+		fprintf(stderr,
+			"Error: output to stdout with dep generation would fail\n");
+		return 3;
+	}
+
+	if (options->depfilename != NULL &&
+	    options->infilename == NULL) {
+		fprintf(stderr,
+			"Error: input from stdin with dep generation would fail\n");
+		return 3;
+	}
+
+	if (options->depfilename != NULL) {
+		options->depfilehandle = fopen(options->depfilename, "w");
+		if (options->depfilehandle == NULL) {
+			fprintf(stderr,
+				"Error: unable to open dep file\n");
+			return 4;
+		}
+		fprintf(options->depfilehandle,
+			"%s %s :", options->depfilename,
+			options->outfilename);
+	}
+
 	res = genbind_parsefile(options->infilename, &genbind_root);
 	if (res != 0) {
 		fprintf(stderr, "Error: parse failed with code %d\n", res);
@@ -102,6 +132,11 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Error: output failed with code %d\n", res);
 		unlink(options->outfilename);
 		return res;
+	}
+
+	if (options->depfilehandle != NULL) {
+		fputc('\n', options->depfilehandle);
+		fclose(options->depfilehandle);
 	}
 
 	return 0;

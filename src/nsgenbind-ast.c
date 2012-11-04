@@ -299,6 +299,10 @@ FILE *genbindopen(const char *filename)
 			}
 			prevfilepath = strndup(filename,fulllen);
 		}
+		if (options->depfilehandle != NULL) {
+			fprintf(options->depfilehandle, " \\\n\t%s",
+				filename);
+		}
 		return genfile;
 	}
 
@@ -315,6 +319,10 @@ FILE *genbindopen(const char *filename)
 			if (options->verbose) {
 				printf("Opened Genbind file %s\n", fullname);
 			}
+			if (options->depfilehandle != NULL) {
+				fprintf(options->depfilehandle, " \\\n\t%s",
+					fullname);
+			}
 			free(fullname);
 			return genfile;
 		}
@@ -329,6 +337,10 @@ FILE *genbindopen(const char *filename)
 		genfile = fopen(fullname, "r");
 		if ((genfile != NULL) && options->verbose) {
 			printf("Opend Genbind file %s\n", fullname);
+			if (options->depfilehandle != NULL) {
+				fprintf(options->depfilehandle, " \\\n\t%s",
+					fullname);
+			}
 		}
 
 		free(fullname);
