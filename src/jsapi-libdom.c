@@ -157,8 +157,9 @@ output_api_operations(struct binding *binding)
 {
 	int res = 0;
 
+	/* finalise */
 	if (binding->has_private) {
-		/* finalizer only required if there is a private to free */
+		/* finalizer with private to free */
 		fprintf(binding->outfile,
 			"static void jsclass_finalize(JSContext *cx, JSObject *obj)\n"
 			"{\n"
@@ -196,6 +197,27 @@ output_api_operations(struct binding *binding)
 			"{\n");
 
 		output_code_block(binding, genbind_node_getnode(binding->resolve));
+
+		fprintf(binding->outfile,
+			"\treturn JS_TRUE;\n"
+			"}\n\n");
+	}
+
+	if (binding->mark != NULL) {
+		/* generate trace/mark entry */
+		fprintf(binding->outfile,
+			"static JSBool jsclass_mark(JSTracer *trc, JSObject *obj)\n"
+			"{\n");
+		if(binding->has_private) {
+
+			fprintf(binding->outfile,
+				"\tstruct jsclass_private *private;\n"
+				"\n"
+				"\tprivate = JS_GetInstancePrivate(trc->context, obj, &JSClass_%s, NULL);\n",
+				binding->interface);
+		}
+
+		output_code_block(binding, genbind_node_getnode(binding->mark));
 
 		fprintf(binding->outfile,
 			"\treturn JS_TRUE;\n"
@@ -358,6 +380,11 @@ output_jsclass(struct binding *binding)
 			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
 	}
 
+	if (binding->mark != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool jsclass_mark(JSTracer *trc, JSObject *obj);\n\n");
+	}
+
 	if (binding->has_private || (binding->finalise != NULL)) {
 
 		/* forward declare the finalizer */
@@ -382,6 +409,10 @@ output_jsclass(struct binding *binding)
 		fprintf(binding->outfile, " | JSCLASS_NEW_RESOLVE");
 	}
 
+	if (binding->mark != NULL) {
+		fprintf(binding->outfile, " | JSCLASS_MARK_IS_TRACE");
+	}
+
 	if (binding->has_private) {
 		fprintf(binding->outfile, " | JSCLASS_HAS_PRIVATE");
 	}
@@ -390,11 +421,11 @@ output_jsclass(struct binding *binding)
 
 	/* stubs */
 	fprintf(binding->outfile,
-		"\tJS_PropertyStub,\n"
-		"\tJS_PropertyStub,\n"
-		"\tJS_PropertyStub,\n"
-		"\tJS_StrictPropertyStub,\n"
-		"\tJS_EnumerateStub,\n");
+		"\tJS_PropertyStub,\t/* addProperty */\n"
+		"\tJS_PropertyStub,\t/* delProperty */\n"
+		"\tJS_PropertyStub,\t/* getProperty */\n"
+		"\tJS_StrictPropertyStub,\t/* setProperty */\n"
+		"\tJS_EnumerateStub,\t/* enumerate */\n");
 
 	/* resolver */
 	if (binding->resolve != NULL) {
@@ -403,16 +434,30 @@ output_jsclass(struct binding *binding)
 		fprintf(binding->outfile, "\tJS_ResolveStub,\n");
 	}
 
-	fprintf(binding->outfile, "\tJS_ConvertStub,\n");
+	fprintf(binding->outfile, "\tJS_ConvertStub,\t/* convert */\n");
 
 	if (binding->has_private || (binding->finalise != NULL)) {
 		fprintf(binding->outfile, "\tjsclass_finalize,\n");
 	} else {
 		fprintf(binding->outfile, "\tJS_FinalizeStub,\n");
 	}
+	fprintf(binding->outfile,
+		"\t0,\t/* reserved */\n"
+		"\tNULL,\t/* checkAccess */\n"
+		"\tNULL,\t/* call */\n"
+		"\tNULL,\t/* construct */"
+		"\tNULL,\t/* xdr Object */"
+		"\tNULL,\t/* hasInstance */");
+
+	/* trace/mark */
+	if (binding->mark != NULL) {
+		fprintf(binding->outfile, "\t(JSMarkOp)jsclass_mark,\n");
+	} else {
+		fprintf(binding->outfile, "\tNULL, /* trace/mark */\n");
+	}
 
 	fprintf(binding->outfile,
-		"\tJSCLASS_NO_OPTIONAL_MEMBERS\n"
+		"\tJSCLASS_NO_INTERNAL_MEMBERS\n"
 		"};\n\n");
 	return 0;
 }
@@ -596,6 +641,11 @@ binding_new(char *outfilename, struct genbind_node *genbind_ast)
 						    NULL,
 						    GENBIND_NODE_TYPE_API,
 						    "finalise");
+
+	nb->mark = genbind_node_find_type_ident(genbind_ast,
+						    NULL,
+						    GENBIND_NODE_TYPE_API,
+						    "mark");
 	return nb;
 }
 

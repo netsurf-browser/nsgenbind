@@ -18,8 +18,9 @@ struct binding {
 
 	bool has_private; /* true if the binding requires a private structure */
 	bool has_global; /* true if the binding is for a global */
-	struct genbind_node *resolve; /* the binding api resolve node or NULL */
-	struct genbind_node *finalise; /* the binding api finalise node or NULL*/
+	struct genbind_node *resolve; /* binding api resolve node or NULL */
+	struct genbind_node *finalise; /* binding api finalise node or NULL */
+	struct genbind_node *mark; /* binding api mark node or NULL */
 
 	FILE *outfile ; /* output file */
 };
