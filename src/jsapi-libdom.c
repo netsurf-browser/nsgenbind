@@ -457,7 +457,7 @@ output_jsclass(struct binding *binding)
 	}
 
 	fprintf(binding->outfile,
-		"\tJSCLASS_NO_INTERNAL_MEMBERS\n"
+		"\tJSAPI_CLASS_NO_INTERNAL_MEMBERS\n"
 		"};\n\n");
 	return 0;
 }
