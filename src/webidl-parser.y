@@ -390,6 +390,7 @@ DictionaryMember:
 PartialDictionary:
         TOK_DICTIONARY TOK_IDENTIFIER '{' DictionaryMembers '}' ';'
         {
+            $$ = NULL;
         }
 
  /* [15] */
