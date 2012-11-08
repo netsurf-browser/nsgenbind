@@ -207,14 +207,14 @@ output_api_operations(struct binding *binding)
 	if (binding->mark != NULL) {
 		/* generate trace/mark entry */
 		fprintf(binding->outfile,
-			"static JSBool jsclass_mark(JSTracer *trc, JSObject *obj)\n"
+			"static JSAPI_MARKOP(jsclass_mark)\n"
 			"{\n");
 		if(binding->has_private) {
 
 			fprintf(binding->outfile,
 				"\tstruct jsclass_private *private;\n"
 				"\n"
-				"\tprivate = JS_GetInstancePrivate(trc->context, obj, &JSClass_%s, NULL);\n",
+				"\tprivate = JS_GetInstancePrivate(JSAPI_MARKCX, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
 		}
 
@@ -412,7 +412,7 @@ output_jsclass(struct binding *binding)
 	}
 
 	if (binding->mark != NULL) {
-		fprintf(binding->outfile, " | JSCLASS_MARK_IS_TRACE");
+		fprintf(binding->outfile, " | JSAPI_JSCLASS_MARK_IS_TRACE");
 	}
 
 	if (binding->has_private) {
@@ -447,13 +447,13 @@ output_jsclass(struct binding *binding)
 		"\t0,\t/* reserved */\n"
 		"\tNULL,\t/* checkAccess */\n"
 		"\tNULL,\t/* call */\n"
-		"\tNULL,\t/* construct */"
-		"\tNULL,\t/* xdr Object */"
-		"\tNULL,\t/* hasInstance */");
+		"\tNULL,\t/* construct */\n"
+		"\tNULL,\t/* xdr Object */\n"
+		"\tNULL,\t/* hasInstance */\n");
 
 	/* trace/mark */
 	if (binding->mark != NULL) {
-		fprintf(binding->outfile, "\t(JSMarkOp)jsclass_mark,\n");
+		fprintf(binding->outfile, "\tJSAPI_JSCLASS_MARKOP(jsclass_mark),\n");
 	} else {
 		fprintf(binding->outfile, "\tNULL, /* trace/mark */\n");
 	}
