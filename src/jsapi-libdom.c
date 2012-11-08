@@ -383,7 +383,7 @@ output_jsclass(struct binding *binding)
 
 	if (binding->mark != NULL) {
 		fprintf(binding->outfile,
-			"static JSBool jsclass_mark(JSTracer *trc, JSObject *obj);\n\n");
+			"static JSAPI_MARKOP(jsclass_mark);\n\n");
 	}
 
 	if (binding->has_private || (binding->finalise != NULL)) {
