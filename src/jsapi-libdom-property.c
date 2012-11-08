@@ -17,9 +17,6 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
-#define WARN(msg, args...) fprintf(stderr, "%s: warning:"msg"\n", __func__, ## args);
-
-
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -179,11 +176,11 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_BYTE:
-		WARN("Unhandled type WEBIDL_TYPE_BYTE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_BYTE");
 		break;
 
 	case WEBIDL_TYPE_OCTET:
-		WARN("Unhandled type WEBIDL_TYPE_OCTET");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_OCTET");
 		break;
 
 	case WEBIDL_TYPE_FLOAT:
@@ -195,11 +192,11 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SHORT:
-		WARN("Unhandled type WEBIDL_TYPE_SHORT");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_SHORT");
 		break;
 
 	case WEBIDL_TYPE_LONGLONG:
-		WARN("Unhandled type WEBIDL_TYPE_LONGLONG");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_LONGLONG");
 		break;
 
 	case WEBIDL_TYPE_LONG:
@@ -217,7 +214,7 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SEQUENCE:
-		WARN("Unhandled type WEBIDL_TYPE_SEQUENCE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_SEQUENCE");
 		break;
 
 	case WEBIDL_TYPE_OBJECT:
@@ -228,7 +225,7 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_DATE:
-		WARN("Unhandled type WEBIDL_TYPE_DATE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_DATE");
 		break;
 
 	case WEBIDL_TYPE_VOID:
@@ -284,11 +281,11 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_BYTE:
-		WARN("Unhandled type WEBIDL_TYPE_BYTE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_BYTE");
 		break;
 
 	case WEBIDL_TYPE_OCTET:
-		WARN("Unhandled type WEBIDL_TYPE_OCTET");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_OCTET");
 		break;
 
 	case WEBIDL_TYPE_FLOAT:
@@ -298,11 +295,11 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SHORT:
-		WARN("Unhandled type WEBIDL_TYPE_SHORT");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_SHORT");
 		break;
 
 	case WEBIDL_TYPE_LONGLONG:
-		WARN("Unhandled type WEBIDL_TYPE_LONGLONG");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_LONGLONG");
 		break;
 
 	case WEBIDL_TYPE_LONG:
@@ -331,7 +328,7 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SEQUENCE:
-		WARN("Unhandled type WEBIDL_TYPE_SEQUENCE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_SEQUENCE");
 		break;
 
 	case WEBIDL_TYPE_OBJECT:
@@ -340,7 +337,7 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_DATE:
-		WARN("Unhandled type WEBIDL_TYPE_DATE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_DATE");
 		break;
 
 	case WEBIDL_TYPE_VOID:
@@ -350,6 +347,25 @@ static int output_return_declaration(struct binding *binding,
 	default:
 		break;
 	}
+	return 0;
+}
+
+static int 
+output_property_placeholder(struct binding *binding, 
+			    struct webidl_node* oplist, 
+			    const char *ident)
+{
+	oplist=oplist;
+
+	WARN(WARNING_UNIMPLEMENTED, 
+	     "property %s.%s has no implementation\n",
+	     binding->interface,
+	     ident);
+
+	fprintf(binding->outfile,
+		"\tJSLOG(\"property %s.%s has no implementation\");\n",
+		binding->interface,
+		ident);
 	return 0;
 }
 
@@ -412,10 +428,7 @@ static int output_property_getter(struct binding *binding,
 				"\tjsret = private->%s;\n",
 				ident);
 		} else {
-			fprintf(stderr,
-				"warning: attribute getter %s.%s has no implementation\n",
-				binding->interface,
-				ident);
+			output_property_placeholder(binding, node, ident);
 		}
 
 	}

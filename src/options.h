@@ -15,10 +15,23 @@ struct options {
 	char *depfilename;
 	FILE *depfilehandle;
 	char *idlpath;
-	bool verbose;
-	bool debug;
+	bool verbose; /* verbose processing */
+	bool debug; /* debug enabled */
+	unsigned int warnings; /* warning flags */
 };
 
 extern struct options *options;
+
+enum opt_warnings {
+	WARNING_UNIMPLEMENTED = 1,
+};
+
+#define WARNING_ALL (WARNING_UNIMPLEMENTED)
+
+#define WARN(flags, msg, args...) do {			\
+		if ((options->warnings & flags) != 0) {			\
+			fprintf(stderr, "%s: warning:"msg"\n", __func__, ## args); \
+		}							\
+	} while(0)
 
 #endif

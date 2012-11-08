@@ -17,9 +17,6 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
-#define WARN(msg, args...) fprintf(stderr, "%s: warning:"msg"\n", __func__, ## args);
-
-
 static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -173,11 +170,11 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_BYTE:
-		WARN("Unhandled type WEBIDL_TYPE_BYTE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_BYTE");
 		break;
 
 	case WEBIDL_TYPE_OCTET:
-		WARN("Unhandled type WEBIDL_TYPE_OCTET");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_OCTET");
 		break;
 
 	case WEBIDL_TYPE_FLOAT:
@@ -189,11 +186,12 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SHORT:
-		WARN("Unhandled type WEBIDL_TYPE_SHORT");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_SHORT");
 		break;
 
 	case WEBIDL_TYPE_LONGLONG:
-		WARN("Unhandled type WEBIDL_TYPE_LONGLONG");
+		WARN(WARNING_UNIMPLEMENTED,
+		     "Unhandled type WEBIDL_TYPE_LONGLONG");
 		break;
 
 	case WEBIDL_TYPE_LONG:
@@ -211,7 +209,8 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SEQUENCE:
-		WARN("Unhandled type WEBIDL_TYPE_SEQUENCE");
+		WARN(WARNING_UNIMPLEMENTED,
+		     "Unhandled type WEBIDL_TYPE_SEQUENCE");
 		break;
 
 	case WEBIDL_TYPE_OBJECT:
@@ -222,7 +221,8 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_DATE:
-		WARN("Unhandled type WEBIDL_TYPE_DATE");
+		WARN(WARNING_UNIMPLEMENTED,
+		     "Unhandled type WEBIDL_TYPE_DATE");
 		break;
 
 	case WEBIDL_TYPE_VOID:
@@ -288,11 +288,11 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_BYTE:
-		WARN("Unhandled type WEBIDL_TYPE_BYTE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_BYTE");
 		break;
 
 	case WEBIDL_TYPE_OCTET:
-		WARN("Unhandled type WEBIDL_TYPE_OCTET");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_OCTET");
 		break;
 
 	case WEBIDL_TYPE_FLOAT:
@@ -302,11 +302,12 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SHORT:
-		WARN("Unhandled type WEBIDL_TYPE_SHORT");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_SHORT");
 		break;
 
 	case WEBIDL_TYPE_LONGLONG:
-		WARN("Unhandled type WEBIDL_TYPE_LONGLONG");
+		WARN(WARNING_UNIMPLEMENTED, 
+		     "Unhandled type WEBIDL_TYPE_LONGLONG");
 		break;
 
 	case WEBIDL_TYPE_LONG:
@@ -330,7 +331,8 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SEQUENCE:
-		WARN("Unhandled type WEBIDL_TYPE_SEQUENCE");
+		WARN(WARNING_UNIMPLEMENTED, 
+		     "Unhandled type WEBIDL_TYPE_SEQUENCE");
 		break;
 
 	case WEBIDL_TYPE_OBJECT:
@@ -339,7 +341,7 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_DATE:
-		WARN("Unhandled type WEBIDL_TYPE_DATE");
+		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_DATE");
 		break;
 
 	case WEBIDL_TYPE_VOID:
@@ -576,8 +578,10 @@ output_operation_input(struct binding *binding,
 		switch (webidl_arg_type) {
 		case WEBIDL_TYPE_USER:
 			fprintf(binding->outfile,
-				"\tif ((!JSVAL_IS_NULL(argv[%d])) ||\n"
-				"\t\t(JSVAL_IS_PRIMITIVE(argv[%d]))) {\n"
+				"\tif (!JSAPI_JSVAL_IS_OBJECT(argv[%d])) {\n"
+				"\t\tJSType argtype;\n"
+				"\t\targtype = JS_TypeOfValue(cx, argv[%d]);\n"
+				"\t\tJSLOG(\"User argument is type %%s not an object\", JS_GetTypeName(cx, argtype));\n"
 				"\t\treturn JS_FALSE;\n"
 				"\t}\n"
 				"\t%s = JSVAL_TO_OBJECT(argv[%d]);\n",
@@ -680,6 +684,26 @@ output_operation_input(struct binding *binding,
 
 }
 
+static int 
+output_operator_placeholder(struct binding *binding, 
+			    struct webidl_node *oplist, 
+			    struct webidl_node *ident_node)
+{
+	oplist = oplist;
+
+	WARN(WARNING_UNIMPLEMENTED, 
+	     "operation %s.%s has no implementation\n",
+	     binding->interface,
+	     webidl_node_gettext(ident_node));
+
+	fprintf(binding->outfile,
+		"\tJSLOG(\"operation %s.%s has no implementation\");\n",
+		binding->interface,
+		webidl_node_gettext(ident_node));
+
+	return 0;
+}
+
 static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -695,6 +719,10 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 		/* operation without identifier - must have special keyword
 		 * http://www.w3.org/TR/WebIDL/#idl-operations
 		 */
+		WARN(WARNING_UNIMPLEMENTED,
+			"Unhandled operation with no name on %s\n",
+			binding->interface);
+
 	} else {
 		/* normal operation with identifier */
 
@@ -734,10 +762,7 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 					  genbind_node_getnode(operation_node));
 
 		} else {
-			fprintf(stderr,
-				"warning: operation %s.%s has no implementation\n",
-				binding->interface,
-				webidl_node_gettext(ident_node));
+			output_operator_placeholder(binding, webidl_node_getnode(node), ident_node);
 		}
 
 		output_return(binding, "jsret", webidl_node_getnode(node));

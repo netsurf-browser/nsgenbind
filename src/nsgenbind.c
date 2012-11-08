@@ -30,7 +30,7 @@ static struct options* process_cmdline(int argc, char **argv)
 		return NULL;
 	}
 
-	while ((opt = getopt(argc, argv, "vDd:I:o:")) != -1) {
+	while ((opt = getopt(argc, argv, "vDW::d:I:o:")) != -1) {
 		switch (opt) {
 		case 'I':
 			options->idlpath = strdup(optarg);
@@ -50,6 +50,10 @@ static struct options* process_cmdline(int argc, char **argv)
 
 		case 'D':
 			options->debug = true;
+			break;
+
+		case 'W':
+			options->warnings = 1; /* warning flags */
 			break;
 
 		default: /* '?' */
