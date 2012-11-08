@@ -487,9 +487,11 @@ output_variable_definitions(struct binding *binding,
 		case WEBIDL_TYPE_STRING:
 			/* JSString * */
 			fprintf(binding->outfile,
-				"\tJSString *%1$s_jsstr = NULL;\n"
-				"\tint %1$s_len = 0;\n"
-				"\tchar *%1$s = NULL;\n",
+				"\tJSString *%s_jsstr = NULL;\n"
+				"\tint %s_len = 0;\n"
+				"\tchar *%s = NULL;\n",
+				webidl_node_gettext(arg_ident),
+				webidl_node_gettext(arg_ident),
 				webidl_node_gettext(arg_ident));
 			break;
 
@@ -574,13 +576,15 @@ output_operation_input(struct binding *binding,
 		switch (webidl_arg_type) {
 		case WEBIDL_TYPE_USER:
 			fprintf(binding->outfile,
-				"\tif ((!JSVAL_IS_NULL(argv[%1$d])) ||\n"
-				"\t\t(JSVAL_IS_PRIMITIVE(argv[%1$d]))) {\n"
+				"\tif ((!JSVAL_IS_NULL(argv[%d])) ||\n"
+				"\t\t(JSVAL_IS_PRIMITIVE(argv[%d]))) {\n"
 				"\t\treturn JS_FALSE;\n"
 				"\t}\n"
-				"\t%2$s = JSVAL_TO_OBJECT(argv[%1$d]);\n",
+				"\t%s = JSVAL_TO_OBJECT(argv[%d]);\n",
 				arg_cur,
-				webidl_node_gettext(arg_ident));
+				arg_cur,
+				webidl_node_gettext(arg_ident),
+				arg_cur);
 			break;
 
 		case WEBIDL_TYPE_BOOL:
@@ -632,13 +636,17 @@ output_operation_input(struct binding *binding,
 		case WEBIDL_TYPE_STRING:
 			/* JSString * */
 			fprintf(binding->outfile,
-				"\t%1$s_jsstr = JS_ValueToString(cx, argv[%2$d]);\n"
-				"\tif (%1$s_jsstr == NULL) {\n"
+				"\t%s_jsstr = JS_ValueToString(cx, argv[%d]);\n"
+				"\tif (%s_jsstr == NULL) {\n"
 				"\t\treturn JS_FALSE;\n"
 				"\t}\n\n"
-				"\tJSString_to_char(%1$s_jsstr, %1$s, %1$s_len);\n",
+				"\tJSString_to_char(%s_jsstr, %s, %s_len);\n",
 				webidl_node_gettext(arg_ident),
-				arg_cur);
+				arg_cur,
+				webidl_node_gettext(arg_ident),
+				webidl_node_gettext(arg_ident),
+				webidl_node_gettext(arg_ident),
+				webidl_node_gettext(arg_ident));
 
 			break;
 

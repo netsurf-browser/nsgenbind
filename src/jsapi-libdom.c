@@ -137,6 +137,7 @@ static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
 	struct genbind_node *ident_node;
+	const char *ident;
 
 	ident_node = genbind_node_find_type(genbind_node_getnode(node),
 					    NULL,
@@ -144,9 +145,9 @@ static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
 	if (ident_node == NULL)
 		return -1; /* bad AST */
 
-	fprintf(binding->outfile,
-		"\tprivate->%1$s = %1$s;\n",
-		genbind_node_gettext(ident_node));
+	ident = genbind_node_gettext(ident_node);
+
+	fprintf(binding->outfile, "\tprivate->%s = %s;\n", ident, ident);
 
 	return 0;
 }
@@ -250,7 +251,7 @@ output_class_init(struct binding *binding)
 
 	/* class Initialisor */
 	fprintf(binding->outfile,
-		"JSObject *jsapi_InitClass_%1$s(JSContext *cx, JSObject *parent)\n"
+		"JSObject *jsapi_InitClass_%s(JSContext *cx, JSObject *parent)\n"
 		"{\n"
 		"\tJSObject *prototype;\n",
 		binding->interface);
@@ -268,7 +269,7 @@ output_class_init(struct binding *binding)
 			"\tprototype = JS_InitClass(cx,\n"
 			"\t\tparent,\n"
 			"\t\tNULL,\n"
-			"\t\t&JSClass_%1$s,\n"
+			"\t\t&JSClass_%s,\n"
 			"\t\tNULL,\n"
 			"\t\t0,\n"
 			"\t\tjsclass_properties,\n"
@@ -394,8 +395,9 @@ output_jsclass(struct binding *binding)
 
 	/* output the class */
 	fprintf(binding->outfile,
-		"JSClass JSClass_%1$s = {\n"
-		"\t\"%1$s\",\n",
+		"JSClass JSClass_%s = {\n"
+		"\t\"%s\",\n",
+		binding->interface, 
 		binding->interface);
 
 	/* generate class flags */
