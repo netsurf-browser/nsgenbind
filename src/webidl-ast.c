@@ -232,6 +232,7 @@ webidl_node_getint(struct webidl_node *node)
 		switch(node->type) {
 		case WEBIDL_NODE_TYPE_MODIFIER:
 		case WEBIDL_NODE_TYPE_TYPE_BASE:
+		case WEBIDL_NODE_TYPE_LITERAL_INT:
 			return node->r.number;
 
 		default:
@@ -317,6 +318,9 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 
 	case WEBIDL_NODE_TYPE_CONST:
 		return "Const";
+
+	case WEBIDL_NODE_TYPE_LITERAL_INT:
+		return "Literal (int)";
 
 	default:
 		return "Unknown";

@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 
 #include "webidl-ast.h"
 
@@ -155,11 +156,16 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> SingleType
 %type <node> UnionType
 %type <node> NonAnyType
+%type <node> ConstType
 %type <node> PrimitiveType
 %type <node> UnrestrictedFloatType
 %type <node> FloatType
 %type <node> UnsignedIntegerType
 %type <node> IntegerType
+
+%type <node> FloatLiteral
+%type <node> BooleanLiteral
+%type <node> ConstValue
 
 %type <isit> ReadOnly
 %type <isit> OptionalLong
@@ -513,13 +519,12 @@ Const:
             constant = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $3);
 
             /* add constant type */
-            //constant = webidl_node_prepend(constant, $2); 
+            constant = webidl_node_prepend(constant, $2); 
 
             /* add constant value */
-            //constant = webidl_node_prepend(constant, $5); 
+            constant = webidl_node_prepend(constant, $5); 
 
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_CONST, NULL, constant);
-
         }
         ;
 
@@ -530,26 +535,62 @@ ConstValue:
         FloatLiteral
         |
         TOK_INT_LITERAL
+        {
+          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_INT, NULL, (void *)$1);
+        }
         |
-        TOK_NULL_LITERAL
+        TOK_NULL_LITERAL 
+        {
+          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_NULL, NULL, NULL);
+        }
         ;
 
  /* [28] */
 BooleanLiteral:
         TOK_TRUE
+        {
+          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_BOOL, NULL, (void *)true);
+        }
         |
         TOK_FALSE
+        {
+          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_BOOL, NULL, (void *)false);
+        }
         ;
 
  /* [29] */
 FloatLiteral:
         TOK_FLOAT_LITERAL
+        {
+          float *value;
+          value = malloc(sizeof(float));
+          *value = strtof($1, NULL);
+          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT, NULL, value);
+        }
         |
         '-' TOK_INFINITY
+        {
+          float *value;
+          value = malloc(sizeof(float));
+          *value = -INFINITY;
+          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT, NULL, value);
+        }
         |
         TOK_INFINITY
+        {
+          float *value;
+          value = malloc(sizeof(float));
+          *value = INFINITY;
+          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT, NULL, value);
+        }
         |
         TOK_NAN
+        {
+          float *value;
+          value = malloc(sizeof(float));
+          *value = NAN;
+          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT, NULL, value);
+        }
         ;
 
  /* [30] */
@@ -1090,8 +1131,18 @@ NonAnyType:
  /* [63] */
 ConstType:
         PrimitiveType Null
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, $1);
+        }
         |
         TOK_IDENTIFIER Null
+        {
+            struct webidl_node *type;
+            type = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_USER);
+            type = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, type, $1);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, type);
+        }
+
         ;
 
  /* [64] */
