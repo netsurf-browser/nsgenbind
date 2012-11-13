@@ -267,6 +267,83 @@ static int output_return(struct binding *binding,
 	return 0;
 }
 
+static int output_return_literal(struct binding *binding,
+			 struct webidl_node *node)
+{
+	struct webidl_node *type_node = NULL;
+	struct webidl_node *literal_node = NULL;
+	struct webidl_node *type_base = NULL;
+	enum webidl_type webidl_arg_type;
+
+	type_node = webidl_node_find_type(webidl_node_getnode(node),
+					 NULL,
+					 WEBIDL_NODE_TYPE_TYPE);
+
+	type_base = webidl_node_find_type(webidl_node_getnode(type_node),
+					      NULL,
+					      WEBIDL_NODE_TYPE_TYPE_BASE);
+
+	webidl_arg_type = webidl_node_getint(type_base);
+
+	switch (webidl_arg_type) {
+
+	case WEBIDL_TYPE_BOOL:
+		/* JSBool */
+		literal_node = webidl_node_find_type(webidl_node_getnode(node),
+					 NULL,
+					 WEBIDL_NODE_TYPE_LITERAL_BOOL);
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(JS_FALSE));\n");
+		break;
+
+	case WEBIDL_TYPE_FLOAT:
+	case WEBIDL_TYPE_DOUBLE:
+		/* double */
+		literal_node = webidl_node_find_type(webidl_node_getnode(node),
+					 NULL,
+					 WEBIDL_NODE_TYPE_LITERAL_FLOAT);
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(0.0));\n");
+		break;
+
+	case WEBIDL_TYPE_LONG:
+		/* int32_t  */
+		literal_node = webidl_node_find_type(webidl_node_getnode(node),
+					 NULL,
+					 WEBIDL_NODE_TYPE_LITERAL_INT);
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%d));\n",
+			webidl_node_getint(literal_node));
+		break;
+
+	case WEBIDL_TYPE_SHORT:
+		/* int16_t  */
+		literal_node = webidl_node_find_type(webidl_node_getnode(node),
+					 NULL,
+					 WEBIDL_NODE_TYPE_LITERAL_INT);
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%d));\n",
+			webidl_node_getint(literal_node));
+		break;
+
+
+	case WEBIDL_TYPE_STRING:
+	case WEBIDL_TYPE_BYTE:
+	case WEBIDL_TYPE_OCTET:
+	case WEBIDL_TYPE_LONGLONG:
+	case WEBIDL_TYPE_SEQUENCE:
+	case WEBIDL_TYPE_OBJECT:
+	case WEBIDL_TYPE_DATE:
+	case WEBIDL_TYPE_VOID:
+	case WEBIDL_TYPE_USER:
+	default:
+		WARN(WARNING_UNIMPLEMENTED, "types not allowed as literal");
+		break; /* @todo these types are not allowed here */
+	}
+
+	return 0;
+}
+
 
 /* generate variable declaration of the correct type with appropriate default */
 static int output_return_declaration(struct binding *binding,
@@ -525,10 +602,7 @@ static int webidl_const_body_cb(struct webidl_node *node, void *ctx)
 		"{\n",
 		webidl_node_gettext(ident_node));
 
-	/* return value declaration */
-	output_return_declaration(binding, "jsret", node);
-
-	output_return(binding, "jsret", node);
+	output_return_literal(binding, node);
 
 	fprintf(binding->outfile,
 		"\treturn JS_TRUE;\n"
