@@ -49,6 +49,8 @@ int output_function_spec(struct binding *binding);
 int output_property_spec(struct binding *binding);
 int output_property_body(struct binding *binding, const char *interface);
 
+int output_const_defines(struct binding *binding, const char *interface);
+
 /** Generate binding between jsapi and netsurf libdom */
 int jsapi_libdom_output(char *outfile, struct genbind_node *genbind_root);
 

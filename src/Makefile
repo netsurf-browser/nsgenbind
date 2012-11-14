@@ -1,7 +1,7 @@
 CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/ -g
 
 # Sources in this directory
-DIR_SOURCES := nsgenbind.c webidl-ast.c nsgenbind-ast.c jsapi-libdom.c jsapi-libdom-operator.c jsapi-libdom-property.c
+DIR_SOURCES := nsgenbind.c webidl-ast.c nsgenbind-ast.c jsapi-libdom.c jsapi-libdom-operator.c jsapi-libdom-property.c jsapi-libdom-const.c
 
 SOURCES := $(SOURCES) $(BUILDDIR)/nsgenbind-parser.c $(BUILDDIR)/nsgenbind-lexer.c $(BUILDDIR)/webidl-parser.c $(BUILDDIR)/webidl-lexer.c
 

@@ -17,27 +17,6 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
-static int webidl_const_spec_cb(struct webidl_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-	struct webidl_node *ident_node;
-
-	ident_node = webidl_node_find(webidl_node_getnode(node),
-				      NULL,
-				      webidl_cmp_node_type,
-				      (void *)WEBIDL_NODE_TYPE_IDENT);
-
-	if (ident_node == NULL) {
-		/* broken AST - constants must have an identifier */
-		return 1;
-	} 
-
-	fprintf(binding->outfile,
-		"\tJSAPI_PS_RO(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
-		webidl_node_gettext(ident_node));
-	
-	return 0;
-}
 
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
@@ -118,13 +97,6 @@ generate_property_spec(struct binding *binding, const char *interface)
 					  WEBIDL_NODE_TYPE_ATTRIBUTE,
 					  webidl_property_spec_cb,
 					  binding);
-
-		/* for each const emit a property getter */
-		webidl_node_for_each_type(webidl_node_getnode(members_node),
-					  WEBIDL_NODE_TYPE_CONST,
-					  webidl_const_spec_cb,
-					  binding);
-
 
 		members_node = webidl_node_find_type(webidl_node_getnode(interface_node),
 						members_node,
@@ -267,82 +239,6 @@ static int output_return(struct binding *binding,
 	return 0;
 }
 
-static int output_return_literal(struct binding *binding,
-			 struct webidl_node *node)
-{
-	struct webidl_node *type_node = NULL;
-	struct webidl_node *literal_node = NULL;
-	struct webidl_node *type_base = NULL;
-	enum webidl_type webidl_arg_type;
-
-	type_node = webidl_node_find_type(webidl_node_getnode(node),
-					 NULL,
-					 WEBIDL_NODE_TYPE_TYPE);
-
-	type_base = webidl_node_find_type(webidl_node_getnode(type_node),
-					      NULL,
-					      WEBIDL_NODE_TYPE_TYPE_BASE);
-
-	webidl_arg_type = webidl_node_getint(type_base);
-
-	switch (webidl_arg_type) {
-
-	case WEBIDL_TYPE_BOOL:
-		/* JSBool */
-		literal_node = webidl_node_find_type(webidl_node_getnode(node),
-					 NULL,
-					 WEBIDL_NODE_TYPE_LITERAL_BOOL);
-		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(JS_FALSE));\n");
-		break;
-
-	case WEBIDL_TYPE_FLOAT:
-	case WEBIDL_TYPE_DOUBLE:
-		/* double */
-		literal_node = webidl_node_find_type(webidl_node_getnode(node),
-					 NULL,
-					 WEBIDL_NODE_TYPE_LITERAL_FLOAT);
-		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(0.0));\n");
-		break;
-
-	case WEBIDL_TYPE_LONG:
-		/* int32_t  */
-		literal_node = webidl_node_find_type(webidl_node_getnode(node),
-					 NULL,
-					 WEBIDL_NODE_TYPE_LITERAL_INT);
-		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%d));\n",
-			webidl_node_getint(literal_node));
-		break;
-
-	case WEBIDL_TYPE_SHORT:
-		/* int16_t  */
-		literal_node = webidl_node_find_type(webidl_node_getnode(node),
-					 NULL,
-					 WEBIDL_NODE_TYPE_LITERAL_INT);
-		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%d));\n",
-			webidl_node_getint(literal_node));
-		break;
-
-
-	case WEBIDL_TYPE_STRING:
-	case WEBIDL_TYPE_BYTE:
-	case WEBIDL_TYPE_OCTET:
-	case WEBIDL_TYPE_LONGLONG:
-	case WEBIDL_TYPE_SEQUENCE:
-	case WEBIDL_TYPE_OBJECT:
-	case WEBIDL_TYPE_DATE:
-	case WEBIDL_TYPE_VOID:
-	case WEBIDL_TYPE_USER:
-	default:
-		WARN(WARNING_UNIMPLEMENTED, "types not allowed as literal");
-		break; /* @todo these types are not allowed here */
-	}
-
-	return 0;
-}
 
 
 /* generate variable declaration of the correct type with appropriate default */
@@ -584,33 +480,6 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 	return output_property_getter(binding, node, webidl_node_gettext(ident_node));
 }
 
-static int webidl_const_body_cb(struct webidl_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-	struct webidl_node *ident_node;
-
-	ident_node = webidl_node_find_type(webidl_node_getnode(node),
-					   NULL,
-					   WEBIDL_NODE_TYPE_IDENT);
-	if (ident_node == NULL) {
-		/* Broken AST - must have ident */
-		return 1;
-	}
-
-	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
-		"{\n",
-		webidl_node_gettext(ident_node));
-
-	output_return_literal(binding, node);
-
-	fprintf(binding->outfile,
-		"\treturn JS_TRUE;\n"
-		"}\n\n");
-
-	return 0;
-
-}
 
 /* callback to emit implements property bodys */
 static int webidl_implements_cb(struct webidl_node *node, void *ctx)
@@ -652,12 +521,6 @@ output_property_body(struct binding *binding, const char *interface)
 		webidl_node_for_each_type(webidl_node_getnode(members_node),
 					  WEBIDL_NODE_TYPE_ATTRIBUTE,
 					  webidl_property_body_cb,
-					  binding);
-
-		/* for each const emit a property getter */
-		webidl_node_for_each_type(webidl_node_getnode(members_node),
-					  WEBIDL_NODE_TYPE_CONST,
-					  webidl_const_body_cb,
 					  binding);
 
 

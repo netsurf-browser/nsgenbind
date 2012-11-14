@@ -279,6 +279,8 @@ output_class_init(struct binding *binding)
 			binding->interface);
 	}
 
+	output_const_defines(binding, binding->interface);
+
 	fprintf(binding->outfile,
 		"\treturn prototype;\n"
 		"}\n\n");
