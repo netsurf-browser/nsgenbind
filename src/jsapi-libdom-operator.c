@@ -33,8 +33,9 @@ static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 		 */
 	} else {
 		fprintf(binding->outfile,
-			"\tJSAPI_FS(%s, 0, 0),\n",
+			"\tJSAPI_FS(%s, 0, 0 /* JSPROP_ENUMERATE */),\n",
 			webidl_node_gettext(ident_node));
+		/* @todo number of args to that FN_FS() call should be correct */
 	}
 	return 0;
 }
@@ -640,13 +641,21 @@ output_operation_input(struct binding *binding,
 		case WEBIDL_TYPE_STRING:
 			/* JSString * */
 			fprintf(binding->outfile,
+				"\tif (argc > %d) {\n"
 				"\t%s_jsstr = JS_ValueToString(cx, argv[%d]);\n"
 				"\tif (%s_jsstr == NULL) {\n"
 				"\t\treturn JS_FALSE;\n"
 				"\t}\n\n"
-				"\tJSString_to_char(%s_jsstr, %s, %s_len);\n",
+				"\tJSString_to_char(%s_jsstr, %s, %s_len);\n"
+				"\t} else {\n"
+				"\t\t%s = NULL;"
+				"\t\t%s_len = 0;"
+				"\t}\n",
+				arg_cur,
 				webidl_node_gettext(arg_ident),
 				arg_cur,
+				webidl_node_gettext(arg_ident),
+				webidl_node_gettext(arg_ident),
 				webidl_node_gettext(arg_ident),
 				webidl_node_gettext(arg_ident),
 				webidl_node_gettext(arg_ident),

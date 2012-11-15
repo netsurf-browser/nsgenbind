@@ -272,8 +272,8 @@ output_class_init(struct binding *binding)
 			"\t\t&JSClass_%s,\n"
 			"\t\tNULL,\n"
 			"\t\t0,\n"
-			"\t\tjsclass_properties,\n"
-			"\t\tjsclass_functions, \n"
+			"\t\tNULL,\n"
+			"\t\tNULL, \n"
 			"\t\tNULL, \n"
 			"\t\tNULL);\n",
 			binding->interface);
@@ -322,6 +322,7 @@ output_class_new(struct binding *binding)
 		"{\n"
 		"\tJSObject *newobject;\n");
 
+	/* create private data */
 	if (binding->has_private) {
 		fprintf(binding->outfile,
 			"\tstruct jsclass_private *private;\n"
@@ -362,8 +363,38 @@ output_class_new(struct binding *binding)
 			"\tif (JS_SetPrivate(cx, newobject, private) != JS_TRUE) {\n"
 			"\t\tfree(private);\n"
 			"\t\treturn NULL;\n"
+			"\t}\n\n");
+
+		/* attach operations and attributes (functions and properties) */
+		fprintf(binding->outfile,
+			"\tif (JS_DefineFunctions(cx, newobject, jsclass_functions) != JS_TRUE) {\n"
+			"\t\tfree(private);\n"
+			"\t\treturn NULL;\n"
+			"\t}\n\n");
+
+		fprintf(binding->outfile,
+			"\tif (JS_DefineProperties(cx, newobject, jsclass_properties) != JS_TRUE) {\n"
+			"\t\tfree(private);\n"
+			"\t\treturn NULL;\n"
+			"\t}\n\n");
+	} else {
+		fprintf(binding->outfile,
+			"\tif (newobject == NULL) {\n"
+			"\t\treturn NULL;\n"
 			"\t}\n");
+
+		/* attach operations and attributes (functions and properties) */
+		fprintf(binding->outfile,
+			"\tif (JS_DefineFunctions(cx, newobject, jsclass_functions) != JS_TRUE) {\n"
+			"\t\treturn NULL;\n"
+			"\t}\n\n");
+
+		fprintf(binding->outfile,
+			"\tif (JS_DefineProperties(cx, newobject, jsclass_properties) != JS_TRUE) {\n"
+			"\t\treturn NULL;\n"
+			"\t}\n\n");
 	}
+	
 
 	fprintf(binding->outfile,
 		"\n"
