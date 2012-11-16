@@ -357,13 +357,23 @@ output_class_new(struct binding *binding)
 			"\tif (newobject == NULL) {\n"
 			"\t\tfree(private);\n"
 			"\t\treturn NULL;\n"
-			"\t}\n"
+			"\t}\n\n");
+
+		/* root object to stop it being garbage collected */
+		fprintf(binding->outfile,
+			"\tif (JS_AddRoot(cx, &newobject) != JS_TRUE) {\n"
+			"\t\tfree(private);\n"
+			"\t\treturn NULL;\n"
+			"\t}\n\n");
+
+		fprintf(binding->outfile,
 			"\n"
 			"\t/* attach private pointer */\n"
 			"\tif (JS_SetPrivate(cx, newobject, private) != JS_TRUE) {\n"
 			"\t\tfree(private);\n"
 			"\t\treturn NULL;\n"
 			"\t}\n\n");
+
 
 		/* attach operations and attributes (functions and properties) */
 		fprintf(binding->outfile,
@@ -383,6 +393,12 @@ output_class_new(struct binding *binding)
 			"\t\treturn NULL;\n"
 			"\t}\n");
 
+		/* root object to stop it being garbage collected */
+		fprintf(binding->outfile,
+			"\tif (JS_AddRoot(cx, &newobject) != JS_TRUE) {\n"
+			"\t\treturn NULL;\n"
+			"\t}\n\n");
+
 		/* attach operations and attributes (functions and properties) */
 		fprintf(binding->outfile,
 			"\tif (JS_DefineFunctions(cx, newobject, jsclass_functions) != JS_TRUE) {\n"
@@ -395,8 +411,9 @@ output_class_new(struct binding *binding)
 			"\t}\n\n");
 	}
 	
-
+	/* unroot object and return it */
 	fprintf(binding->outfile,
+		"\tJS_RemoveRoot(cx, &newobject);\n"
 		"\n"
 		"\treturn newobject;\n"
 		"}\n");
