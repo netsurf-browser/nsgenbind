@@ -361,7 +361,7 @@ output_class_new(struct binding *binding)
 
 		/* root object to stop it being garbage collected */
 		fprintf(binding->outfile,
-			"\tif (JS_AddRoot(cx, &newobject) != JS_TRUE) {\n"
+			"\tif (JSAPI_ADD_OBJECT_ROOT(cx, &newobject) != JS_TRUE) {\n"
 			"\t\tfree(private);\n"
 			"\t\treturn NULL;\n"
 			"\t}\n\n");
@@ -395,7 +395,7 @@ output_class_new(struct binding *binding)
 
 		/* root object to stop it being garbage collected */
 		fprintf(binding->outfile,
-			"\tif (JS_AddRoot(cx, &newobject) != JS_TRUE) {\n"
+			"\tif (JSAPI_ADD_OBJECT_ROOT(cx, &newobject) != JS_TRUE) {\n"
 			"\t\treturn NULL;\n"
 			"\t}\n\n");
 
@@ -413,7 +413,7 @@ output_class_new(struct binding *binding)
 	
 	/* unroot object and return it */
 	fprintf(binding->outfile,
-		"\tJS_RemoveRoot(cx, &newobject);\n"
+		"\tJSAPI_REMOVE_OBJECT_ROOT(cx, &newobject);\n"
 		"\n"
 		"\treturn newobject;\n"
 		"}\n");
