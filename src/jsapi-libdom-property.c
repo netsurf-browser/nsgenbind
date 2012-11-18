@@ -192,7 +192,10 @@ static int output_return(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SHORT:
-		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_SHORT");
+		/* int16_t  */
+		fprintf(binding->outfile,
+			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
+			ident);
 		break;
 
 	case WEBIDL_TYPE_LONGLONG:
@@ -296,7 +299,21 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SHORT:
-		WARN(WARNING_UNIMPLEMENTED, "Unhandled type WEBIDL_TYPE_SHORT");
+		/* int16_t  */
+		type_mod = webidl_node_find_type(webidl_node_getnode(type_node),
+						 NULL,
+						 WEBIDL_NODE_TYPE_MODIFIER);
+		if ((type_mod != NULL) && 
+		    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
+			fprintf(binding->outfile, 
+				"\tuint16_t %s = 0;\n", 
+				ident);
+		} else {
+			fprintf(binding->outfile, 
+				"\tint16_t %s = 0;\n", 
+				ident);
+		}
+
 		break;
 
 	case WEBIDL_TYPE_LONGLONG:
