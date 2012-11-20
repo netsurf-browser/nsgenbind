@@ -301,5 +301,11 @@ Unshared
           $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_UNSHARED, NULL, 
                  genbind_new_node(GENBIND_NODE_TYPE_TYPE, NULL, $3));
         }
+        |
+        TOK_UNSHARED TOK_IDENTIFIER ';'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_UNSHARED, NULL, 
+                 genbind_new_node(GENBIND_NODE_TYPE_IDENT, NULL, $2));
+        }
         ;
 %%
