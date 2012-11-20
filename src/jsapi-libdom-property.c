@@ -21,19 +21,11 @@
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
-	struct genbind_node *binding_node;
 	struct genbind_node *unshared_node;
 	struct webidl_node *type_node;
 	struct webidl_node *ident_node;
 	const char *ident;
 	struct webidl_node *modifier_node;
-
-	binding_node = genbind_node_find_type(binding->gb_ast,
-					      NULL,
-					      GENBIND_NODE_TYPE_BINDING);
-	if (binding_node == NULL) {
-		return -1;
-	}
 
 	ident_node = webidl_node_find_type(webidl_node_getnode(node),
 					   NULL,
@@ -56,7 +48,7 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 		fprintf(binding->outfile, "\tJSAPI_PS(");
 	}
 
-	unshared_node = genbind_node_find_type_ident(genbind_node_getnode(binding_node),
+	unshared_node = genbind_node_find_type_ident(binding->binding_list,
 					NULL,
 					GENBIND_NODE_TYPE_BINDING_UNSHARED,
 					ident);
@@ -75,7 +67,7 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 						   WEBIDL_NODE_TYPE_IDENT);
 
 		if (ident_node != NULL) {
-			unshared_node = genbind_node_find_type_type(genbind_node_getnode(binding_node),
+			unshared_node = genbind_node_find_type_type(binding->binding_list,
 							    NULL,
 							    GENBIND_NODE_TYPE_BINDING_UNSHARED,
 							    webidl_node_gettext(ident_node));
@@ -601,7 +593,7 @@ output_property_body(struct binding *binding, const char *interface)
 
 	if (inherit_node != NULL) {
 		res = output_property_body(binding,
-					    webidl_node_gettext(inherit_node));
+					   webidl_node_gettext(inherit_node));
 	}
 
 	if (res == 0) {

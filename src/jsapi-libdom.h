@@ -13,11 +13,13 @@ struct binding {
 	struct genbind_node *gb_ast; /* root node of binding AST */
 	struct webidl_node *wi_ast; /* root node of webidl AST */
 
+
 	const char *name; /* name of the binding */
 	const char *interface; /* webidl interface binding is for */
 
 	bool has_private; /* true if the binding requires a private structure */
 	bool has_global; /* true if the binding is for a global */
+	struct genbind_node *binding_list; /* node list of the binding */
 	struct genbind_node *resolve; /* binding api resolve node or NULL */
 	struct genbind_node *finalise; /* binding api finalise node or NULL */
 	struct genbind_node *mark; /* binding api mark node or NULL */

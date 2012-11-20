@@ -292,18 +292,7 @@ static int
 output_class_new(struct binding *binding)
 {
 	int res = 0;
-	struct genbind_node *binding_node;
 	struct genbind_node *api_node;
-
-	binding_node = genbind_node_find(binding->gb_ast,
-					 NULL,
-					 genbind_cmp_node_type,
-					 (void *)GENBIND_NODE_TYPE_BINDING);
-
-	if (binding_node == NULL) {
-		return -1;
-	}
-
 
 	/* constructor */
 	fprintf(binding->outfile,
@@ -312,7 +301,7 @@ output_class_new(struct binding *binding)
 		"\t\tJSObject *parent",
 		binding->interface);
 
-	genbind_node_for_each_type(genbind_node_getnode(binding_node),
+	genbind_node_for_each_type(binding->binding_list,
 				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 				   webidl_private_param_cb,
 				   binding);
@@ -332,7 +321,7 @@ output_class_new(struct binding *binding)
 			"\t\treturn NULL;\n"
 			"\t}\n");
 
-		genbind_node_for_each_type(genbind_node_getnode(binding_node),
+		genbind_node_for_each_type(binding->binding_list,
 					   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 					   webidl_private_assign_cb,
 					   binding);
@@ -517,23 +506,13 @@ output_jsclass(struct binding *binding)
 static int
 output_private_declaration(struct binding *binding)
 {
-	struct genbind_node *binding_node;
 	struct genbind_node *type_node;
 
 	if (!binding->has_private) {
 		return 0;
 	}
 
-	binding_node = genbind_node_find(binding->gb_ast,
-					 NULL,
-					 genbind_cmp_node_type,
-					 (void *)GENBIND_NODE_TYPE_BINDING);
-
-	if (binding_node == NULL) {
-		return -1;
-	}
-
-	type_node = genbind_node_find(genbind_node_getnode(binding_node),
+	type_node = genbind_node_find(binding->binding_list,
 				      NULL,
 				      genbind_cmp_node_type,
 				      (void *)GENBIND_NODE_TYPE_TYPE);
@@ -544,12 +523,12 @@ output_private_declaration(struct binding *binding)
 
 	fprintf(binding->outfile, "struct jsclass_private {\n");
 
-	genbind_node_for_each_type(genbind_node_getnode(binding_node),
+	genbind_node_for_each_type(binding->binding_list,
 				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 				   webidl_private_cb,
 				   binding);
 
-	genbind_node_for_each_type(genbind_node_getnode(binding_node),
+	genbind_node_for_each_type(binding->binding_list,
 				   GENBIND_NODE_TYPE_BINDING_INTERNAL,
 				   webidl_private_cb,
 				   binding);
@@ -588,11 +567,11 @@ output_header_comments(struct binding *binding)
 }
 
 static bool
-binding_has_private(struct genbind_node *binding_node)
+binding_has_private(struct genbind_node *binding_list)
 {
 	struct genbind_node *node;
 
-	node = genbind_node_find_type(genbind_node_getnode(binding_node),
+	node = genbind_node_find_type(binding_list,
 				      NULL,
 				      GENBIND_NODE_TYPE_BINDING_PRIVATE);
 
@@ -600,7 +579,7 @@ binding_has_private(struct genbind_node *binding_node)
 		return true;
 	}
 
-	node = genbind_node_find_type(genbind_node_getnode(binding_node),
+	node = genbind_node_find_type(binding_list,
 				      NULL,
 				      GENBIND_NODE_TYPE_BINDING_INTERNAL);
 	if (node != NULL) {
@@ -629,6 +608,7 @@ binding_new(char *outfilename, struct genbind_node *genbind_ast)
 {
 	struct binding *nb;
 	struct genbind_node *binding_node;
+	struct genbind_node *binding_list;
 	struct genbind_node *ident_node;
 	struct genbind_node *interface_node;
 	FILE *outfile ; /* output file */
@@ -642,14 +622,19 @@ binding_new(char *outfilename, struct genbind_node *genbind_ast)
 		return NULL;
 	}
 
-	ident_node = genbind_node_find_type(genbind_node_getnode(binding_node),
+	binding_list = genbind_node_getnode(binding_node);
+	if (binding_list == NULL) {
+		return NULL;
+	}
+	
+	ident_node = genbind_node_find_type(binding_list,
 					    NULL,
 					    GENBIND_NODE_TYPE_IDENT);
 	if (ident_node == NULL) {
 		return NULL;
 	}
 
-	interface_node = genbind_node_find_type(genbind_node_getnode(binding_node),
+	interface_node = genbind_node_find_type(binding_list,
 					   NULL,
 					   GENBIND_NODE_TYPE_BINDING_INTERFACE);
 	if (interface_node == NULL) {
@@ -683,8 +668,9 @@ binding_new(char *outfilename, struct genbind_node *genbind_ast)
 	nb->name = genbind_node_gettext(ident_node);
 	nb->interface = genbind_node_gettext(interface_node);
 	nb->outfile = outfile;
-	nb->has_private = binding_has_private(binding_node);
+	nb->has_private = binding_has_private(binding_list);
 	nb->has_global = binding_has_global(nb);
+	nb->binding_list = binding_list;
 	nb->resolve = genbind_node_find_type_ident(genbind_ast,
 						      NULL,
 						      GENBIND_NODE_TYPE_API,
