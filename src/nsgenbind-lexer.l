@@ -96,6 +96,8 @@ private                 return TOK_PRIVATE;
 
 internal                return TOK_INTERNAL;
 
+unshared                return TOK_UNSHARED;
+
 operation               return TOK_OPERATION;
 
 api                     return TOK_API;

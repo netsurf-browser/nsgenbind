@@ -23,21 +23,36 @@ binding window {
 
 	interface Window; /* Web IDL interface to generate */
 
-	/* private are parameters to constructor stored in private
-         *  context structure.
-         *
-         * internal are value stored in private context structure but not
-         *  passed to constructor but are considered for property 
-         *  getters/setters.
-         */
 	private "struct browser_window *" bw;
 	private "struct html_content *" htmlc;
+
 	internal "JSObject *" document;
 	internal "JSObject *" navigator;
 	internal "JSObject *" console;
 	internal "JSObject *" location;
+
+	unshared type EventHandler;
 }
 
+api mark %{
+	if (private != NULL) {
+		if (private->document != NULL) {
+			JSAPI_GCMARK(private->document);
+		}
+		if (private->navigator != NULL) {
+			JSAPI_GCMARK(private->navigator);
+		}
+		if (private->console != NULL) {
+			JSAPI_GCMARK(private->console);
+		}
+		if (private->location != NULL) {
+			JSAPI_GCMARK(private->location);
+		}
+	}
+%}
+
+api global %{
+%}
 
 api init %{
 	JSObject *user_proto;
@@ -101,6 +116,26 @@ api init %{
 		return NULL;
 	}
 
+	user_proto = jsapi_InitClass_HTMLCollection(cx, prototype);
+	if (user_proto == NULL) {
+		return NULL;
+	}
+
+	user_proto = jsapi_InitClass_NodeList(cx, prototype);
+	if (user_proto == NULL) {
+		return NULL;
+	}
+
+	user_proto = jsapi_InitClass_Text(cx, prototype);
+	if (user_proto == NULL) {
+		return NULL;
+	}
+
+	user_proto = jsapi_InitClass_Node(cx, prototype);
+	if (user_proto == NULL) {
+		return NULL;
+	}
+
 %}
 
 api new %{
@@ -114,7 +149,7 @@ api new %{
 	private->document = jsapi_new_Document(cx,
                                                NULL,
                                                newobject, 
-                                               htmlc->document, 
+                                               (dom_document *)dom_node_ref(htmlc->document), 
                                                htmlc);
 	if (private->document == NULL) { 
 		free(private);

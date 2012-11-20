@@ -536,7 +536,7 @@ output_private_declaration(struct binding *binding)
 	type_node = genbind_node_find(genbind_node_getnode(binding_node),
 				      NULL,
 				      genbind_cmp_node_type,
-				      (void *)GENBIND_NODE_TYPE_BINDING_TYPE);
+				      (void *)GENBIND_NODE_TYPE_TYPE);
 
 	if (type_node == NULL) {
 		return -1;

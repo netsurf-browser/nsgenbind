@@ -51,6 +51,7 @@ char *errtxt;
 %token TOK_TYPE
 %token TOK_PRIVATE
 %token TOK_INTERNAL
+%token TOK_UNSHARED
 
 %token <text> TOK_IDENTIFIER
 %token <text> TOK_STRING_LITERAL
@@ -71,6 +72,7 @@ char *errtxt;
 %type <node> Private
 %type <node> Internal
 %type <node> Interface
+%type <node> Unshared
 %type <node> Operation
 %type <node> Api
 %type <node> Getter
@@ -252,13 +254,15 @@ BindingArg
         Internal
         | 
         Interface
+        |
+        Unshared
         ;
 
 Type
         :
         TOK_TYPE TOK_IDENTIFIER ';'
         {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_TYPE, NULL, $2);
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE, NULL, $2);
         }
         ;
 
@@ -290,4 +294,12 @@ Interface
         }
         ;
 
+Unshared
+        :
+        TOK_UNSHARED TOK_TYPE TOK_IDENTIFIER ';'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_UNSHARED, NULL, 
+                 genbind_new_node(GENBIND_NODE_TYPE_TYPE, NULL, $3));
+        }
+        ;
 %%
