@@ -52,7 +52,6 @@ int genbind_ast_dump(struct genbind_node *ast, int indent);
 /** Depth first left hand search using user provided comparison 
  *
  * @param node The node to start the search from
-
  * @param prev The node at which to stop the search, either NULL to
  *             search the full tree depth (initial search) or the result 
  *             of a previous search to continue.
@@ -65,16 +64,50 @@ genbind_node_find(struct genbind_node *node,
 		  genbind_callback_t *cb,
 		  void *ctx);
 
+/** Depth first left hand search returning nodes of the specified type
+ *
+ * @param node The node to start the search from
+ * @param prev The node at which to stop the search, either NULL to
+ *             search the full tree depth (initial search) or the result 
+ *             of a previous search to continue.
+ * @param nodetype The type of node to seach for
+ */
 struct genbind_node *
 genbind_node_find_type(struct genbind_node *node,
 		       struct genbind_node *prev,
-		       enum genbind_node_type type);
+		       enum genbind_node_type nodetype);
 
+/** Depth first left hand search returning nodes of the specified type
+ *    and a ident child node with matching text
+ *
+ * @param node The node to start the search from
+ * @param prev The node at which to stop the search, either NULL to
+ *             search the full tree depth (initial search) or the result 
+ *             of a previous search to continue.
+ * @param nodetype The type of node to seach for
+ * @param ident The text to match the ident child node to
+ */
 struct genbind_node *
 genbind_node_find_type_ident(struct genbind_node *node,
 			     struct genbind_node *prev,
-			     enum genbind_node_type type,
+			     enum genbind_node_type nodetype,
 			     const char *ident);
+
+/** Depth first left hand search returning nodes of the specified type
+ *    and a type child node with matching text
+ *
+ * @param node The node to start the search from
+ * @param prev The node at which to stop the search, either NULL to
+ *             search the full tree depth (initial search) or the result 
+ *             of a previous search to continue.
+ * @param nodetype The type of node to seach for
+ * @param type The text to match the type child node to
+ */
+struct genbind_node *
+genbind_node_find_type_type(struct genbind_node *node,
+			     struct genbind_node *prev,
+			     enum genbind_node_type nodetype,
+			     const char *type);
 
 int genbind_node_for_each_type(struct genbind_node *node, enum genbind_node_type type, genbind_callback_t *cb, void *ctx);
 

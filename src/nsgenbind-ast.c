@@ -118,7 +118,7 @@ genbind_node_find(struct genbind_node *node,
 	return NULL;
 }
 
-/* exported interface defined in nsgenbind-ast.h */
+/* exported interface documented in nsgenbind-ast.h */
 struct genbind_node *
 genbind_node_find_type(struct genbind_node *node,
 		       struct genbind_node *prev,
@@ -130,6 +130,7 @@ genbind_node_find_type(struct genbind_node *node,
 				 (void *)type);
 }
 
+/* exported interface documented in nsgenbind-ast.h */
 struct genbind_node *
 genbind_node_find_type_ident(struct genbind_node *node,
 			     struct genbind_node *prev,
@@ -143,7 +144,7 @@ genbind_node_find_type_ident(struct genbind_node *node,
 
 
 	while (found_node != NULL) {
-
+		/* look for an ident node  */
 		ident_node = genbind_node_find_type(genbind_node_getnode(found_node),
 					       NULL,
 					       GENBIND_NODE_TYPE_IDENT);
@@ -154,7 +155,35 @@ genbind_node_find_type_ident(struct genbind_node *node,
 
 		/* look for next matching node */
 		found_node = genbind_node_find_type(node, found_node, type);
+	}
+	return found_node;
+}
 
+/* exported interface documented in nsgenbind-ast.h */
+struct genbind_node *
+genbind_node_find_type_type(struct genbind_node *node,
+			     struct genbind_node *prev,
+			     enum genbind_node_type type,
+			     const char *ident)
+{
+	struct genbind_node *found_node;
+	struct genbind_node *ident_node;
+
+	found_node = genbind_node_find_type(node, prev, type);
+
+
+	while (found_node != NULL) {
+		/* look for a type node  */
+		ident_node = genbind_node_find_type(genbind_node_getnode(found_node),
+					       NULL,
+					       GENBIND_NODE_TYPE_TYPE);
+		if (ident_node != NULL) {
+			if (strcmp(ident_node->r.text, ident) == 0)
+				break;
+		}
+
+		/* look for next matching node */
+		found_node = genbind_node_find_type(node, found_node, type);
 	}
 	return found_node;
 }

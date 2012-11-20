@@ -10,8 +10,8 @@
 #define nsgenbind_jsapi_libdom_h
 
 struct binding {
-	struct genbind_node *gb_ast;
-	struct webidl_node *wi_ast;
+	struct genbind_node *gb_ast; /* root node of binding AST */
+	struct webidl_node *wi_ast; /* root node of webidl AST */
 
 	const char *name; /* name of the binding */
 	const char *interface; /* webidl interface binding is for */

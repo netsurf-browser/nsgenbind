@@ -21,36 +21,83 @@
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
+	struct genbind_node *binding_node;
+	struct genbind_node *unshared_node;
+	struct webidl_node *type_node;
 	struct webidl_node *ident_node;
+	const char *ident;
 	struct webidl_node *modifier_node;
 
-	ident_node = webidl_node_find(webidl_node_getnode(node),
-				      NULL,
-				      webidl_cmp_node_type,
-				      (void *)WEBIDL_NODE_TYPE_IDENT);
+	binding_node = genbind_node_find_type(binding->gb_ast,
+					      NULL,
+					      GENBIND_NODE_TYPE_BINDING);
+	if (binding_node == NULL) {
+		return -1;
+	}
 
-	modifier_node = webidl_node_find(webidl_node_getnode(node),
-					 NULL,
-					 webidl_cmp_node_type,
-					 (void *)WEBIDL_NODE_TYPE_MODIFIER);
-
+	ident_node = webidl_node_find_type(webidl_node_getnode(node),
+					   NULL,
+					   WEBIDL_NODE_TYPE_IDENT);
 	if (ident_node == NULL) {
 		/* properties must have an operator
 		 * http://www.w3.org/TR/WebIDL/#idl-attributes
 		 */
-		return 1;
+		return -1;
 	}
- 
+	ident = webidl_node_gettext(ident_node);
+
+	modifier_node = webidl_node_find_type(webidl_node_getnode(node),
+					      NULL,
+					      WEBIDL_NODE_TYPE_MODIFIER);
+
 	if (webidl_node_getint(modifier_node) == WEBIDL_TYPE_READONLY) {
-		fprintf(binding->outfile,
-			"\tJSAPI_PS_RO(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
-			webidl_node_gettext(ident_node));
+		fprintf(binding->outfile, "\tJSAPI_PS_RO(");
 	} else {
-		fprintf(binding->outfile,
-			"\tJSAPI_PS(%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED),\n",
-			webidl_node_gettext(ident_node));
+		fprintf(binding->outfile, "\tJSAPI_PS(");
 	}
-	
+
+	unshared_node = genbind_node_find_type_ident(genbind_node_getnode(binding_node),
+					NULL,
+					GENBIND_NODE_TYPE_BINDING_UNSHARED,
+					ident);
+
+	if (unshared_node != NULL) {
+		/* not a shared property */
+		fprintf(binding->outfile, "%s, 0, JSPROP_ENUMERATE", ident);
+	} else {
+		/* examine if the property is of a unshared type */
+		type_node = webidl_node_find_type(webidl_node_getnode(node),
+					 NULL,
+					 WEBIDL_NODE_TYPE_TYPE);
+
+		ident_node = webidl_node_find_type(webidl_node_getnode(type_node),
+						   NULL,
+						   WEBIDL_NODE_TYPE_IDENT);
+
+		if (ident_node != NULL) {
+			unshared_node = genbind_node_find_type_type(genbind_node_getnode(binding_node),
+							    NULL,
+							    GENBIND_NODE_TYPE_BINDING_UNSHARED,
+							    webidl_node_gettext(ident_node));
+		}
+
+		if (unshared_node != NULL) {
+			/* property is not shared because of its type */
+			fprintf(binding->outfile,
+				"%s, 0, JSPROP_ENUMERATE",
+				webidl_node_gettext(ident_node));
+		} else {
+			/* property is shared
+			 * js doesnt provide storage and setter/getter must
+			 * perform all GC management.
+			 */
+			fprintf(binding->outfile,
+				"%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED",
+				ident);
+		}
+	}
+	fprintf(binding->outfile, "),\n");
+
 	return 0;
 }
 
@@ -303,14 +350,14 @@ static int output_return_declaration(struct binding *binding,
 		type_mod = webidl_node_find_type(webidl_node_getnode(type_node),
 						 NULL,
 						 WEBIDL_NODE_TYPE_MODIFIER);
-		if ((type_mod != NULL) && 
+		if ((type_mod != NULL) &&
 		    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
-			fprintf(binding->outfile, 
-				"\tuint16_t %s = 0;\n", 
+			fprintf(binding->outfile,
+				"\tuint16_t %s = 0;\n",
 				ident);
 		} else {
-			fprintf(binding->outfile, 
-				"\tint16_t %s = 0;\n", 
+			fprintf(binding->outfile,
+				"\tint16_t %s = 0;\n",
 				ident);
 		}
 
@@ -325,14 +372,14 @@ static int output_return_declaration(struct binding *binding,
 		type_mod = webidl_node_find_type(webidl_node_getnode(type_node),
 						 NULL,
 						 WEBIDL_NODE_TYPE_MODIFIER);
-		if ((type_mod != NULL) && 
+		if ((type_mod != NULL) &&
 		    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
-			fprintf(binding->outfile, 
-				"\tuint32_t %s = 0;\n", 
+			fprintf(binding->outfile,
+				"\tuint32_t %s = 0;\n",
 				ident);
 		} else {
-			fprintf(binding->outfile, 
-				"\tint32_t %s = 0;\n", 
+			fprintf(binding->outfile,
+				"\tint32_t %s = 0;\n",
 				ident);
 		}
 
@@ -368,14 +415,14 @@ static int output_return_declaration(struct binding *binding,
 	return 0;
 }
 
-static int 
-output_property_placeholder(struct binding *binding, 
-			    struct webidl_node* oplist, 
+static int
+output_property_placeholder(struct binding *binding,
+			    struct webidl_node* oplist,
 			    const char *ident)
 {
 	oplist=oplist;
 
-	WARN(WARNING_UNIMPLEMENTED, 
+	WARN(WARNING_UNIMPLEMENTED,
 	     "property %s.%s has no implementation\n",
 	     binding->interface,
 	     ident);

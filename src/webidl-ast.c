@@ -214,15 +214,19 @@ webidl_node_find_type_ident(struct webidl_node *root_node,
 
 char *webidl_node_gettext(struct webidl_node *node)
 {
-	switch(node->type) {
-	case WEBIDL_NODE_TYPE_IDENT:
-	case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
-	case WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS:
-		return node->r.text;
+	if (node != NULL) {
 
-	default:
-		return NULL;
+		switch(node->type) {
+		case WEBIDL_NODE_TYPE_IDENT:
+		case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
+		case WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS:
+			return node->r.text;
+
+		default:
+			break;	
+		}
 	}
+	return NULL;
 }
 
 int
