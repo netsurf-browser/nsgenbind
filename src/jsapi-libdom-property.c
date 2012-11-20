@@ -30,22 +30,22 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 	ident_node = webidl_node_find_type(webidl_node_getnode(node),
 					   NULL,
 					   WEBIDL_NODE_TYPE_IDENT);
-	if (ident_node == NULL) {
+	ident = webidl_node_gettext(ident_node);
+	if (ident == NULL) {
 		/* properties must have an operator
 		 * http://www.w3.org/TR/WebIDL/#idl-attributes
 		 */
 		return -1;
 	}
-	ident = webidl_node_gettext(ident_node);
 
 	modifier_node = webidl_node_find_type(webidl_node_getnode(node),
 					      NULL,
 					      WEBIDL_NODE_TYPE_MODIFIER);
 
 	if (webidl_node_getint(modifier_node) == WEBIDL_TYPE_READONLY) {
-		fprintf(binding->outfile, "\tJSAPI_PS_RO(");
+		fprintf(binding->outfile, "\tJSAPI_PS_RO(\"%s\", ", ident);
 	} else {
-		fprintf(binding->outfile, "\tJSAPI_PS(");
+		fprintf(binding->outfile, "\tJSAPI_PS(\"%s\", ", ident);
 	}
 
 	unshared_node = genbind_node_find_type_ident(binding->binding_list,
@@ -499,42 +499,83 @@ static int output_property_getter(struct binding *binding,
 	return 0;
 }
 
-static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
+static int output_property_setter(struct binding *binding,
+				  struct webidl_node *node,
+				  const char *ident)
 {
-	struct binding *binding = ctx;
-	struct webidl_node *ident_node;
 	struct webidl_node *modifier_node;
-
-	ident_node = webidl_node_find_type(webidl_node_getnode(node),
-					   NULL,
-					   WEBIDL_NODE_TYPE_IDENT);
-	if (ident_node == NULL) {
-		/* properties must have an operator
-		 * http://www.w3.org/TR/WebIDL/#idl-attributes
-		 */
-		return 1;
-	}
 
 	modifier_node = webidl_node_find_type(webidl_node_getnode(node),
 					      NULL,
 					      WEBIDL_NODE_TYPE_MODIFIER);
 
 
-	if (webidl_node_getint(modifier_node) != WEBIDL_TYPE_READONLY) {
-		/* no readonly so a set function is required */
-
-		fprintf(binding->outfile,
-			"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
-			webidl_node_gettext(ident_node));
-		fprintf(binding->outfile,
-			"{\n"
-			"        return JS_FALSE;\n"
-			"}\n\n");
+	if (webidl_node_getint(modifier_node) == WEBIDL_TYPE_READONLY) {
+		/* readonly so a set function is not required */
+		return 0;
 	}
 
-	/* property getter */
-	return output_property_getter(binding, node, webidl_node_gettext(ident_node));
+
+	fprintf(binding->outfile,
+		"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
+		ident);
+
+	fprintf(binding->outfile,
+		"{\n"
+		"        return JS_FALSE;\n"
+		"}\n\n");
+	
+
+	return 0; 
 }
+
+static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+	struct webidl_node *ident_node;
+	const char *ident;
+	struct webidl_node *type_node;
+	int ret;
+
+	ident_node = webidl_node_find_type(webidl_node_getnode(node),
+					   NULL,
+					   WEBIDL_NODE_TYPE_IDENT);
+	ident = webidl_node_gettext(ident_node);
+	if (ident == NULL) {
+		/* properties must have an operator
+		 * http://www.w3.org/TR/WebIDL/#idl-attributes
+		 */
+		return -1;
+	}
+
+	/* do not generate individual getters/setters for an unshared type */
+	type_node = webidl_node_find_type(webidl_node_getnode(node),
+					  NULL,
+					  WEBIDL_NODE_TYPE_TYPE);
+
+	ident_node = webidl_node_find_type(webidl_node_getnode(type_node),
+					   NULL,
+					   WEBIDL_NODE_TYPE_IDENT);
+
+	if (ident_node != NULL) {
+		struct genbind_node *unshared_node;
+		unshared_node = genbind_node_find_type_type(binding->binding_list,
+					NULL,
+					GENBIND_NODE_TYPE_BINDING_UNSHARED,
+					webidl_node_gettext(ident_node));
+		if (unshared_node != NULL) {
+			return 0; 
+		}
+	}
+
+	ret = output_property_setter(binding, node, ident);
+	if (ret == 0) {
+		/* property getter */
+		ret = output_property_getter(binding, node, ident);
+	}
+	return ret;
+}
+
 
 
 /* callback to emit implements property bodys */
