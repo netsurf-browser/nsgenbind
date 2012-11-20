@@ -49,7 +49,7 @@ int output_operator_body(struct binding *binding, const char *interface);
 int output_function_spec(struct binding *binding);
 
 int output_property_spec(struct binding *binding);
-int output_property_body(struct binding *binding, const char *interface);
+int output_property_body(struct binding *binding);
 
 int output_const_defines(struct binding *binding, const char *interface);
 

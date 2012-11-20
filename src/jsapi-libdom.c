@@ -724,7 +724,7 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 		return 9;
 	}
 
-	res = output_property_body(binding, binding->interface);
+	res = output_property_body(binding);
 	if (res) {
 		return 10;
 	}

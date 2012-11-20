@@ -17,6 +17,9 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
+static int generate_property_spec(struct binding *binding, const char *interface);
+static int generate_property_body(struct binding *binding, const char *interface);
+
 
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
@@ -93,7 +96,7 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 	return 0;
 }
 
-static int generate_property_spec(struct binding *binding, const char *interface);
+
 /* callback to emit implements property spec */
 static int webidl_property_spec_implements_cb(struct webidl_node *node, void *ctx)
 {
@@ -583,11 +586,13 @@ static int webidl_implements_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
 
-	return output_property_body(binding, webidl_node_gettext(node));
+	return generate_property_body(binding, webidl_node_gettext(node));
 }
 
-int
-output_property_body(struct binding *binding, const char *interface)
+
+
+static int
+generate_property_body(struct binding *binding, const char *interface)
 {
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
@@ -633,7 +638,7 @@ output_property_body(struct binding *binding, const char *interface)
 					WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		res = output_property_body(binding,
+		res = generate_property_body(binding,
 					   webidl_node_gettext(inherit_node));
 	}
 
@@ -641,6 +646,54 @@ output_property_body(struct binding *binding, const char *interface)
 		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
 					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
 					webidl_implements_cb,
+					binding);
+	}
+
+	return res;
+}
+
+
+
+int unshared_property_cb(struct genbind_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+	struct genbind_node *type_node;
+
+	/* only need to generate property body for unshared types */
+	type_node = genbind_node_find_type(genbind_node_getnode(node),
+					   NULL,
+					   GENBIND_NODE_TYPE_TYPE);
+
+	fprintf(binding->outfile,
+		"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
+		genbind_node_gettext(type_node));
+
+	fprintf(binding->outfile,
+		"{\n"
+		"        return JS_FALSE;\n"
+		"}\n\n");
+
+	fprintf(binding->outfile,
+		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"{\n",
+		genbind_node_gettext(type_node));
+	
+
+	return 0;
+}
+
+/* exported interface documented in jsapi-libdom.h */
+int
+output_property_body(struct binding *binding)
+{
+	int res;
+
+	res = generate_property_body(binding, binding->interface);
+
+	if (res == 0) {
+		res = genbind_node_for_each_type(binding->binding_list,
+					GENBIND_NODE_TYPE_BINDING_UNSHARED,
+			                unshared_property_cb,
 					binding);
 	}
 
