@@ -527,9 +527,9 @@ static int output_property_setter(struct binding *binding,
 		"{\n"
 		"        return JS_FALSE;\n"
 		"}\n\n");
-	
 
-	return 0; 
+
+	return 0;
 }
 
 static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
@@ -567,7 +567,7 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 					GENBIND_NODE_TYPE_BINDING_UNSHARED,
 					webidl_node_gettext(ident_node));
 		if (unshared_node != NULL) {
-			return 0; 
+			return 0;
 		}
 	}
 
@@ -658,33 +658,60 @@ int unshared_property_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
 	struct genbind_node *type_node;
+	struct genbind_node *property_node;
+	const char *type;
 
 	/* only need to generate property body for unshared types */
 	type_node = genbind_node_find_type(genbind_node_getnode(node),
 					   NULL,
 					   GENBIND_NODE_TYPE_TYPE);
-	if (type_node == NULL) {
+	type = genbind_node_gettext(type_node);
+	if (type== NULL) {
 		return 0;
 	}
 
+	/* setter for unshared types */
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
-		genbind_node_gettext(type_node));
+		"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"{\n",
+		type);
+
+	property_node = genbind_node_find_type_ident(binding->gb_ast,
+						     NULL,
+						     GENBIND_NODE_TYPE_SETTER,
+						     type);
+
+	if (property_node != NULL) {
+		/* binding source block */
+		output_code_block(binding, genbind_node_getnode(property_node));
+	}
 
 	fprintf(binding->outfile,
-		"{\n"
-		"        return JS_FALSE;\n"
+		"        return JS_TRUE;\n"
 		"}\n\n");
 
-	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
-		genbind_node_gettext(type_node));
+
+	/* getter for unshared types */
 
 	fprintf(binding->outfile,
-		"{\n"
-		"        return JS_FALSE;\n"
+		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"{\n",
+		type);
+
+	property_node = genbind_node_find_type_ident(binding->gb_ast,
+						     NULL,
+						     GENBIND_NODE_TYPE_GETTER,
+						     type);
+
+	if (property_node != NULL) {
+		/* binding source block */
+		output_code_block(binding, genbind_node_getnode(property_node));
+	}
+
+	fprintf(binding->outfile,
+		"        return JS_TRUE;\n"
 		"}\n\n");
-	
+
 
 	return 0;
 }
@@ -700,7 +727,7 @@ output_property_body(struct binding *binding)
 	if (res == 0) {
 		res = genbind_node_for_each_type(binding->binding_list,
 					GENBIND_NODE_TYPE_BINDING_UNSHARED,
-			                unshared_property_cb,
+					unshared_property_cb,
 					binding);
 	}
 
