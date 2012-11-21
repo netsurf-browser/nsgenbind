@@ -34,8 +34,9 @@ char *errtxt;
 
 %union
 {
-  char* text;
-  struct genbind_node *node;
+    char* text;
+    struct genbind_node *node;
+    int number;
 }
 
 %token TOK_IDLFILE
@@ -52,12 +53,16 @@ char *errtxt;
 %token TOK_PRIVATE
 %token TOK_INTERNAL
 %token TOK_UNSHARED
+%token TOK_SHARED
 
 %token <text> TOK_IDENTIFIER
 %token <text> TOK_STRING_LITERAL
 %token <text> TOK_CCODE_LITERAL
 
 %type <text> CBlock
+
+%type <number> Modifiers
+%type <number> Modifier
 
 %type <node> Statement
 %type <node> Statements
@@ -72,11 +77,12 @@ char *errtxt;
 %type <node> Private
 %type <node> Internal
 %type <node> Interface
-%type <node> Unshared
+%type <node> Shared
 %type <node> Operation
 %type <node> Api
 %type <node> Getter
 %type <node> Setter
+
 
 %%
 
@@ -255,7 +261,7 @@ BindingArg
         | 
         Interface
         |
-        Unshared
+        Shared
         ;
 
 Type
@@ -294,18 +300,44 @@ Interface
         }
         ;
 
-Unshared
+Shared
         :
-        TOK_UNSHARED TOK_TYPE TOK_IDENTIFIER ';'
+        TOK_SHARED Modifiers TOK_IDENTIFIER ';'
         {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_UNSHARED, NULL, 
-                 genbind_new_node(GENBIND_NODE_TYPE_TYPE, NULL, $3));
-        }
-        |
-        TOK_UNSHARED TOK_IDENTIFIER ';'
-        {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_UNSHARED, NULL, 
-                 genbind_new_node(GENBIND_NODE_TYPE_IDENT, NULL, $2));
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_SHARED, 
+                                NULL, 
+                                genbind_new_node(GENBIND_NODE_TYPE_MODIFIER, 
+                                                 genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
+                                                                  NULL, 
+                                                                  $3),
+                                                 (void *)$2));
         }
         ;
+
+Modifiers
+        :
+        /* empty */
+        {
+            $$ = 0;
+        }
+        |
+        Modifiers Modifier
+        {
+            $$ |= $2;
+        }
+        ;
+
+Modifier
+        :
+        TOK_TYPE
+        {
+            $$ = GENBIND_TYPE_TYPE;
+        }
+        |
+        TOK_UNSHARED
+        {
+            $$ = GENBIND_TYPE_UNSHARED;            
+        }
+        ;
+
 %%

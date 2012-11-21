@@ -31,8 +31,8 @@ binding window {
 	internal "JSObject *" console;
 	internal "JSObject *" location;
 
-	unshared type EventHandler;
-	unshared foo;
+	shared unshared type EventHandler;
+	shared unshared foo;
 }
 
 api mark %{

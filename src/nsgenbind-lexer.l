@@ -98,6 +98,8 @@ internal                return TOK_INTERNAL;
 
 unshared                return TOK_UNSHARED;
 
+shared                  return TOK_SHARED;
+
 operation               return TOK_OPERATION;
 
 api                     return TOK_API;

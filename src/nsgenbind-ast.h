@@ -11,8 +11,9 @@
 
 enum genbind_node_type {
 	GENBIND_NODE_TYPE_ROOT = 0,
-	GENBIND_NODE_TYPE_IDENT, /* generic identifier string */
-	GENBIND_NODE_TYPE_TYPE, /* generic type string */
+	GENBIND_NODE_TYPE_IDENT, /**< generic identifier string */
+	GENBIND_NODE_TYPE_TYPE, /**< generic type string */
+	GENBIND_NODE_TYPE_MODIFIER, /**< node modifier */
 
 	GENBIND_NODE_TYPE_CBLOCK,
 	GENBIND_NODE_TYPE_WEBIDLFILE,
@@ -23,11 +24,19 @@ enum genbind_node_type {
 	GENBIND_NODE_TYPE_BINDING_PRIVATE,
 	GENBIND_NODE_TYPE_BINDING_INTERNAL,
 	GENBIND_NODE_TYPE_BINDING_INTERFACE,
-	GENBIND_NODE_TYPE_BINDING_UNSHARED,
+	GENBIND_NODE_TYPE_BINDING_SHARED,
 	GENBIND_NODE_TYPE_API,
 	GENBIND_NODE_TYPE_OPERATION,
 	GENBIND_NODE_TYPE_GETTER,
 	GENBIND_NODE_TYPE_SETTER,
+};
+
+/* modifier flags */
+enum genbind_type_modifier {
+	GENBIND_TYPE_NONE = 0,
+	GENBIND_TYPE_TYPE = 1, /**< identifies a type handler */
+	GENBIND_TYPE_UNSHARED = 2, /**< unshared item */
+	GENBIND_TYPE_TYPE_UNSHARED = 3, /**< identifies a unshared type handler */
 };
 
 
@@ -113,5 +122,6 @@ int genbind_node_for_each_type(struct genbind_node *node, enum genbind_node_type
 
 char *genbind_node_gettext(struct genbind_node *node);
 struct genbind_node *genbind_node_getnode(struct genbind_node *node);
+int genbind_node_getint(struct genbind_node *node);
 
 #endif

@@ -21,11 +21,47 @@ static int generate_property_spec(struct binding *binding, const char *interface
 static int generate_property_body(struct binding *binding, const char *interface);
 
 
+/* search binding for property sharing modifier */
+static enum genbind_type_modifier
+get_binding_shared_modifier(struct binding *binding, const char *type, const char *ident)
+{
+	struct genbind_node *shared_node;
+	struct genbind_node *shared_mod_node;
+
+	/* look for node matching the ident first */
+	shared_node = genbind_node_find_type_ident(binding->binding_list,
+				   NULL,
+				   GENBIND_NODE_TYPE_BINDING_SHARED,
+				   ident);
+
+	/* look for a node matching the type */
+	if (shared_node == NULL) {
+		shared_node = genbind_node_find_type_ident(binding->binding_list,
+					   NULL,
+					   GENBIND_NODE_TYPE_BINDING_SHARED,
+					   type);
+
+	}
+
+
+	if (shared_node != NULL) {
+		/* no explicit shared status */
+		shared_mod_node = genbind_node_find_type(genbind_node_getnode(shared_node),
+						NULL,
+						GENBIND_NODE_TYPE_MODIFIER);
+		if (shared_mod_node != NULL) {
+			return genbind_node_getint(shared_mod_node);
+		}
+	}
+	return GENBIND_TYPE_NONE;
+}
+
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
-	struct genbind_node *unshared_node;
+
 	struct webidl_node *type_node;
+	const char *type = NULL;
 	struct webidl_node *ident_node;
 	const char *ident;
 	struct webidl_node *modifier_node;
@@ -41,6 +77,18 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 		return -1;
 	}
 
+
+	/* get type name */
+	type_node = webidl_node_find_type(webidl_node_getnode(node),
+					  NULL,
+					  WEBIDL_NODE_TYPE_TYPE);
+	ident_node = webidl_node_find_type(webidl_node_getnode(type_node),
+					   NULL,
+					   WEBIDL_NODE_TYPE_IDENT);
+	type = webidl_node_gettext(ident_node);
+
+
+	/* generate JSAPI_PS macro entry */
 	modifier_node = webidl_node_find_type(webidl_node_getnode(node),
 					      NULL,
 					      WEBIDL_NODE_TYPE_MODIFIER);
@@ -51,45 +99,42 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 		fprintf(binding->outfile, "\tJSAPI_PS(\"%s\", ", ident);
 	}
 
-	unshared_node = genbind_node_find_type_ident(binding->binding_list,
-					NULL,
-					GENBIND_NODE_TYPE_BINDING_UNSHARED,
-					ident);
+	/* generate property shared status */
+	switch (get_binding_shared_modifier(binding, type, ident)) {
 
-	if (unshared_node != NULL) {
-		/* not a shared property */
-		fprintf(binding->outfile, "%s, 0, JSPROP_ENUMERATE", ident);
-	} else {
-		/* examine if the property is of a unshared type */
-		type_node = webidl_node_find_type(webidl_node_getnode(node),
-					 NULL,
-					 WEBIDL_NODE_TYPE_TYPE);
+	default:
+	case GENBIND_TYPE_NONE:
+		/* shared property without type handler
+		 *
+		 * js doesnt provide storage and setter/getter must
+		 * perform all GC management.
+		 */
+		fprintf(binding->outfile,
+			"%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED",
+			ident);
+		break;
 
-		ident_node = webidl_node_find_type(webidl_node_getnode(type_node),
-						   NULL,
-						   WEBIDL_NODE_TYPE_IDENT);
+	case GENBIND_TYPE_TYPE:
+		/* shared property with a type handler */
+		fprintf(binding->outfile,
+			"%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED",
+			type);
+		break;
 
-		if (ident_node != NULL) {
-			unshared_node = genbind_node_find_type_type(binding->binding_list,
-							    NULL,
-							    GENBIND_NODE_TYPE_BINDING_UNSHARED,
-							    webidl_node_gettext(ident_node));
-		}
+	case GENBIND_TYPE_UNSHARED:
+		/* unshared property without type handler */
+		fprintf(binding->outfile,
+			"%s, 0, JSPROP_ENUMERATE",
+			ident);
+		break;
 
-		if (unshared_node != NULL) {
-			/* property is not shared because of its type */
-			fprintf(binding->outfile,
-				"%s, 0, JSPROP_ENUMERATE",
-				webidl_node_gettext(ident_node));
-		} else {
-			/* property is shared
-			 * js doesnt provide storage and setter/getter must
-			 * perform all GC management.
-			 */
-			fprintf(binding->outfile,
-				"%s, 0, JSPROP_ENUMERATE | JSPROP_SHARED",
-				ident);
-		}
+	case GENBIND_TYPE_TYPE_UNSHARED:
+		/* unshared property with a type handler */
+		fprintf(binding->outfile,
+			"%s, 0, JSPROP_ENUMERATE",
+			type);
+		break;
+
 	}
 	fprintf(binding->outfile, "),\n");
 
@@ -538,7 +583,9 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 	struct webidl_node *ident_node;
 	const char *ident;
 	struct webidl_node *type_node;
+	const char *type = NULL;
 	int ret;
+	enum genbind_type_modifier shared_mod;
 
 	ident_node = webidl_node_find_type(webidl_node_getnode(node),
 					   NULL,
@@ -551,30 +598,27 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 		return -1;
 	}
 
-	/* do not generate individual getters/setters for an unshared type */
+	/* get type name */
 	type_node = webidl_node_find_type(webidl_node_getnode(node),
 					  NULL,
 					  WEBIDL_NODE_TYPE_TYPE);
-
 	ident_node = webidl_node_find_type(webidl_node_getnode(type_node),
 					   NULL,
 					   WEBIDL_NODE_TYPE_IDENT);
+	type = webidl_node_gettext(ident_node);
 
-	if (ident_node != NULL) {
-		struct genbind_node *unshared_node;
-		unshared_node = genbind_node_find_type_type(binding->binding_list,
-					NULL,
-					GENBIND_NODE_TYPE_BINDING_UNSHARED,
-					webidl_node_gettext(ident_node));
-		if (unshared_node != NULL) {
-			return 0;
+	/* find shared modifiers */
+	shared_mod = get_binding_shared_modifier(binding, type, ident);
+
+	/* only generate individual getters/setters if there is not a
+	 * type handler
+	 */
+	if ((shared_mod & GENBIND_TYPE_TYPE) == 0) {
+		ret = output_property_setter(binding, node, ident);
+		if (ret == 0) {
+			/* property getter */
+			ret = output_property_getter(binding, node, ident);
 		}
-	}
-
-	ret = output_property_setter(binding, node, ident);
-	if (ret == 0) {
-		/* property getter */
-		ret = output_property_getter(binding, node, ident);
 	}
 	return ret;
 }
@@ -652,21 +696,30 @@ generate_property_body(struct binding *binding, const char *interface)
 	return res;
 }
 
-
-
-int unshared_property_cb(struct genbind_node *node, void *ctx)
+/* callback to emit property handlers for whole types */
+static int typehandler_property_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
-	struct genbind_node *type_node;
+	struct genbind_node *ident_node;
 	struct genbind_node *property_node;
 	const char *type;
+	struct genbind_node *mod_node;
+	enum genbind_type_modifier share_mod;
 
-	/* only need to generate property body for unshared types */
-	type_node = genbind_node_find_type(genbind_node_getnode(node),
+	mod_node = genbind_node_find_type(genbind_node_getnode(node),
 					   NULL,
-					   GENBIND_NODE_TYPE_TYPE);
-	type = genbind_node_gettext(type_node);
-	if (type== NULL) {
+					   GENBIND_NODE_TYPE_MODIFIER);
+	share_mod = genbind_node_getint(mod_node);
+	if ((share_mod & GENBIND_TYPE_TYPE) != GENBIND_TYPE_TYPE) {
+		/* not a type handler */
+		return 0;
+	}
+
+	ident_node = genbind_node_find_type(genbind_node_getnode(node),
+					   NULL,
+					   GENBIND_NODE_TYPE_IDENT);
+	type = genbind_node_gettext(ident_node);
+	if (type == NULL) {
 		return 0;
 	}
 
@@ -726,8 +779,8 @@ output_property_body(struct binding *binding)
 
 	if (res == 0) {
 		res = genbind_node_for_each_type(binding->binding_list,
-					GENBIND_NODE_TYPE_BINDING_UNSHARED,
-					unshared_property_cb,
+					GENBIND_NODE_TYPE_BINDING_SHARED,
+					typehandler_property_cb,
 					binding);
 	}
 

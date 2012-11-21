@@ -32,6 +32,7 @@ struct genbind_node {
 		void *value;
 		struct genbind_node *node;
 		char *text;
+		int number; /* node data is an integer */
 	} r;
 };
 
@@ -140,6 +141,10 @@ genbind_node_find_type_ident(struct genbind_node *node,
 	struct genbind_node *found_node;
 	struct genbind_node *ident_node;
 
+	if (ident == NULL) {
+		return NULL;
+	}
+
 	found_node = genbind_node_find_type(node, prev, type);
 
 
@@ -223,7 +228,7 @@ struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 		case GENBIND_NODE_TYPE_BINDING:
 		case GENBIND_NODE_TYPE_BINDING_PRIVATE:
 		case GENBIND_NODE_TYPE_BINDING_INTERNAL:
-		case GENBIND_NODE_TYPE_BINDING_UNSHARED:
+		case GENBIND_NODE_TYPE_BINDING_SHARED:
 		case GENBIND_NODE_TYPE_OPERATION:
 		case GENBIND_NODE_TYPE_API:
 		case GENBIND_NODE_TYPE_GETTER:
@@ -235,6 +240,21 @@ struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 		}
 	}
 	return NULL;
+
+}
+
+int genbind_node_getint(struct genbind_node *node)
+{
+	if (node != NULL) {
+		switch(node->type) {
+		case GENBIND_NODE_TYPE_MODIFIER:
+			return node->r.number;
+
+		default:
+			break;
+		}
+	}
+	return -1;
 
 }
 
@@ -274,8 +294,8 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 	case GENBIND_NODE_TYPE_BINDING_INTERFACE:
 		return "Interface";
 
-	case GENBIND_NODE_TYPE_BINDING_UNSHARED:
-		return "Unshared";
+	case GENBIND_NODE_TYPE_BINDING_SHARED:
+		return "Shared";
 
 	case GENBIND_NODE_TYPE_OPERATION:
 		return "Operation";

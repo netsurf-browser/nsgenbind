@@ -41,11 +41,11 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %union
 {
-  int attr;
-  long value;
+    int attr;
+    long value;
     bool isit;
-  char* text;
-  struct webidl_node *node;
+    char* text;
+    struct webidl_node *node;
 }
 
 
