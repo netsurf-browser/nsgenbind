@@ -197,38 +197,45 @@ int genbind_cmp_node_type(struct genbind_node *node, void *ctx)
 
 char *genbind_node_gettext(struct genbind_node *node)
 {
-	switch(node->type) {
-	case GENBIND_NODE_TYPE_WEBIDLFILE:
-	case GENBIND_NODE_TYPE_STRING:
-	case GENBIND_NODE_TYPE_PREAMBLE:
-	case GENBIND_NODE_TYPE_IDENT:
-	case GENBIND_NODE_TYPE_TYPE:
-	case GENBIND_NODE_TYPE_BINDING_INTERFACE:
-	case GENBIND_NODE_TYPE_CBLOCK:
-		return node->r.text;
+	if (node != NULL) {
+		switch(node->type) {
+		case GENBIND_NODE_TYPE_WEBIDLFILE:
+		case GENBIND_NODE_TYPE_STRING:
+		case GENBIND_NODE_TYPE_PREAMBLE:
+		case GENBIND_NODE_TYPE_IDENT:
+		case GENBIND_NODE_TYPE_TYPE:
+		case GENBIND_NODE_TYPE_BINDING_INTERFACE:
+		case GENBIND_NODE_TYPE_CBLOCK:
+			return node->r.text;
 
-	default:
-		return NULL;
+		default:
+			break;
+		}
 	}
+	return NULL;
 }
 
 struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 {
-	switch(node->type) {
-	case GENBIND_NODE_TYPE_HDRCOMMENT:
-	case GENBIND_NODE_TYPE_BINDING:
-	case GENBIND_NODE_TYPE_BINDING_PRIVATE:
-	case GENBIND_NODE_TYPE_BINDING_INTERNAL:
-	case GENBIND_NODE_TYPE_BINDING_UNSHARED:
-	case GENBIND_NODE_TYPE_OPERATION:
-	case GENBIND_NODE_TYPE_API:
-	case GENBIND_NODE_TYPE_GETTER:
-	case GENBIND_NODE_TYPE_SETTER:
-		return node->r.node;
+	if (node != NULL) {
+		switch(node->type) {
+		case GENBIND_NODE_TYPE_HDRCOMMENT:
+		case GENBIND_NODE_TYPE_BINDING:
+		case GENBIND_NODE_TYPE_BINDING_PRIVATE:
+		case GENBIND_NODE_TYPE_BINDING_INTERNAL:
+		case GENBIND_NODE_TYPE_BINDING_UNSHARED:
+		case GENBIND_NODE_TYPE_OPERATION:
+		case GENBIND_NODE_TYPE_API:
+		case GENBIND_NODE_TYPE_GETTER:
+		case GENBIND_NODE_TYPE_SETTER:
+			return node->r.node;
 
-	default:
-		return NULL;
+		default:
+			break;
+		}
 	}
+	return NULL;
+
 }
 
 static const char *genbind_node_type_to_str(enum genbind_node_type type)

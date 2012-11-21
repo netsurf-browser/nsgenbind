@@ -663,6 +663,9 @@ int unshared_property_cb(struct genbind_node *node, void *ctx)
 	type_node = genbind_node_find_type(genbind_node_getnode(node),
 					   NULL,
 					   GENBIND_NODE_TYPE_TYPE);
+	if (type_node == NULL) {
+		return 0;
+	}
 
 	fprintf(binding->outfile,
 		"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
@@ -674,9 +677,13 @@ int unshared_property_cb(struct genbind_node *node, void *ctx)
 		"}\n\n");
 
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
-		"{\n",
+		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
 		genbind_node_gettext(type_node));
+
+	fprintf(binding->outfile,
+		"{\n"
+		"        return JS_FALSE;\n"
+		"}\n\n");
 	
 
 	return 0;
