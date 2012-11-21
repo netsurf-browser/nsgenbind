@@ -31,8 +31,10 @@ binding window {
 	internal "JSObject *" console;
 	internal "JSObject *" location;
 
-	shared unshared type EventHandler;
-	shared unshared foo;
+	property unshared type WindowProxy;
+	property unshared foo;
+	property shared type EventHandler;
+	property shared baz;
 }
 
 api mark %{
@@ -198,4 +200,8 @@ getter window %{
 
 getter self %{
 	jsret = obj;
+%}
+
+getter EventHandler %{
+	/* example shared property type handler */
 %}

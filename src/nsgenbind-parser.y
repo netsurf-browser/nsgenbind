@@ -36,7 +36,7 @@ char *errtxt;
 {
     char* text;
     struct genbind_node *node;
-    int number;
+    long value;
 }
 
 %token TOK_IDLFILE
@@ -54,6 +54,7 @@ char *errtxt;
 %token TOK_INTERNAL
 %token TOK_UNSHARED
 %token TOK_SHARED
+%token TOK_PROPERTY
 
 %token <text> TOK_IDENTIFIER
 %token <text> TOK_STRING_LITERAL
@@ -61,8 +62,8 @@ char *errtxt;
 
 %type <text> CBlock
 
-%type <number> Modifiers
-%type <number> Modifier
+%type <value> Modifiers
+%type <value> Modifier
 
 %type <node> Statement
 %type <node> Statements
@@ -77,7 +78,7 @@ char *errtxt;
 %type <node> Private
 %type <node> Internal
 %type <node> Interface
-%type <node> Shared
+%type <node> Property
 %type <node> Operation
 %type <node> Api
 %type <node> Getter
@@ -261,7 +262,7 @@ BindingArg
         | 
         Interface
         |
-        Shared
+        Property
         ;
 
 Type
@@ -300,11 +301,11 @@ Interface
         }
         ;
 
-Shared
+Property
         :
-        TOK_SHARED Modifiers TOK_IDENTIFIER ';'
+        TOK_PROPERTY Modifiers TOK_IDENTIFIER ';'
         {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_SHARED, 
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_PROPERTY, 
                                 NULL, 
                                 genbind_new_node(GENBIND_NODE_TYPE_MODIFIER, 
                                                  genbind_new_node(GENBIND_NODE_TYPE_IDENT, 
@@ -318,7 +319,7 @@ Modifiers
         :
         /* empty */
         {
-            $$ = 0;
+            $$ = GENBIND_TYPE_NONE;
         }
         |
         Modifiers Modifier
@@ -337,6 +338,11 @@ Modifier
         TOK_UNSHARED
         {
             $$ = GENBIND_TYPE_UNSHARED;            
+        }
+        |
+        TOK_SHARED
+        {
+            $$ = GENBIND_TYPE_NONE;            
         }
         ;
 

@@ -27,14 +27,14 @@ hdrcomment "This file is part of NetSurf, http://www.netsurf-browser.org/";
 hdrcomment "Released under the terms of the MIT License,";
 hdrcomment "        http://www.opensource.org/licenses/mit-license";
 
-/* the preamble block is copied verbatum into the generated output 
+/* the preamble block is copied verbatum into the generated output
  *
- * This can be used for includes, comments or whatever else is desired 
+ * This can be used for includes, comments or whatever else is desired
  */
 preamble %{
 
 #include <dom/dom.h>
-        
+
 #include "utils/config.h"
 #include "utils/log.h"
 
@@ -46,8 +46,8 @@ preamble %{
 /* this block describes the binding to be generated
  *
  * Depending on the type of binding being generated multiple blocks
- * may be allowed. 
- * 
+ * may be allowed.
+ *
  * Note: the js_libdom (javascript to libdom) binding as currently
  * implemented only allows for a single binding per file, this may
  * be improved in future.
@@ -71,12 +71,23 @@ binding example {
      *  - are considered for property getters/setters.
      */
     internal "void *" fluff;
-     
+
+    /* property handler specifiers:
+     *   - (un)shared flag allows control of the properties JSAPI shared state.
+     *          The default for all unnamed properties on the interface
+     *          is shared without a type handler.
+     *   - type flag allows a set of properties whose type matches the
+     *          identifier to be handled by the same callback function.
+     */
+    property shared bar; /* the default - a noop */
+    property shared type EventHandler;
+    property unshared foo;
+    property unshared type WindowProxy;
 }
 
-/* operation implementation code. 
+/* operation implementation code.
  *
- * The body is copied verbatum into operation binding 
+ * The body is copied verbatum into operation binding
  *
  * several values are generated automatically:
  *
@@ -94,7 +105,7 @@ binding example {
  *
  * - Arguments are automatically converted into c variables (named as
  *    per the WebIDL names.
- * 
+ *
  * - Return values (excepting void return types where its omitted) are
  *    always named "retval" and are of the appropriate c type. The
  *    initial value is set appropriately.
@@ -103,9 +114,9 @@ operation foo %{
   retval = JS_NewStringCopyN(cx, "foo", SLEN("foo"));
 %}
 
-/* property getter implementation code. 
+/* property getter implementation code.
  *
- * The body is copied verbatum into property getter binding 
+ * The body is copied verbatum into property getter binding
  *
  * several values are generated automatically:
  *
@@ -132,9 +143,9 @@ getter bar %{
   retval = JS_NewStringCopyN(cx, "bar", SLEN("bar"));
 %}
 
-/* property setter implementation code. 
+/* property setter implementation code.
  *
- * The body is copied verbatum into property getter binding 
+ * The body is copied verbatum into property getter binding
  *
  * several values are generated automatically:
  *
@@ -163,7 +174,7 @@ setter baz %{
   printf("%s\n", setval);
 %}
 
-/* implementation of the class initilisation 
+/* implementation of the class initilisation
  *
  * This allows the default JS_InitClass to be overriden - currently
  *  only used for the window (global) object to cause all the other class
@@ -178,7 +189,7 @@ api init %{
 /* implementation of the c instance creation
  *
  * This allows the overriding of the construction of an interface instance.
- * 
+ *
  * The body is copied verbatum and must return the new object in the
  *  "newobject" variable.
  *
@@ -189,9 +200,9 @@ api init %{
  * If there are private or internal values the private struct is
  * constructed and instantiated. The struct is available during the
  * new function and is automatically attached as the private value to
- * the object. 
+ * the object.
  *
- * The default implemenattion simply calls JS_NewObject() 
+ * The default implemenattion simply calls JS_NewObject()
  *
  * Note this does *not* rely upon (or even call) the instances
  * javascript constructor allowing the c code to create objects that
@@ -203,11 +214,11 @@ api new %{
 
 /* additional code in the instance finalise operation.
  *
- * The body is copied verbatim into the output 
+ * The body is copied verbatim into the output
  *
- * Prototype is 
+ * Prototype is
  * void jsclass_finalize(JSContext *cx, JSObject *obj)
- * 
+ *
  * private is available (if appropriate) and freed after the body
  */
 api finalise %{
@@ -219,7 +230,7 @@ api finalise %{
  *  JSResolveOp with JSCLASS_NEW_RESOLVE specified and must provide a
  *  complete implementation.
  *
- * The body is copied verbatim into the output 
+ * The body is copied verbatim into the output
  *
  * Prototype is:
  * JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)
@@ -227,7 +238,7 @@ api finalise %{
  * By default returns JS_TRUE implying that *objp has been updated
  *
  * The minimal implementation would be "*objp = NULL;" but is
- *   equivalent to simply omitting this directive and using the defaul stub.  
+ *   equivalent to simply omitting this directive and using the defaul stub.
  */
 api resolve %{
 %}

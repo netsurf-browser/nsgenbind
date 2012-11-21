@@ -228,7 +228,7 @@ struct genbind_node *genbind_node_getnode(struct genbind_node *node)
 		case GENBIND_NODE_TYPE_BINDING:
 		case GENBIND_NODE_TYPE_BINDING_PRIVATE:
 		case GENBIND_NODE_TYPE_BINDING_INTERNAL:
-		case GENBIND_NODE_TYPE_BINDING_SHARED:
+		case GENBIND_NODE_TYPE_BINDING_PROPERTY:
 		case GENBIND_NODE_TYPE_OPERATION:
 		case GENBIND_NODE_TYPE_API:
 		case GENBIND_NODE_TYPE_GETTER:
@@ -294,8 +294,8 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 	case GENBIND_NODE_TYPE_BINDING_INTERFACE:
 		return "Interface";
 
-	case GENBIND_NODE_TYPE_BINDING_SHARED:
-		return "Shared";
+	case GENBIND_NODE_TYPE_BINDING_PROPERTY:
+		return "Property";
 
 	case GENBIND_NODE_TYPE_OPERATION:
 		return "Operation";

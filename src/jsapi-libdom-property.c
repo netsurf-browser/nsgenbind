@@ -31,14 +31,14 @@ get_binding_shared_modifier(struct binding *binding, const char *type, const cha
 	/* look for node matching the ident first */
 	shared_node = genbind_node_find_type_ident(binding->binding_list,
 				   NULL,
-				   GENBIND_NODE_TYPE_BINDING_SHARED,
+				   GENBIND_NODE_TYPE_BINDING_PROPERTY,
 				   ident);
 
 	/* look for a node matching the type */
 	if (shared_node == NULL) {
 		shared_node = genbind_node_find_type_ident(binding->binding_list,
 					   NULL,
-					   GENBIND_NODE_TYPE_BINDING_SHARED,
+					   GENBIND_NODE_TYPE_BINDING_PROPERTY,
 					   type);
 
 	}
@@ -779,7 +779,7 @@ output_property_body(struct binding *binding)
 
 	if (res == 0) {
 		res = genbind_node_for_each_type(binding->binding_list,
-					GENBIND_NODE_TYPE_BINDING_SHARED,
+					GENBIND_NODE_TYPE_BINDING_PROPERTY,
 					typehandler_property_cb,
 					binding);
 	}

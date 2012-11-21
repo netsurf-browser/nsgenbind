@@ -100,6 +100,8 @@ unshared                return TOK_UNSHARED;
 
 shared                  return TOK_SHARED;
 
+property                return TOK_PROPERTY;
+
 operation               return TOK_OPERATION;
 
 api                     return TOK_API;
