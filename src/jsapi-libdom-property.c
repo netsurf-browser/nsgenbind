@@ -249,7 +249,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_USER:
 		/* User type are represented with jsobject */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
+			"\tJSAPI_PROP_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
 			ident);
 
 		break;
@@ -257,7 +257,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_BOOL:
 		/* JSBool */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(%s));\n",
+			"\tJSAPI_PROP_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(%s));\n",
 			ident);
 
 		break;
@@ -274,14 +274,14 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_DOUBLE:
 		/* double */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(%s));\n",
+			"\tJSAPI_PROP_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
 	case WEBIDL_TYPE_SHORT:
 		/* int16_t  */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
+			"\tJSAPI_PROP_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
@@ -292,14 +292,14 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_LONG:
 		/* int32_t  */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
+			"\tJSAPI_PROP_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
 	case WEBIDL_TYPE_STRING:
 		/* JSString * */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, JSAPI_STRING_TO_JSVAL(%s));\n",
+			"\tJSAPI_PROP_SET_RVAL(cx, vp, JSAPI_STRING_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
@@ -310,7 +310,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_OBJECT:
 		/* JSObject * */
 		fprintf(binding->outfile,
-			"\tJS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
+			"\tJSAPI_PROP_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
@@ -481,7 +481,7 @@ static int output_property_getter(struct binding *binding,
 	struct genbind_node *property_node;
 
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"static JSBool JSAPI_PROP_GETTER(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
 		"{\n",
 		ident);
 
@@ -565,7 +565,7 @@ static int output_property_setter(struct binding *binding,
 
 
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
+		"static JSBool JSAPI_PROP_SETTER(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
 		ident);
 
 	fprintf(binding->outfile,
@@ -696,38 +696,30 @@ generate_property_body(struct binding *binding, const char *interface)
 	return res;
 }
 
-/* callback to emit property handlers for whole types */
-static int typehandler_property_cb(struct genbind_node *node, void *ctx)
+	/* setter for type handler */
+
+static int output_property_type_setter(struct binding *binding, struct genbind_node *node, const char *type)
 {
-	struct binding *binding = ctx;
-	struct genbind_node *ident_node;
 	struct genbind_node *property_node;
-	const char *type;
-	struct genbind_node *mod_node;
-	enum genbind_type_modifier share_mod;
 
-	mod_node = genbind_node_find_type(genbind_node_getnode(node),
-					   NULL,
-					   GENBIND_NODE_TYPE_MODIFIER);
-	share_mod = genbind_node_getint(mod_node);
-	if ((share_mod & GENBIND_TYPE_TYPE) != GENBIND_TYPE_TYPE) {
-		/* not a type handler */
-		return 0;
-	}
-
-	ident_node = genbind_node_find_type(genbind_node_getnode(node),
-					   NULL,
-					   GENBIND_NODE_TYPE_IDENT);
-	type = genbind_node_gettext(ident_node);
-	if (type == NULL) {
-		return 0;
-	}
-
-	/* setter for unshared types */
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYSET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"static JSBool JSAPI_PROP_SETTER(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
 		"{\n",
 		type);
+
+	if (binding->has_private) {
+		/* get context */
+		fprintf(binding->outfile,
+			"\tstruct jsclass_private *private;\n"
+			"\n"
+			"\tprivate = JS_GetInstancePrivate(cx,\n"
+			"\t\tobj,\n"
+			"\t\t&JSClass_%s,\n"
+			"\t\tNULL);\n"
+			"\tif (private == NULL)\n"
+			"\t\treturn JS_FALSE;\n\n",
+			binding->interface);
+	}
 
 	property_node = genbind_node_find_type_ident(binding->gb_ast,
 						     NULL,
@@ -742,14 +734,34 @@ static int typehandler_property_cb(struct genbind_node *node, void *ctx)
 	fprintf(binding->outfile,
 		"        return JS_TRUE;\n"
 		"}\n\n");
+	return 0;
+
+}
 
 
-	/* getter for unshared types */
+/* getter for type handlers */
+static int output_property_type_getter(struct binding *binding, struct genbind_node *node, const char *type)
+{
+	struct genbind_node *property_node;
 
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROPERTYGET(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"static JSBool JSAPI_PROP_GETTER(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
 		"{\n",
 		type);
+
+	if (binding->has_private) {
+		/* get context */
+		fprintf(binding->outfile,
+			"\tstruct jsclass_private *private;\n"
+			"\n"
+			"\tprivate = JS_GetInstancePrivate(cx,\n"
+			"\t\tobj,\n"
+			"\t\t&JSClass_%s,\n"
+			"\t\tNULL);\n"
+			"\tif (private == NULL)\n"
+			"\t\treturn JS_FALSE;\n\n",
+			binding->interface);
+	}
 
 	property_node = genbind_node_find_type_ident(binding->gb_ast,
 						     NULL,
@@ -764,9 +776,42 @@ static int typehandler_property_cb(struct genbind_node *node, void *ctx)
 	fprintf(binding->outfile,
 		"        return JS_TRUE;\n"
 		"}\n\n");
-
-
 	return 0;
+
+}
+
+/* callback to emit property handlers for whole types */
+static int typehandler_property_cb(struct genbind_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+	struct genbind_node *ident_node;
+	const char *type;
+	struct genbind_node *mod_node;
+	enum genbind_type_modifier share_mod;
+	int ret = 0;
+
+	mod_node = genbind_node_find_type(genbind_node_getnode(node),
+					  NULL,
+					  GENBIND_NODE_TYPE_MODIFIER);
+	share_mod = genbind_node_getint(mod_node);
+	if ((share_mod & GENBIND_TYPE_TYPE) == GENBIND_TYPE_TYPE) {
+		/* type handler */
+
+		ident_node = genbind_node_find_type(genbind_node_getnode(node),
+						    NULL,
+						    GENBIND_NODE_TYPE_IDENT);
+		type = genbind_node_gettext(ident_node);
+		if (type != NULL) {
+			ret = output_property_type_setter(binding, node, type);
+			if (ret == 0) {
+				/* property getter */
+				ret = output_property_type_getter(binding,
+								  node,
+								  type);
+			}
+		}
+	}
+	return ret;
 }
 
 /* exported interface documented in jsapi-libdom.h */

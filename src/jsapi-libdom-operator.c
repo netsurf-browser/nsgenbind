@@ -157,7 +157,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_USER:
 		/* User type are represented with jsobject */
 		fprintf(binding->outfile,
-			"\tJSAPI_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
+			"\tJSAPI_FUNC_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
 			ident);
 
 		break;
@@ -165,7 +165,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_BOOL:
 		/* JSBool */
 		fprintf(binding->outfile,
-			"\tJSAPI_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(%s));\n",
+			"\tJSAPI_FUNC_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(%s));\n",
 			ident);
 
 		break;
@@ -182,7 +182,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_DOUBLE:
 		/* double */
 		fprintf(binding->outfile,
-			"\tJSAPI_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(%s));\n",
+			"\tJSAPI_FUNC_SET_RVAL(cx, vp, DOUBLE_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
@@ -198,14 +198,14 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_LONG:
 		/* int32_t  */
 		fprintf(binding->outfile,
-			"\tJSAPI_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
+			"\tJSAPI_FUNC_SET_RVAL(cx, vp, INT_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
 	case WEBIDL_TYPE_STRING:
 		/* JSString * */
 		fprintf(binding->outfile,
-			"\tJSAPI_SET_RVAL(cx, vp, JSAPI_STRING_TO_JSVAL(%s));\n",
+			"\tJSAPI_FUNC_SET_RVAL(cx, vp, JSAPI_STRING_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
@@ -217,7 +217,7 @@ static int output_return(struct binding *binding,
 	case WEBIDL_TYPE_OBJECT:
 		/* JSObject * */
 		fprintf(binding->outfile,
-			"\tJSAPI_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
+			"\tJSAPI_FUNC_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(%s));\n",
 			ident);
 		break;
 
@@ -393,7 +393,7 @@ output_variable_definitions(struct binding *binding,
 	/* at least one argument or private need to generate argv variable */
 	if ((arg_node != NULL) || binding->has_private) {
 		fprintf(binding->outfile,
-			"\tjsval *argv = JSAPI_ARGV(cx, vp);\n");
+			"\tjsval *argv = JSAPI_FUNC_ARGV(cx, vp);\n");
 	}
 
 	while (arg_node != NULL) {
@@ -733,7 +733,7 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 		/* normal operation with identifier */
 
 		fprintf(binding->outfile,
-			"static JSBool JSAPI_NATIVE(%s, JSContext *cx, uintN argc, jsval *vp)\n",
+			"static JSBool JSAPI_FUNC(%s, JSContext *cx, uintN argc, jsval *vp)\n",
 			webidl_node_gettext(ident_node));
 		fprintf(binding->outfile,
 			"{\n");
