@@ -21,6 +21,53 @@ static int generate_property_spec(struct binding *binding, const char *interface
 static int generate_property_body(struct binding *binding, const char *interface);
 
 
+/* generate context data fetcher if the binding has private data */
+static inline int
+output_private_get(struct binding *binding, const char *argname)
+{
+	if (!binding->has_private) {
+		return 0;
+	}
+
+	return fprintf(binding->outfile,
+		       "\tstruct jsclass_private *%s;\n"
+		       "\n"
+		       "\t%s = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n"
+		       "\tif (%s == NULL) {\n"
+		       "\t\treturn JS_FALSE;\n"
+		       "\t}\n\n",
+		       argname, argname, binding->interface, argname);
+}
+
+/* generate vars for property name getter */
+static inline int
+output_property_name_get_vars(struct binding *binding, const char *argname)
+{
+	/* get property name */
+	return fprintf(binding->outfile,
+		       "\tjsval %s_jsval;\n"
+		       "\tJSString *%s_jsstr = NULL;\n"
+		       "\tint %s_len = 0;\n"
+		       "\tchar *%s = NULL;\n",
+		       argname, argname, argname, argname);
+}
+
+/* generate property name getter */
+static inline int
+output_property_name_get(struct binding *binding, const char *argname)
+{
+	/* get property name */
+	return fprintf(binding->outfile,
+		       "\t /* obtain property name */\n"
+		       "\tJSAPI_PROP_IDVAL(cx, &%s_jsval);\n"
+		       "\t%s_jsstr = JS_ValueToString(cx, %s_jsval);\n"
+		       "\tif (%s_jsstr != NULL) {\n"
+		       "\t\tJSString_to_char(%s_jsstr, %s, %s_len);\n"
+		       "\t}\n\n",
+		       argname,argname,argname,argname,argname,argname,argname);
+}
+
+
 /* search binding for property sharing modifier */
 static enum genbind_type_modifier
 get_binding_shared_modifier(struct binding *binding, const char *type, const char *ident)
@@ -488,19 +535,7 @@ static int output_property_getter(struct binding *binding,
 	/* return value declaration */
 	output_return_declaration(binding, "jsret", node);
 
-	if (binding->has_private) {
-		/* get context */
-		fprintf(binding->outfile,
-			"\tstruct jsclass_private *private;\n"
-			"\n"
-			"\tprivate = JS_GetInstancePrivate(cx,\n"
-			"\t\tobj,\n"
-			"\t\t&JSClass_%s,\n"
-			"\t\tNULL);\n"
-			"\tif (private == NULL)\n"
-			"\t\treturn JS_FALSE;\n\n",
-			binding->interface);
-	}
+	output_private_get(binding, "private");
 
 	property_node = genbind_node_find_type_ident(binding->gb_ast,
 				      NULL,
@@ -696,8 +731,8 @@ generate_property_body(struct binding *binding, const char *interface)
 	return res;
 }
 
-	/* setter for type handler */
 
+/* setter for type handler */
 static int output_property_type_setter(struct binding *binding, struct genbind_node *node, const char *type)
 {
 	struct genbind_node *property_node;
@@ -707,20 +742,14 @@ static int output_property_type_setter(struct binding *binding, struct genbind_n
 		"{\n",
 		type);
 
-	if (binding->has_private) {
-		/* get context */
-		fprintf(binding->outfile,
-			"\tstruct jsclass_private *private;\n"
-			"\n"
-			"\tprivate = JS_GetInstancePrivate(cx,\n"
-			"\t\tobj,\n"
-			"\t\t&JSClass_%s,\n"
-			"\t\tNULL);\n"
-			"\tif (private == NULL)\n"
-			"\t\treturn JS_FALSE;\n\n",
-			binding->interface);
-	}
+	/* property name vars */
+	output_property_name_get_vars(binding, "propname");
+	/* context data */
+	output_private_get(binding, "private");
+	/* property name */
+	output_property_name_get(binding, "propname");
 
+	/* output binding code block */
 	property_node = genbind_node_find_type_ident(binding->gb_ast,
 						     NULL,
 						     GENBIND_NODE_TYPE_SETTER,
@@ -732,7 +761,7 @@ static int output_property_type_setter(struct binding *binding, struct genbind_n
 	}
 
 	fprintf(binding->outfile,
-		"        return JS_TRUE;\n"
+		"\treturn JS_TRUE;\n"
 		"}\n\n");
 	return 0;
 
@@ -749,20 +778,14 @@ static int output_property_type_getter(struct binding *binding, struct genbind_n
 		"{\n",
 		type);
 
-	if (binding->has_private) {
-		/* get context */
-		fprintf(binding->outfile,
-			"\tstruct jsclass_private *private;\n"
-			"\n"
-			"\tprivate = JS_GetInstancePrivate(cx,\n"
-			"\t\tobj,\n"
-			"\t\t&JSClass_%s,\n"
-			"\t\tNULL);\n"
-			"\tif (private == NULL)\n"
-			"\t\treturn JS_FALSE;\n\n",
-			binding->interface);
-	}
+	/* property name vars */
+	output_property_name_get_vars(binding, "propname");
+	/* context data */
+	output_private_get(binding, "private");
+	/* property name */
+	output_property_name_get(binding, "propname");
 
+	/* output binding code block */
 	property_node = genbind_node_find_type_ident(binding->gb_ast,
 						     NULL,
 						     GENBIND_NODE_TYPE_GETTER,
