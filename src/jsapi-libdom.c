@@ -414,24 +414,28 @@ output_class_new(struct binding *binding)
 static int
 output_jsclass(struct binding *binding)
 {
+	/* forward declare the resolver */
 	if (binding->resolve != NULL) {
-		/* forward declare the resolver */
 		fprintf(binding->outfile,
 			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
 	}
 
+	/* forward declare the GC mark operation */
 	if (binding->mark != NULL) {
 		fprintf(binding->outfile,
 			"static JSAPI_MARKOP(jsclass_mark);\n\n");
 	}
 
+	/* forward declare the finalizer */
 	if (binding->has_private || (binding->finalise != NULL)) {
-
-		/* forward declare the finalizer */
 		fprintf(binding->outfile,
 			"static void jsclass_finalize(JSContext *cx, JSObject *obj);\n\n");
 	}
 
+	/* forward declare property list */
+	fprintf(binding->outfile,
+		"static JSPropertySpec jsclass_properties[];\n\n");
+	
 	/* output the class */
 	fprintf(binding->outfile,
 		"JSClass JSClass_%s = {\n"
@@ -696,62 +700,73 @@ int jsapi_libdom_output(char *outfilename, struct genbind_node *genbind_ast)
 	/* get general binding information used in output */
 	binding = binding_new(outfilename, genbind_ast);
 	if (binding == NULL) {
-		return 4;
+		return 40;
 	}
 
 	res = output_header_comments(binding);
 	if (res) {
-		return 5;
+		return 50;
 	}
 
 	res = output_preamble(binding);
 	if (res) {
-		return 6;
+		return 60;
 	}
 
 	res = output_private_declaration(binding);
 	if (res) {
-		return 7;
+		return 70;
 	}
 
 	res = output_jsclass(binding);
 	if (res) {
-		return 8;
+		return 80;
 	}
+
+	res = output_property_tinyid(binding);
+	if (res) {
+		return 85;
+	}
+
+	/* operator and atrtribute body generation */
 
 	res = output_operator_body(binding, binding->interface);
 	if (res) {
-		return 9;
+		return 90;
 	}
 
 	res = output_property_body(binding);
 	if (res) {
-		return 10;
+		return 100;
 	}
+
+	/* operator and atrtribute specifier generation */
 
 	res = output_function_spec(binding);
 	if (res) {
-		return 11;
+		return 110;
 	}
 
 	res = output_property_spec(binding);
 	if (res) {
-		return 12;
+		return 120;
 	}
+
+	/* binding specific operations (destructors etc.) */
 
 	res = output_api_operations(binding);
 	if (res) {
-		return 13;
+		return 130;
 	}
 
 	res = output_class_init(binding);
 	if (res) {
-		return 14;
+		return 140;
 	}
 
 	res = output_class_new(binding);
 	if (res) {
-		return 15;
+		return 150;
 	}
 
 	fclose(binding->outfile);

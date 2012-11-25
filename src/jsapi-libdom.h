@@ -27,8 +27,14 @@ struct binding {
 	FILE *outfile ; /* output file */
 };
 
+/** Generate binding between jsapi and netsurf libdom */
+int jsapi_libdom_output(char *outfile, struct genbind_node *genbind_root);
+
 /** output code block from a node */
 void output_code_block(struct binding *binding, struct genbind_node *codelist);
+
+/* Generate jsapi native function specifiers */
+int output_function_spec(struct binding *binding);
 
 /* Generate jsapi native function bodys
  *
@@ -46,15 +52,20 @@ void output_code_block(struct binding *binding, struct genbind_node *codelist);
  * @param interface The interface to generate operator bodys for
  */
 int output_operator_body(struct binding *binding, const char *interface);
-int output_function_spec(struct binding *binding);
 
+
+/** generate property tinyid enum */
+int output_property_tinyid(struct binding *binding);
+
+/** generate property specifier structure */
 int output_property_spec(struct binding *binding);
+
+/** generate property function bodies */
 int output_property_body(struct binding *binding);
 
+/** generate property definitions for constants */
 int output_const_defines(struct binding *binding, const char *interface);
 
-/** Generate binding between jsapi and netsurf libdom */
-int jsapi_libdom_output(char *outfile, struct genbind_node *genbind_root);
 
 
 
