@@ -317,6 +317,12 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_TYPE_BASE:
 		return "Base";
 
+	case WEBIDL_NODE_TYPE_TYPE_NULLABLE:
+		return "Nullable";
+
+	case WEBIDL_NODE_TYPE_TYPE_ARRAY:
+		return "Array";
+
 	case WEBIDL_NODE_TYPE_MODIFIER:
 		return "Modifier";
 

@@ -163,6 +163,9 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> UnsignedIntegerType
 %type <node> IntegerType
 
+%type <node> TypeSuffix
+%type <node> TypeSuffixStartingWithArray
+
 %type <node> FloatLiteral
 %type <node> BooleanLiteral
 %type <node> ConstValue
@@ -1099,16 +1102,19 @@ UnionMemberTypes:
  /* [62] */
 NonAnyType:
         PrimitiveType TypeSuffix
+        {
+            $$ = webidl_node_prepend($1, $2);
+        }
         |
         TOK_STRING TypeSuffix
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_STRING);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, $2, (void *)WEBIDL_TYPE_STRING);
         }
         |
         TOK_IDENTIFIER TypeSuffix
         {
             struct webidl_node *type;
-            type = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_USER);
+            type = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, $2, (void *)WEBIDL_TYPE_USER);
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, type, $1);
         }
         |
@@ -1119,12 +1125,12 @@ NonAnyType:
         |
         TOK_OBJECT TypeSuffix
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_OBJECT);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, $2, (void *)WEBIDL_TYPE_OBJECT);
         }
         |
         TOK_DATE TypeSuffix
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, NULL, (void *)WEBIDL_TYPE_DATE);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE, $2, (void *)WEBIDL_TYPE_DATE);
         }
         ;
 
@@ -1237,17 +1243,32 @@ OptionalLong:
  /* [70] */
 TypeSuffix:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         '[' ']' TypeSuffix
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_ARRAY, $3, NULL);
+        }
         |
         '?' TypeSuffixStartingWithArray
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_NULLABLE, $2, NULL);
+        }
         ;
 
  /* [71] */
 TypeSuffixStartingWithArray:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         '[' ']' TypeSuffix
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_ARRAY, $3, NULL);
+        }
         ;
 
  /* [72] */
