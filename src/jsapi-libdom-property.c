@@ -437,6 +437,7 @@ static int output_return(struct binding *binding,
 {
 	struct webidl_node *type_node = NULL;
 	struct webidl_node *type_base = NULL;
+	struct webidl_node *type_nullable = NULL;
 	enum webidl_type webidl_arg_type;
 
 	type_node = webidl_node_find_type(webidl_node_getnode(node),
@@ -448,6 +449,10 @@ static int output_return(struct binding *binding,
 					      WEBIDL_NODE_TYPE_TYPE_BASE);
 
 	webidl_arg_type = webidl_node_getint(type_base);
+
+	type_nullable = webidl_node_find_type(webidl_node_getnode(type_node),
+					      NULL,
+					      WEBIDL_NODE_TYPE_TYPE_NULLABLE);
 
 	switch (webidl_arg_type) {
 	case WEBIDL_TYPE_USER:
@@ -502,6 +507,14 @@ static int output_return(struct binding *binding,
 
 	case WEBIDL_TYPE_STRING:
 		/* JSString * */
+		if (type_nullable == NULL) {
+			/* entry is not nullable ensure it is set to a string */
+			fprintf(binding->outfile,
+				"\tif (%s == NULL) {\n"
+				"\t\t%s = JS_NewStringCopyN(cx, NULL, 0);\n"
+				"\t}\n",
+				ident, ident);
+		}
 		fprintf(binding->outfile,
 			"\tJSAPI_PROP_SET_RVAL(cx, vp, JSAPI_STRING_TO_JSVAL(%s));\n",
 			ident);
