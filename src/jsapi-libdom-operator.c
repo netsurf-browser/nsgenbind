@@ -440,7 +440,7 @@ output_variable_definitions(struct binding *binding,
 		case WEBIDL_TYPE_BOOL:
 			/* JSBool */
 			fprintf(binding->outfile,
-				"\tjsBool %s = JS_FALSE;\n",
+				"\tJSBool %s = JS_FALSE;\n",
 				webidl_node_gettext(arg_ident));
 
 			break;
