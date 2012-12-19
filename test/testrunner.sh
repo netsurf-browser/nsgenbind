@@ -28,9 +28,9 @@ for TEST in ${BINDINGTESTS};do
   echo -n "    TEST: ${TESTNAME}......"
   outline
 
-  echo  ${GENJSBIND} -D -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c ${TEST} >>${LOGFILE} 2>&1   
+  echo  ${GENJSBIND} -D -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c -h ${BUILDDIR}/test_${TESTNAME}.h ${TEST} >>${LOGFILE} 2>&1   
 
-  ${GENJSBIND} -D -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c ${TEST} >>${LOGFILE} 2>&1
+  ${GENJSBIND} -D -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c -h ${BUILDDIR}/test_${TESTNAME}.h ${TEST} >>${LOGFILE} 2>&1
 
   if [ $? -eq 0 ]; then
     echo "PASS"

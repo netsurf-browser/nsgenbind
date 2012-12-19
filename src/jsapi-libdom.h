@@ -24,11 +24,16 @@ struct binding {
 	struct genbind_node *finalise; /* binding api finalise node or NULL */
 	struct genbind_node *mark; /* binding api mark node or NULL */
 
-	FILE *outfile ; /* output file */
+	FILE *outfile ; /* file handle output should be written to,
+			 * allows reuse of callback routines to output
+			 * to headers and source files 
+			 */
+	FILE *srcfile ; /* output source file */
+	FILE *hdrfile ; /* output header file */
 };
 
 /** Generate binding between jsapi and netsurf libdom */
-int jsapi_libdom_output(char *outfile, struct genbind_node *genbind_root);
+int jsapi_libdom_output(char *outfile, char *hdrfile, struct genbind_node *genbind_root);
 
 /** output code block from a node */
 void output_code_block(struct binding *binding, struct genbind_node *codelist);

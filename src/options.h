@@ -9,15 +9,20 @@
 #ifndef nsgenbind_options_h
 #define nsgenbind_options_h
 
+/** global options */
 struct options {
-	char *outfilename;
-	char *infilename;
-	char *depfilename;
-	FILE *depfilehandle;
-	char *idlpath;
-	bool verbose; /* verbose processing */
-	bool debug; /* debug enabled */
-	unsigned int warnings; /* warning flags */
+	char *infilename; /**< binding source */
+
+	char *outfilename; /**< output source file */
+	char *hdrfilename; /**< output header file */
+
+	char *depfilename; /**< dependancy output*/
+	FILE *depfilehandle; /**< dependancy file handle */
+	char *idlpath; /**< path to IDL files */
+
+	bool verbose; /**< verbose processing */
+	bool debug; /**< debug enabled */
+	unsigned int warnings; /**< warning flags */
 };
 
 extern struct options *options;

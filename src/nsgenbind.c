@@ -30,7 +30,7 @@ static struct options* process_cmdline(int argc, char **argv)
 		return NULL;
 	}
 
-	while ((opt = getopt(argc, argv, "vDW::d:I:o:")) != -1) {
+	while ((opt = getopt(argc, argv, "vDW::d:I:o:h:")) != -1) {
 		switch (opt) {
 		case 'I':
 			options->idlpath = strdup(optarg);
@@ -38,6 +38,10 @@ static struct options* process_cmdline(int argc, char **argv)
 
 		case 'o':
 			options->outfilename = strdup(optarg);
+			break;
+
+		case 'h':
+			options->hdrfilename = strdup(optarg);
 			break;
 
 		case 'd':
@@ -58,7 +62,7 @@ static struct options* process_cmdline(int argc, char **argv)
 
 		default: /* '?' */
 			fprintf(stderr, 
-			     "Usage: %s [-d depfilename] [-I idlpath] [-o filename] inputfile\n",
+			     "Usage: %s [-v] [-D] [-W] [-d depfilename] [-I idlpath] [-o filename] [-h headerfile] inputfile\n",
 				argv[0]);
 			free(options);
 			return NULL;
@@ -131,10 +135,17 @@ int main(int argc, char **argv)
 		genbind_ast_dump(genbind_root, 0);
 	}
 
-	res = jsapi_libdom_output(options->outfilename, genbind_root);
+	res = jsapi_libdom_output(options->outfilename, 
+				  options->hdrfilename, 
+				  genbind_root);
 	if (res != 0) {
 		fprintf(stderr, "Error: output failed with code %d\n", res);
-		unlink(options->outfilename);
+		if (options->outfilename != NULL) {
+			unlink(options->outfilename);
+		}
+		if (options->hdrfilename != NULL) {
+			unlink(options->hdrfilename);
+		} 
 		return res;
 	}
 
