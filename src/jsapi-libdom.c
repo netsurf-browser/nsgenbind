@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "options.h"
 #include "nsgenbind-ast.h"
@@ -60,6 +61,15 @@ read_webidl(struct genbind_node *genbind_ast, struct webidl_node **webidl_ast)
 
 
 static int webidl_preamble_cb(struct genbind_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+
+	fprintf(binding->outfile, "%s", genbind_node_gettext(node));
+
+	return 0;
+}
+
+static int webidl_epilogue_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
 
@@ -597,6 +607,42 @@ output_preamble(struct binding *binding)
 
 	fprintf(binding->outfile,"\n\n");
 
+	if (binding->hdrfile) {
+		binding->outfile = binding->hdrfile;
+
+		fprintf(binding->outfile,
+			"#ifndef _%s_\n"
+			"#define _%s_\n\n",
+			binding->hdrguard,
+			binding->hdrguard);
+
+		binding->outfile = binding->srcfile;
+	}
+
+
+	return 0;
+}
+
+static int
+output_epilogue(struct binding *binding)
+{
+	genbind_node_for_each_type(binding->gb_ast,
+				   GENBIND_NODE_TYPE_EPILOGUE,
+				   webidl_epilogue_cb,
+				   binding);
+
+	fprintf(binding->outfile,"\n\n");
+
+	if (binding->hdrfile) {
+		binding->outfile = binding->hdrfile;
+
+		fprintf(binding->outfile,
+			"\n\n#endif /* _%s_ */\n",
+			binding->hdrguard);
+
+		binding->outfile = binding->srcfile;
+	}
+
 	return 0;
 }
 
@@ -679,6 +725,7 @@ binding_new(char *outfilename,
 	struct genbind_node *interface_node;
 	FILE *outfile = NULL; /* output source file */
 	FILE *hdrfile = NULL; /* output header file */
+	char *hdrguard = NULL;
 	struct webidl_node *webidl_ast = NULL;
 	int res;
 
@@ -730,6 +777,9 @@ binding_new(char *outfilename,
 
 	/* output header file if required */
 	if (hdrfilename != NULL) {
+		int guardlen;
+		int pos;
+
 		hdrfile = fopen(hdrfilename, "w");
 		if (hdrfile == NULL) {			
 			fprintf(stderr, "Error opening header output %s: %s\n",
@@ -737,6 +787,15 @@ binding_new(char *outfilename,
 				strerror(errno));
 			fclose(outfile);
 			return NULL;
+		}
+		guardlen = strlen(hdrfilename);
+		hdrguard = calloc(1, guardlen + 1);
+		for (pos = 0; pos < guardlen; pos++) {
+			if (isalpha(hdrfilename[pos])) {
+				hdrguard[pos] = toupper(hdrfilename[pos]);
+			} else {
+				hdrguard[pos] = '_';
+			}
 		}
 	}
 
@@ -749,6 +808,7 @@ binding_new(char *outfilename,
 	nb->outfile = outfile;
 	nb->srcfile = outfile;
 	nb->hdrfile = hdrfile;
+	nb->hdrguard = hdrguard;
 	nb->has_private = binding_has_private(binding_list);
 	nb->has_global = binding_has_global(nb);
 	nb->binding_list = binding_list;
@@ -847,6 +907,11 @@ jsapi_libdom_output(char *outfilename,
 	res = output_class_new(binding);
 	if (res) {
 		return 150;
+	}
+
+	res = output_epilogue(binding);
+	if (res) {
+		return 160;
 	}
 
 	fclose(binding->outfile);

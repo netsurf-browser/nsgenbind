@@ -24,6 +24,8 @@ struct binding {
 	struct genbind_node *finalise; /* binding api finalise node or NULL */
 	struct genbind_node *mark; /* binding api mark node or NULL */
 
+	const char *hdrguard; /* header file guard name */
+
 	FILE *outfile ; /* file handle output should be written to,
 			 * allows reuse of callback routines to output
 			 * to headers and source files 
