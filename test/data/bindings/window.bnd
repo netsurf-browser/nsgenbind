@@ -1,6 +1,5 @@
 /* binding to generate window */
 
-#include "dom.bnd"
 
 webidlfile "html.idl";
 
@@ -17,6 +16,16 @@ preamble %{
 #include "javascript/jsapi/binding.h"
 
 %}
+
+prologue %{
+/* prologue comment */
+%}
+
+epilogue %{
+/* epilogue comment */
+%}
+
+#include "dom.bnd"
 
 binding window {
 	type js_libdom; /* the binding type */

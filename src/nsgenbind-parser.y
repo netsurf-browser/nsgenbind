@@ -42,6 +42,8 @@ char *errtxt;
 %token TOK_IDLFILE
 %token TOK_HDR_COMMENT
 %token TOK_PREAMBLE
+%token TOK_PROLOGUE;
+%token TOK_EPILOGUE;
 
 %token TOK_API
 %token TOK_BINDING
@@ -69,6 +71,8 @@ char *errtxt;
 %type <node> Statements
 %type <node> IdlFile
 %type <node> Preamble 
+%type <node> Prologue
+%type <node> Epilogue
 %type <node> HdrComment
 %type <node> Strings
 %type <node> Binding
@@ -120,7 +124,11 @@ Statement
         HdrComment
         |
         Preamble
-        | 
+        |
+        Prologue
+        |
+        Epilogue
+        |
         Binding
         |
         Operation
@@ -164,9 +172,25 @@ Strings
 
 Preamble
         :
-        TOK_PREAMBLE CBlock 
+        TOK_PREAMBLE CBlock
         {
           $$ = genbind_new_node(GENBIND_NODE_TYPE_PREAMBLE, NULL, $2);
+        }
+        ;
+
+Prologue
+        :
+        TOK_PROLOGUE CBlock
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_PROLOGUE, NULL, $2);
+        }
+        ;
+
+Epilogue
+        :
+        TOK_EPILOGUE CBlock
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_EPILOGUE, NULL, $2);
         }
         ;
 

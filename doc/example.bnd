@@ -11,12 +11,6 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
-/* additional binding fragments may be included
- * Note: this is not preprocessed despite the #include name, the
- *  parser will simply switch input to the included file and carry on
- *  cosntructing the bindings Abstract Syntax Tree (AST)
- */
-#include "dom.bnd"
 
 /* directive to read WebIDL file and add its contents to the webidl AST */
 webidlfile "html.idl";
@@ -42,6 +36,22 @@ preamble %{
 #include "javascript/jsapi/binding.h"
 
 %}
+
+/* code block emitted immediately before the binding function bodies */
+prologue %{
+%}
+
+/* code block emmitted at the end of the output */
+epilogue %{
+%}
+
+/* additional binding fragments may be included
+ * Note: this is not preprocessed despite the #include name, the
+ *  parser will simply switch input to the included file and carry on
+ *  cosntructing the bindings Abstract Syntax Tree (AST)
+ */
+#include "dom.bnd"
+
 
 /* this block describes the binding to be generated
  *

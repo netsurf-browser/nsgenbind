@@ -69,6 +69,15 @@ static int webidl_preamble_cb(struct genbind_node *node, void *ctx)
 	return 0;
 }
 
+static int webidl_prologue_cb(struct genbind_node *node, void *ctx)
+{
+	struct binding *binding = ctx;
+
+	fprintf(binding->outfile, "%s", genbind_node_gettext(node));
+
+	return 0;
+}
+
 static int webidl_epilogue_cb(struct genbind_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -168,6 +177,46 @@ static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
 	ident = genbind_node_gettext(ident_node);
 
 	fprintf(binding->outfile, "\tprivate->%s = %s;\n", ident, ident);
+
+	return 0;
+}
+
+/* section output generators */
+
+/** Output the epilogue right at the end of the generated program */
+static int
+output_epilogue(struct binding *binding)
+{
+	genbind_node_for_each_type(binding->gb_ast,
+				   GENBIND_NODE_TYPE_EPILOGUE,
+				   webidl_epilogue_cb,
+				   binding);
+
+	fprintf(binding->outfile,"\n\n");
+
+	if (binding->hdrfile) {
+		binding->outfile = binding->hdrfile;
+
+		fprintf(binding->outfile,
+			"\n\n#endif /* _%s_ */\n",
+			binding->hdrguard);
+
+		binding->outfile = binding->srcfile;
+	}
+
+	return 0;
+}
+
+/** Output the prologue right before the generated function bodies */
+static int
+output_prologue(struct binding *binding)
+{
+	genbind_node_for_each_type(binding->gb_ast,
+				   GENBIND_NODE_TYPE_PROLOGUE,
+				   webidl_prologue_cb,
+				   binding);
+
+	fprintf(binding->outfile,"\n\n");
 
 	return 0;
 }
@@ -623,28 +672,6 @@ output_preamble(struct binding *binding)
 	return 0;
 }
 
-static int
-output_epilogue(struct binding *binding)
-{
-	genbind_node_for_each_type(binding->gb_ast,
-				   GENBIND_NODE_TYPE_EPILOGUE,
-				   webidl_epilogue_cb,
-				   binding);
-
-	fprintf(binding->outfile,"\n\n");
-
-	if (binding->hdrfile) {
-		binding->outfile = binding->hdrfile;
-
-		fprintf(binding->outfile,
-			"\n\n#endif /* _%s_ */\n",
-			binding->hdrguard);
-
-		binding->outfile = binding->srcfile;
-	}
-
-	return 0;
-}
 
 static int
 output_header_comments(struct binding *binding)
@@ -843,6 +870,7 @@ jsapi_libdom_output(char *outfilename,
 		return 40;
 	}
 
+	/* start with comment block */
 	res = output_header_comments(binding);
 	if (res) {
 		return 50;
@@ -866,6 +894,12 @@ jsapi_libdom_output(char *outfilename,
 	res = output_property_tinyid(binding);
 	if (res) {
 		return 85;
+	}
+
+	/* user code outout just before function bodies emitted */
+	res = output_prologue(binding);
+	if (res) {
+		return 89;
 	}
 
 	/* operator and atrtribute body generation */

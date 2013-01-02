@@ -86,6 +86,10 @@ hdrcomment              return TOK_HDR_COMMENT;
 
 preamble                return TOK_PREAMBLE;
 
+prologue                return TOK_PROLOGUE;
+
+epilogue                return TOK_EPILOGUE;
+
 binding                 return TOK_BINDING;
 
 interface               return TOK_INTERFACE;
