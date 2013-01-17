@@ -321,7 +321,7 @@ output_class_init(struct binding *binding)
 	/* class Initialisor declaration */
 	if (binding->hdrfile) {
 		binding->outfile = binding->hdrfile;
- 
+
 	fprintf(binding->outfile,
 		"JSObject *jsapi_InitClass_%s(JSContext *cx, JSObject *parent);\n",
 		binding->interface);
@@ -377,7 +377,7 @@ output_class_new(struct binding *binding)
 	/* constructor declaration */
 	if (binding->hdrfile) {
 		binding->outfile = binding->hdrfile;
- 
+
 		fprintf(binding->outfile,
 			"JSObject *jsapi_new_%s(JSContext *cx,\n"
 			"\t\tJSObject *prototype,\n"
@@ -499,7 +499,7 @@ output_class_new(struct binding *binding)
 			"\t\treturn NULL;\n"
 			"\t}\n\n");
 	}
-	
+
 	/* unroot object and return it */
 	fprintf(binding->outfile,
 		"\tJSAPI_REMOVE_OBJECT_ROOT(cx, &newobject);\n"
@@ -514,6 +514,36 @@ output_class_new(struct binding *binding)
 static int
 output_jsclass(struct binding *binding)
 {
+	/* forward declare add property */
+	if (binding->addproperty != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool JSAPI_PROP_DEFAULT(add, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
+	}
+
+	/* forward declare del property */
+	if (binding->delproperty != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool JSAPI_PROP_DEFAULT(del, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
+	}
+
+	/* forward declare get property */
+	if (binding->getproperty != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool JSAPI_PROP_DEFAULT(get, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
+	}
+
+	/* forward declare set property */
+	if (binding->setproperty != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool JSAPI_PROP_DEFAULT(set, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
+	}
+
+	/* forward declare the enumerate */
+	if (binding->enumerate != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool jsclass_enumerate(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
+	}
+
 	/* forward declare the resolver */
 	if (binding->resolve != NULL) {
 		fprintf(binding->outfile,
@@ -535,7 +565,7 @@ output_jsclass(struct binding *binding)
 	/* forward declare property list */
 	fprintf(binding->outfile,
 		"static JSPropertySpec jsclass_properties[];\n\n");
-	
+
 	/* output the class declaration */
 	HDROUTF(binding, "JSClass JSClass_%s;\n", binding->interface);
 
@@ -543,7 +573,7 @@ output_jsclass(struct binding *binding)
 	fprintf(binding->outfile,
 		"JSClass JSClass_%s = {\n"
 		"\t\"%s\",\n",
-		binding->interface, 
+		binding->interface,
 		binding->interface);
 
 	/* generate class flags */
@@ -567,13 +597,50 @@ output_jsclass(struct binding *binding)
 
 	fprintf(binding->outfile, ",\n");
 
-	/* stubs */
-	fprintf(binding->outfile,
-		"\tJS_PropertyStub,\t/* addProperty */\n"
-		"\tJS_PropertyStub,\t/* delProperty */\n"
-		"\tJS_PropertyStub,\t/* getProperty */\n"
-		"\tJS_StrictPropertyStub,\t/* setProperty */\n"
-		"\tJS_EnumerateStub,\t/* enumerate */\n");
+	/* add property */
+	if (binding->addproperty != NULL) {
+		fprintf(binding->outfile,
+			"\tjsapi_property_add,\t/* addProperty */\n");
+	} else {
+		fprintf(binding->outfile,
+			"\tJS_PropertyStub,\t/* addProperty */\n");
+	}
+
+	/* del property */
+	if (binding->delproperty != NULL) {
+		fprintf(binding->outfile,
+			"\tjsapi_property_del,\t/* delProperty */\n");
+	} else {
+		fprintf(binding->outfile,
+			"\tJS_PropertyStub,\t/* delProperty */\n");
+	}
+
+	/* get property */
+	if (binding->getproperty != NULL) {
+		fprintf(binding->outfile,
+			"\tjsapi_property_get,\t/* getProperty */\n");
+	} else {
+		fprintf(binding->outfile,
+			"\tJS_PropertyStub,\t/* getProperty */\n");
+	}
+
+	/* set property */
+	if (binding->setproperty != NULL) {
+		fprintf(binding->outfile,
+			"\tjsapi_property_set,\t/* setProperty */\n");
+	} else {
+		fprintf(binding->outfile,
+			"\tJS_StrictPropertyStub,\t/* setProperty */\n");
+	}
+
+	/* enumerate */
+	if (binding->enumerate != NULL) {
+		fprintf(binding->outfile,
+			"\tjsclass_enumerate,\t/* enumerate */\n");
+	} else {
+		fprintf(binding->outfile,
+			"\tJS_EnumerateStub,\t/* enumerate */\n");
+	}
 
 	/* resolver */
 	if (binding->resolve != NULL) {
@@ -741,8 +808,8 @@ binding_has_global(struct binding *binding)
 }
 
 static struct binding *
-binding_new(char *outfilename, 
-	    char *hdrfilename, 
+binding_new(char *outfilename,
+	    char *hdrfilename,
 	    struct genbind_node *genbind_ast)
 {
 	struct binding *nb;
@@ -767,7 +834,7 @@ binding_new(char *outfilename,
 	if (binding_list == NULL) {
 		return NULL;
 	}
-	
+
 	ident_node = genbind_node_find_type(binding_list,
 					    NULL,
 					    GENBIND_NODE_TYPE_IDENT);
@@ -808,7 +875,7 @@ binding_new(char *outfilename,
 		int pos;
 
 		hdrfile = fopen(hdrfilename, "w");
-		if (hdrfile == NULL) {			
+		if (hdrfile == NULL) {
 			fprintf(stderr, "Error opening header output %s: %s\n",
 				hdrfilename,
 				strerror(errno));
@@ -839,10 +906,38 @@ binding_new(char *outfilename,
 	nb->has_private = binding_has_private(binding_list);
 	nb->has_global = binding_has_global(nb);
 	nb->binding_list = binding_list;
+
+	/* class API */
+	nb->addproperty = genbind_node_find_type_ident(genbind_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_API,
+						      "addproperty");
+
+	nb->delproperty = genbind_node_find_type_ident(genbind_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_API,
+						      "delproperty");
+
+	nb->getproperty = genbind_node_find_type_ident(genbind_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_API,
+						      "getproperty");
+
+	nb->setproperty = genbind_node_find_type_ident(genbind_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_API,
+						      "setproperty");
+
+	nb->enumerate = genbind_node_find_type_ident(genbind_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_API,
+						      "enumerate");
+
 	nb->resolve = genbind_node_find_type_ident(genbind_ast,
 						      NULL,
 						      GENBIND_NODE_TYPE_API,
 						      "resolve");
+
 	nb->finalise = genbind_node_find_type_ident(genbind_ast,
 						    NULL,
 						    GENBIND_NODE_TYPE_API,
@@ -856,9 +951,9 @@ binding_new(char *outfilename,
 }
 
 
-int 
-jsapi_libdom_output(char *outfilename, 
-		    char *hdrfilename, 
+int
+jsapi_libdom_output(char *outfilename,
+		    char *hdrfilename,
 		    struct genbind_node *genbind_ast)
 {
 	int res;
