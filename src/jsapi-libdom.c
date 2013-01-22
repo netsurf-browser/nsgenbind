@@ -239,7 +239,8 @@ output_api_operations(struct binding *binding)
 			binding->interface);
 
 		if (binding->finalise != NULL) {
-			output_code_block(binding, genbind_node_getnode(binding->finalise));
+			output_code_block(binding,
+				genbind_node_getnode(binding->finalise));
 		}
 
 		fprintf(binding->outfile,
@@ -253,15 +254,85 @@ output_api_operations(struct binding *binding)
 			"static void jsclass_finalize(JSContext *cx, JSObject *obj)\n"
 			"{\n");
 
-		output_code_block(binding, genbind_node_getnode(binding->finalise));
+		output_code_block(binding,
+				  genbind_node_getnode(binding->finalise));
 
 		fprintf(binding->outfile,
 			"}\n\n");
 
 	}
 
+	/* generate class default property add implementation */
+	if (binding->addproperty != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool JSAPI_PROP(add, JSContext *cx, JSObject *obj, jsval *vp)\n"
+			"{\n");
+
+		output_code_block(binding,
+				  genbind_node_getnode(binding->addproperty));
+
+		fprintf(binding->outfile,
+			"\treturn JS_TRUE;\n"
+			"}\n\n");
+	}
+
+	/* generate class default property delete implementation */
+	if (binding->delproperty != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool JSAPI_PROP(del, JSContext *cx, JSObject *obj, jsval *vp)\n"
+			"{\n");
+
+		output_code_block(binding,
+				  genbind_node_getnode(binding->delproperty));
+
+		fprintf(binding->outfile,
+			"\treturn JS_TRUE;\n"
+			"}\n\n");
+	}
+
+	/* generate class default property get implementation */
+	if (binding->getproperty != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool JSAPI_PROP(get, JSContext *cx, JSObject *obj, jsval *vp)\n"
+			"{\n");
+
+		output_code_block(binding,
+				  genbind_node_getnode(binding->getproperty));
+
+		fprintf(binding->outfile,
+			"\treturn JS_TRUE;\n"
+			"}\n\n");
+	}
+
+	/* generate class default property set implementation */
+	if (binding->setproperty != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool JSAPI_STRICTPROP(set, JSContext *cx, JSObject *obj, jsval *vp)\n"
+			"{\n");
+
+		output_code_block(binding,
+				  genbind_node_getnode(binding->setproperty));
+
+		fprintf(binding->outfile,
+			"\treturn JS_TRUE;\n"
+			"}\n\n");
+	}
+
+	/* generate class enumerate implementation */
+	if (binding->enumerate != NULL) {
+		fprintf(binding->outfile,
+			"static JSBool jsclass_enumerate(JSContext *cx, JSObject *obj)\n"
+			"{\n");
+
+		output_code_block(binding, genbind_node_getnode(binding->enumerate));
+
+		fprintf(binding->outfile,
+			"\treturn JS_TRUE;\n"
+			"}\n\n");
+	}
+
+	/* generate class resolver implementation */
 	if (binding->resolve != NULL) {
-		/* generate resolver entry */
 		fprintf(binding->outfile,
 			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)\n"
 			"{\n");
@@ -541,7 +612,7 @@ output_jsclass(struct binding *binding)
 	/* forward declare the enumerate */
 	if (binding->enumerate != NULL) {
 		fprintf(binding->outfile,
-			"static JSBool jsclass_enumerate(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp);\n\n");
+			"static JSBool jsclass_enumerate(JSContext *cx, JSObject *obj);\n\n");
 	}
 
 	/* forward declare the resolver */
