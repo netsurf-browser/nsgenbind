@@ -698,7 +698,7 @@ static int output_property_getter(struct binding *binding,
 	struct genbind_node *property_node;
 
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROP_GETTER(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"static JSBool JSAPI_PROP(%s_get, JSContext *cx, JSObject *obj, jsval *vp)\n"
 		"{\n",
 		ident);
 
@@ -770,7 +770,7 @@ static int output_property_setter(struct binding *binding,
 
 
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROP_SETTER(%s, JSContext *cx, JSObject *obj, jsval *vp)\n",
+		"static JSBool JSAPI_STRICTPROP(%s_set, JSContext *cx, JSObject *obj, jsval *vp)\n",
 		ident);
 
 	fprintf(binding->outfile,
@@ -913,7 +913,7 @@ output_property_type_setter(struct binding *binding,
 
 	fprintf(binding->outfile,
 		"static JSBool\n"
-		"JSAPI_PROP_SETTER(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"JSAPI_STRICTPROP(%s_set, JSContext *cx, JSObject *obj, jsval *vp)\n"
 		"{\n",
 		type);
 
@@ -950,7 +950,7 @@ static int output_property_type_getter(struct binding *binding, struct genbind_n
 	node = node;/* currently unused */
 
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_PROP_GETTER(%s, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"static JSBool JSAPI_PROP(%s_get, JSContext *cx, JSObject *obj, jsval *vp)\n"
 		"{\n",
 		type);
 

@@ -517,25 +517,25 @@ output_jsclass(struct binding *binding)
 	/* forward declare add property */
 	if (binding->addproperty != NULL) {
 		fprintf(binding->outfile,
-			"static JSBool JSAPI_PROP_DEFAULT(add, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
+			"static JSBool JSAPI_PROP(add, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
 	}
 
 	/* forward declare del property */
 	if (binding->delproperty != NULL) {
 		fprintf(binding->outfile,
-			"static JSBool JSAPI_PROP_DEFAULT(del, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
+			"static JSBool JSAPI_PROP(del, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
 	}
 
 	/* forward declare get property */
 	if (binding->getproperty != NULL) {
 		fprintf(binding->outfile,
-			"static JSBool JSAPI_PROP_DEFAULT(get, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
+			"static JSBool JSAPI_PROP(get, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
 	}
 
 	/* forward declare set property */
 	if (binding->setproperty != NULL) {
 		fprintf(binding->outfile,
-			"static JSBool JSAPI_PROP_DEFAULT(set, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
+			"static JSBool JSAPI_STRICTPROP(set, JSContext *cx, JSObject *obj, jsval *vp);\n\n");
 	}
 
 	/* forward declare the enumerate */
