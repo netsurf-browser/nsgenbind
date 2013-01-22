@@ -268,6 +268,15 @@ output_api_operations(struct binding *binding)
 			"static JSBool JSAPI_PROP(add, JSContext *cx, JSObject *obj, jsval *vp)\n"
 			"{\n");
 
+		if (binding->has_private) {
+
+			fprintf(binding->outfile,
+				"\tstruct jsclass_private *private;\n"
+				"\n"
+				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
+				binding->interface);
+		}
+
 		output_code_block(binding,
 				  genbind_node_getnode(binding->addproperty));
 
@@ -281,6 +290,15 @@ output_api_operations(struct binding *binding)
 		fprintf(binding->outfile,
 			"static JSBool JSAPI_PROP(del, JSContext *cx, JSObject *obj, jsval *vp)\n"
 			"{\n");
+
+		if (binding->has_private) {
+
+			fprintf(binding->outfile,
+				"\tstruct jsclass_private *private;\n"
+				"\n"
+				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
+				binding->interface);
+		}
 
 		output_code_block(binding,
 				  genbind_node_getnode(binding->delproperty));
@@ -296,6 +314,15 @@ output_api_operations(struct binding *binding)
 			"static JSBool JSAPI_PROP(get, JSContext *cx, JSObject *obj, jsval *vp)\n"
 			"{\n");
 
+		if (binding->has_private) {
+
+			fprintf(binding->outfile,
+				"\tstruct jsclass_private *private;\n"
+				"\n"
+				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
+				binding->interface);
+		}
+
 		output_code_block(binding,
 				  genbind_node_getnode(binding->getproperty));
 
@@ -309,6 +336,15 @@ output_api_operations(struct binding *binding)
 		fprintf(binding->outfile,
 			"static JSBool JSAPI_STRICTPROP(set, JSContext *cx, JSObject *obj, jsval *vp)\n"
 			"{\n");
+
+		if (binding->has_private) {
+
+			fprintf(binding->outfile,
+				"\tstruct jsclass_private *private;\n"
+				"\n"
+				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
+				binding->interface);
+		}
 
 		output_code_block(binding,
 				  genbind_node_getnode(binding->setproperty));
@@ -324,6 +360,15 @@ output_api_operations(struct binding *binding)
 			"static JSBool jsclass_enumerate(JSContext *cx, JSObject *obj)\n"
 			"{\n");
 
+		if (binding->has_private) {
+
+			fprintf(binding->outfile,
+				"\tstruct jsclass_private *private;\n"
+				"\n"
+				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
+				binding->interface);
+		}
+
 		output_code_block(binding, genbind_node_getnode(binding->enumerate));
 
 		fprintf(binding->outfile,
@@ -337,6 +382,15 @@ output_api_operations(struct binding *binding)
 			"static JSBool jsclass_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)\n"
 			"{\n");
 
+		if (binding->has_private) {
+
+			fprintf(binding->outfile,
+				"\tstruct jsclass_private *private;\n"
+				"\n"
+				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
+				binding->interface);
+		}
+
 		output_code_block(binding, genbind_node_getnode(binding->resolve));
 
 		fprintf(binding->outfile,
@@ -344,12 +398,12 @@ output_api_operations(struct binding *binding)
 			"}\n\n");
 	}
 
+	/* generate trace/mark entry */
 	if (binding->mark != NULL) {
-		/* generate trace/mark entry */
 		fprintf(binding->outfile,
 			"static JSAPI_MARKOP(jsclass_mark)\n"
 			"{\n");
-		if(binding->has_private) {
+		if (binding->has_private) {
 
 			fprintf(binding->outfile,
 				"\tstruct jsclass_private *private;\n"
