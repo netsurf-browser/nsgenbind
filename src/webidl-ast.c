@@ -78,15 +78,33 @@ webidl_node_append(struct webidl_node *list, struct webidl_node *node)
 struct webidl_node *
 webidl_node_add(struct webidl_node *node, struct webidl_node *list)
 {
-	struct webidl_node *node_list;
+	if (node == NULL) {
+		return list;
+	}
 
-	node_list = webidl_node_getnode(node);
-	if (node_list == NULL) {
+	/* this does not use webidl_node_getnode() as it cannot
+	 * determine between an empty node and a node which is not a
+	 * list type
+	 */
+	switch (node->type) {
+	case WEBIDL_NODE_TYPE_ROOT:
+	case WEBIDL_NODE_TYPE_INTERFACE:
+	case WEBIDL_NODE_TYPE_LIST:
+	case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
+	case WEBIDL_NODE_TYPE_ATTRIBUTE:
+	case WEBIDL_NODE_TYPE_OPERATION:
+	case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
+	case WEBIDL_NODE_TYPE_ARGUMENT:
+	case WEBIDL_NODE_TYPE_TYPE:
+	case WEBIDL_NODE_TYPE_CONST:
+		break;
+
+	default:
 		/* not a node type node */
 		return list;
 	}
 
-	node->r.node =	webidl_node_prepend(node_list, list);
+	node->r.node =	webidl_node_prepend(node->r.node, list);
 
 	return node;
 }
@@ -260,6 +278,7 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 		case WEBIDL_NODE_TYPE_ROOT:
 		case WEBIDL_NODE_TYPE_INTERFACE:
 		case WEBIDL_NODE_TYPE_LIST:
+		case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
 		case WEBIDL_NODE_TYPE_ATTRIBUTE:
 		case WEBIDL_NODE_TYPE_OPERATION:
 		case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
@@ -331,6 +350,9 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 
 	case WEBIDL_NODE_TYPE_LITERAL_INT:
 		return "Literal (int)";
+
+	case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
+		return "Extended Attribute";
 
 	default:
 		return "Unknown";

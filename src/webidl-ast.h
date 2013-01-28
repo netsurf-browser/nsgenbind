@@ -40,6 +40,8 @@ enum webidl_node_type {
 	WEBIDL_NODE_TYPE_LITERAL_BOOL,
 	WEBIDL_NODE_TYPE_LITERAL_FLOAT,
 
+	WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+
 };
 
 enum webidl_type {

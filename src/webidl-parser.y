@@ -174,6 +174,14 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <isit> OptionalLong
 %type <isit> Inherit
 
+%type <node> ExtendedAttributeList
+%type <node> ExtendedAttributes
+%type <node> ExtendedAttributeRest
+%type <node> ExtendedAttributeInner
+%type <node> ExtendedAttribute
+%type <text> Other
+%type <text> OtherOrComma
+
 %%
 
  /* [1] default rule to add built AST to passed in one, altered from
@@ -187,7 +195,8 @@ Definitions:
         |
         Definitions ExtendedAttributeList Definition
         {
-          $$ = *webidl_ast = webidl_node_prepend(*webidl_ast, $3);
+            webidl_node_add($3, $2);
+            $$ = *webidl_ast = webidl_node_prepend(*webidl_ast, $3);
         }
         |
         error
@@ -334,25 +343,34 @@ InterfaceMembers:
             struct webidl_node *ident_node;
             struct webidl_node *list_node;
 
-            ident_node = webidl_node_find(webidl_node_getnode($3),
-                                          NULL,
-                                          webidl_cmp_node_type,
-                                          (void *)WEBIDL_NODE_TYPE_IDENT);
+            ident_node = webidl_node_find_type(webidl_node_getnode($3),
+                                               NULL,
+                                               WEBIDL_NODE_TYPE_IDENT);
 
-            list_node = webidl_node_find(webidl_node_getnode($3),
-                                         NULL,
-                                         webidl_cmp_node_type,
-                                         (void *)WEBIDL_NODE_TYPE_LIST);
+            list_node = webidl_node_find_type(webidl_node_getnode($3),
+                                              NULL,
+                                              WEBIDL_NODE_TYPE_LIST);
 
             if (ident_node == NULL) {
                 /* something with no ident - possibly constructors? */
                 /* @todo understand this abtter */
 
                 $$ = webidl_node_prepend($1, $3);
+
             } else if (list_node == NULL) {
-                /* something with no argument list - cannot be polymorphic */
+                /* member with no argument list, usually an attribute, cannot
+                 * be polymorphic
+                 */
+
+                /* add extended attributes to parameter list */
+                webidl_node_add($3, $2);
+
                 $$ = webidl_node_prepend($1, $3);
+
             } else {
+                /* add extended attributes to parameter list */
+                webidl_node_add(list_node, $2);
+
                 /* has an arguemnt list so can be polymorphic */
                 member_node = webidl_node_find_type_ident($1,
                                              webidl_node_gettype($3),
@@ -829,121 +847,276 @@ ExceptionField:
  /* [49] extended attribute list inside square brackets */
 ExtendedAttributeList:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         '[' ExtendedAttribute ExtendedAttributes ']'
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE, $3, $2);
+        }
         ;
 
  /* [50] extended attributes are separated with a comma */
 ExtendedAttributes:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         ',' ExtendedAttribute ExtendedAttributes
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE, $3, $2);
+        }
         ;
 
  /* [51] extended attributes are nested with normal, square and curly braces */
 ExtendedAttribute:
         '(' ExtendedAttributeInner ')' ExtendedAttributeRest
+        {
+            $$ = webidl_node_prepend($2, $4);
+        }
         |
         '[' ExtendedAttributeInner ']' ExtendedAttributeRest
+        {
+            $$ = webidl_node_prepend($2, $4);
+        }
         |
         '{' ExtendedAttributeInner '}' ExtendedAttributeRest
+        {
+            $$ = webidl_node_prepend($2, $4);
+        }
         |
         Other ExtendedAttributeRest
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, $2, $1);
+        }
         ;
 
  /* [52] extended attributes can be space separated too */
 ExtendedAttributeRest:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         ExtendedAttribute
+        {
+            $$ = $1;
+        }
         ;
 
  /* [53] extended attributes are nested with normal, square and curly braces */
 ExtendedAttributeInner:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         '(' ExtendedAttributeInner ')' ExtendedAttributeInner
+        {
+            $$ = webidl_node_prepend($2, $4);
+        }
         |
         '[' ExtendedAttributeInner ']' ExtendedAttributeInner
+        {
+            $$ = webidl_node_prepend($2, $4);
+        }
         |
         '{' ExtendedAttributeInner '}' ExtendedAttributeInner
+        {
+            $$ = webidl_node_prepend($2, $4);
+        }
         |
         OtherOrComma ExtendedAttributeInner
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, $2, $1);
+        }
         ;
 
  /* [54] */
 Other:
         TOK_INT_LITERAL
+        {
+            /* @todo loosing base info here might break the attribute */
+            $$ = calloc(1, 32);
+            snprintf($$, 32, "%ld", $1);
+        }
         |
         TOK_FLOAT_LITERAL
+        {
+            $$ = $1;
+        }
         |
         TOK_IDENTIFIER
+        {
+            $$ = $1;
+        }
         |
         TOK_STRING_LITERAL
+        {
+            $$ = $1;
+        }
         |
         TOK_OTHER_LITERAL
+        {
+            $$ = $1;
+        }
         |
         '-'
+        {
+            $$ = strdup("-");
+        }
         |
         '.'
+        {
+            $$ = strdup(".");
+        }
         |
         TOK_ELLIPSIS
+        {
+            $$ = strdup("...");
+        }
         |
         ':'
+        {
+            $$ = strdup(":");
+        }
         |
         ';'
+        {
+            $$ = strdup(";");
+        }
         |
         '<'
+        {
+            $$ = strdup("<");
+        }
         |
         '='
+        {
+            $$ = strdup("=");
+        }
         |
         '>'
+        {
+            $$ = strdup(">");
+        }
         |
         '?'
+        {
+            $$ = strdup("?");
+        }
         |
         TOK_DATE
+        {
+            $$ = strdup("Date");
+        }
         |
         TOK_STRING
+        {
+            $$ = strdup("DOMString");
+        }
         |
         TOK_INFINITY
+        {
+            $$ = strdup("Infinity");
+        }
         |
         TOK_NAN
+        {
+            $$ = strdup("NaN");
+        }
         |
         TOK_ANY
+        {
+            $$ = strdup("any");
+        }
         |
         TOK_BOOLEAN
+        {
+            $$ = strdup("boolean");
+        }
         |
         TOK_BYTE
+        {
+            $$ = strdup("byte");
+        }
         |
         TOK_DOUBLE
+        {
+            $$ = strdup("double");
+        }
         |
         TOK_FALSE
+        {
+            $$ = strdup("false");
+        }
         |
         TOK_FLOAT
+        {
+            $$ = strdup("float");
+        }
         |
         TOK_LONG
+        {
+            $$ = strdup("long");
+        }
         |
         TOK_NULL_LITERAL
+        {
+            $$ = strdup("null");
+        }
         |
         TOK_OBJECT
+        {
+            $$ = strdup("object");
+        }
         |
         TOK_OCTET
+        {
+            $$ = strdup("octet");
+        }
         |
         TOK_OR
+        {
+            $$ = strdup("or");
+        }
         |
         TOK_OPTIONAL
+        {
+            $$ = strdup("optional");
+        }
         |
         TOK_SEQUENCE
+        {
+            $$ = strdup("sequence");
+        }
         |
         TOK_SHORT
+        {
+            $$ = strdup("short");
+        }
         |
         TOK_TRUE
+        {
+            $$ = strdup("true");
+        }
         |
         TOK_UNSIGNED
+        {
+            $$ = strdup("unsigned");
+        }
         |
         TOK_VOID
+        {
+            $$ = strdup("void");
+        }
         |
         ArgumentNameKeyword
+        {
+            $$ = $1;
+        }
         ;
 
  /* [55] */
@@ -1047,8 +1220,14 @@ ArgumentNameKeyword:
  /* [56] as it says an other element or a comma */
 OtherOrComma:
         Other
+        {
+            $$ = $1;
+        }
         |
         ','
+        {
+            $$ = strdup(",");
+        }
         ;
 
  /* [57] */
