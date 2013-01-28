@@ -244,6 +244,20 @@ get_binding_shared_modifier(struct binding *binding, const char *type, const cha
 	return GENBIND_TYPE_NONE;
 }
 
+static bool property_is_ro(struct webidl_node *node)
+{
+	struct webidl_node *modifier_node;
+	modifier_node = webidl_node_find_type(webidl_node_getnode(node),
+					      NULL,
+					      WEBIDL_NODE_TYPE_MODIFIER);
+
+	if (webidl_node_getint(modifier_node) == WEBIDL_TYPE_READONLY) {
+		return true;
+	}
+
+	return false;
+}
+
 static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -252,7 +266,6 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 	const char *type = NULL;
 	struct webidl_node *ident_node;
 	const char *ident;
-	struct webidl_node *modifier_node;
 
 	ident_node = webidl_node_find_type(webidl_node_getnode(node),
 					   NULL,
@@ -277,15 +290,12 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 
 
 	/* generate JSAPI_PS macro entry */
-	modifier_node = webidl_node_find_type(webidl_node_getnode(node),
-					      NULL,
-					      WEBIDL_NODE_TYPE_MODIFIER);
-
-	if (webidl_node_getint(modifier_node) == WEBIDL_TYPE_READONLY) {
+	if (property_is_ro(node)) {
 		fprintf(binding->outfile, "\tJSAPI_PS_RO(\"%s\",\n", ident);
 	} else {
 		fprintf(binding->outfile, "\tJSAPI_PS(\"%s\",\n", ident);
 	}
+
 
 	/* generate property shared status */
 	switch (get_binding_shared_modifier(binding, type, ident)) {
@@ -756,14 +766,7 @@ static int output_property_setter(struct binding *binding,
 				  struct webidl_node *node,
 				  const char *ident)
 {
-	struct webidl_node *modifier_node;
-
-	modifier_node = webidl_node_find_type(webidl_node_getnode(node),
-					      NULL,
-					      WEBIDL_NODE_TYPE_MODIFIER);
-
-
-	if (webidl_node_getint(modifier_node) == WEBIDL_TYPE_READONLY) {
+	if (property_is_ro(node)) {
 		/* readonly so a set function is not required */
 		return 0;
 	}
