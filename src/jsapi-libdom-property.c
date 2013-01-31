@@ -870,6 +870,8 @@ static int output_property_setter(struct binding *binding,
 		"{\n",
 		ident);
 
+	output_private_get(binding, "private");
+
 	if (property_node != NULL) {
 		/* binding source block */
 		output_code_block(binding, genbind_node_getnode(property_node));
