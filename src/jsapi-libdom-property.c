@@ -244,6 +244,67 @@ get_binding_shared_modifier(struct binding *binding, const char *type, const cha
 	return GENBIND_TYPE_NONE;
 }
 
+/* obtain the value for a key/value type  extended attribute */
+static char *
+get_keyval_extended_attribute(struct webidl_node *node, const char *attribute)
+{
+	struct webidl_node *ext_node;
+	struct webidl_node *ident_node;
+	char *value;
+
+	ext_node = webidl_node_find_type_ident(webidl_node_getnode(node),
+					    WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+					       attribute);
+
+	if (ext_node == NULL) {
+		return NULL; /* no matching extended attribute at all */
+	}
+
+	/* should be extended atrribute name node */
+	ident_node = webidl_node_find_type(webidl_node_getnode(ext_node),
+					   NULL,
+					   WEBIDL_NODE_TYPE_IDENT);
+	if (ident_node == NULL) {
+		/* not the attribute name already matched - bail
+		 * somethings broken
+		 */
+		return NULL;
+	}
+	value = webidl_node_gettext(ident_node);
+	if (strcmp(attribute, value) != 0) {
+		/* not the attribute name already matched - bail
+		 * somethings broken
+		 */
+		return NULL;
+	}
+
+	/* should be an = sign for key/value pair */
+	ident_node = webidl_node_find_type(webidl_node_getnode(ext_node),
+					   ident_node,
+					   WEBIDL_NODE_TYPE_IDENT);
+	if (ident_node == NULL) {
+		/* no additional attribute - not key/value then */
+		return NULL;
+	}
+	value = webidl_node_gettext(ident_node);
+	if (strcmp("=", value) != 0) {
+		/* not a key/value pair then */
+		return NULL;
+	}
+
+	/* value */
+	ident_node = webidl_node_find_type(webidl_node_getnode(ext_node),
+					   ident_node,
+					   WEBIDL_NODE_TYPE_IDENT);
+	if (ident_node == NULL) {
+		/* no value */
+		return NULL;
+	}
+	value = webidl_node_gettext(ident_node);
+
+	return value;
+}
+
 static bool property_is_ro(struct webidl_node *node)
 {
 	struct webidl_node *modifier_node;
@@ -290,12 +351,13 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 
 
 	/* generate JSAPI_PS macro entry */
-	if (property_is_ro(node)) {
+	/* if there is a putforwards the property requires a setter */
+	if ((property_is_ro(node)) &&
+	    (get_keyval_extended_attribute(node, "PutForwards") == NULL)) {
 		fprintf(binding->outfile, "\tJSAPI_PS_RO(\"%s\",\n", ident);
 	} else {
 		fprintf(binding->outfile, "\tJSAPI_PS(\"%s\",\n", ident);
 	}
-
 
 	/* generate property shared status */
 	switch (get_binding_shared_modifier(binding, type, ident)) {
@@ -766,6 +828,32 @@ static int output_property_setter(struct binding *binding,
 				  struct webidl_node *node,
 				  const char *ident)
 {
+	char *putforwards;
+	putforwards = get_keyval_extended_attribute(node, "PutForwards");
+
+	if (putforwards != NULL) {
+		/* generate a putforwards setter */
+		fprintf(binding->outfile,
+			"/* PutForwards setter */\n"
+			"static JSBool JSAPI_STRICTPROP(%s_set, JSContext *cx, JSObject *obj, jsval *vp)\n"
+			"{\n",
+			ident);
+
+		fprintf(binding->outfile,
+			"\tjsval propval;\n"
+			"\tif (JS_GetProperty(cx, obj, \"%s\", &propval) == JS_TRUE) {\n"
+			"\t\tJS_SetProperty(cx, JSVAL_TO_OBJECT(propval), \"%s\", vp);\n"
+			"\t}\n",
+			ident, putforwards);
+
+		fprintf(binding->outfile,
+			"\treturn JS_FALSE; /* disallow the asignment */\n"
+			"}\n\n");
+
+
+		return 0;
+	}
+
 	if (property_is_ro(node)) {
 		/* readonly so a set function is not required */
 		return 0;
@@ -778,7 +866,7 @@ static int output_property_setter(struct binding *binding,
 
 	fprintf(binding->outfile,
 		"{\n"
-		"        return JS_FALSE;\n"
+		"        return JS_FALSE; /* disallow the asignment by default */\n"
 		"}\n\n");
 
 
