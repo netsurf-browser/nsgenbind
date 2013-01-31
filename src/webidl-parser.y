@@ -185,7 +185,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %%
 
  /* [1] default rule to add built AST to passed in one, altered from
-  *   original grammar to be left recusive, 
+  *   original grammar to be left recusive,
   */
 Definitions:
         /* empty */
@@ -260,7 +260,7 @@ Interface:
             interface_node = webidl_node_find_type_ident(*webidl_ast,
                                                      WEBIDL_NODE_TYPE_INTERFACE,
                                                      $2);
- 
+
             if (interface_node == NULL) {
                 /* no existing interface - create one with ident */
                 members = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
@@ -378,7 +378,7 @@ InterfaceMembers:
                 if (member_node == NULL) {
                     /* not a member with that ident already present */
                     $$ = webidl_node_prepend($1, $3);
-                } else {            
+                } else {
                     webidl_node_add(member_node, list_node);
                     $$ = $1; /* updated existing node do not add new one */
                 }
@@ -540,10 +540,10 @@ Const:
             constant = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $3);
 
             /* add constant type */
-            constant = webidl_node_prepend(constant, $2); 
+            constant = webidl_node_prepend(constant, $2);
 
             /* add constant value */
-            constant = webidl_node_prepend(constant, $5); 
+            constant = webidl_node_prepend(constant, $5);
 
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_CONST, NULL, constant);
         }
@@ -560,7 +560,7 @@ ConstValue:
           $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_INT, NULL, (void *)$1);
         }
         |
-        TOK_NULL_LITERAL 
+        TOK_NULL_LITERAL
         {
           $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_NULL, NULL, NULL);
         }
@@ -651,7 +651,7 @@ Attribute:
             attribute = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $5);
 
             /* add attributes type */
-            attribute = webidl_node_prepend(attribute, $4); 
+            attribute = webidl_node_prepend(attribute, $4);
 
             /* deal with readonly modifier */
             if ($2) {
@@ -870,26 +870,31 @@ ExtendedAttributes:
         }
         ;
 
- /* [51] extended attributes are nested with normal, square and curly braces */
+ /* [51] extended attributes internal nesting with normal, square and curly
+  * braces
+  */
 ExtendedAttribute:
         '(' ExtendedAttributeInner ')' ExtendedAttributeRest
         {
-            $$ = webidl_node_prepend($2, $4);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE, $4, $2);
         }
         |
         '[' ExtendedAttributeInner ']' ExtendedAttributeRest
         {
-            $$ = webidl_node_prepend($2, $4);
+            /* @todo should be a WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE_SQUARE */
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE, $4, $2);
         }
         |
         '{' ExtendedAttributeInner '}' ExtendedAttributeRest
         {
-            $$ = webidl_node_prepend($2, $4);
+            /* @todo should be a WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE_CURLY */
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE, $4, $2);
         }
         |
         Other ExtendedAttributeRest
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, $2, $1);
+            $$ = webidl_node_append($2,
+                             webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $1));
         }
         ;
 
@@ -915,22 +920,37 @@ ExtendedAttributeInner:
         |
         '(' ExtendedAttributeInner ')' ExtendedAttributeInner
         {
-            $$ = webidl_node_prepend($2, $4);
+            $$ = webidl_node_prepend(
+                     webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+                                     NULL,
+                                     $2),
+                     $4);
         }
         |
         '[' ExtendedAttributeInner ']' ExtendedAttributeInner
         {
-            $$ = webidl_node_prepend($2, $4);
+            /* @todo should be a WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE_SQUARE */
+            $$ = webidl_node_prepend(
+                     webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+                                     NULL,
+                                     $2),
+                     $4);
         }
         |
         '{' ExtendedAttributeInner '}' ExtendedAttributeInner
         {
-            $$ = webidl_node_prepend($2, $4);
+            /* @todo should be a WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE_CURLY */
+            $$ = webidl_node_prepend(
+                     webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+                                     NULL,
+                                     $2),
+                     $4);
         }
         |
         OtherOrComma ExtendedAttributeInner
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, $2, $1);
+            $$ = webidl_node_append($2,
+                             webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $1));
         }
         ;
 
