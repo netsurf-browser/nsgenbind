@@ -828,6 +828,7 @@ static int output_property_setter(struct binding *binding,
 				  struct webidl_node *node,
 				  const char *ident)
 {
+	struct genbind_node *property_node;
 	char *putforwards;
 	putforwards = get_keyval_extended_attribute(node, "PutForwards");
 
@@ -859,13 +860,24 @@ static int output_property_setter(struct binding *binding,
 		return 0;
 	}
 
+	property_node = genbind_node_find_type_ident(binding->gb_ast,
+				      NULL,
+				      GENBIND_NODE_TYPE_SETTER,
+				      ident);
 
 	fprintf(binding->outfile,
-		"static JSBool JSAPI_STRICTPROP(%s_set, JSContext *cx, JSObject *obj, jsval *vp)\n",
+		"static JSBool JSAPI_STRICTPROP(%s_set, JSContext *cx, JSObject *obj, jsval *vp)\n"
+		"{\n",
 		ident);
 
+	if (property_node != NULL) {
+		/* binding source block */
+		output_code_block(binding, genbind_node_getnode(property_node));
+	} else {
+		output_property_placeholder(binding, node, ident);
+	}
+
 	fprintf(binding->outfile,
-		"{\n"
 		"        return JS_FALSE; /* disallow the asignment by default */\n"
 		"}\n\n");
 
