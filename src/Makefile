@@ -1,4 +1,4 @@
-CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/ -g
+CFLAGS := $(CFLAGS) -I$(BUILDDIR) -Isrc/ -g -DYYENABLE_NLS=0
 
 # Sources in this directory
 DIR_SOURCES := nsgenbind.c webidl-ast.c nsgenbind-ast.c jsapi-libdom.c jsapi-libdom-operator.c jsapi-libdom-property.c jsapi-libdom-const.c
