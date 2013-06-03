@@ -415,7 +415,7 @@ output_api_operations(struct binding *binding)
 		output_code_block(binding, genbind_node_getnode(binding->mark));
 
 		fprintf(binding->outfile,
-			"\treturn JS_TRUE;\n"
+			"\tJSAPI_MARKOP_RETURN(JS_TRUE);\n"
 			"}\n\n");
 	}
 	return res;
