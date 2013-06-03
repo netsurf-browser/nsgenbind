@@ -22,6 +22,7 @@ struct options {
 
 	bool verbose; /**< verbose processing */
 	bool debug; /**< debug enabled */
+	bool dbglog; /**< embed debug logging in output */
 	unsigned int warnings; /**< warning flags */
 };
 

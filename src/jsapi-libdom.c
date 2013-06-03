@@ -238,6 +238,11 @@ output_api_operations(struct binding *binding)
 			"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 			binding->interface);
 
+		if (options->dbglog) {
+			fprintf(binding->outfile,
+				"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
+			}
+
 		if (binding->finalise != NULL) {
 			output_code_block(binding,
 				genbind_node_getnode(binding->finalise));
@@ -253,6 +258,11 @@ output_api_operations(struct binding *binding)
 		fprintf(binding->outfile,
 			"static void jsclass_finalize(JSContext *cx, JSObject *obj)\n"
 			"{\n");
+
+		if (options->dbglog) {
+			fprintf(binding->outfile,
+				"\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, obj);\n");
+		}
 
 		output_code_block(binding,
 				  genbind_node_getnode(binding->finalise));
@@ -275,7 +285,19 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
+		
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
+			}
+		} else {
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, obj);\n");
+			}
+
 		}
+
 
 		output_code_block(binding,
 				  genbind_node_getnode(binding->addproperty));
@@ -298,7 +320,19 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
+		
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
+			}
+		} else {
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, obj);\n");
+			}
+
 		}
+
 
 		output_code_block(binding,
 				  genbind_node_getnode(binding->delproperty));
@@ -321,7 +355,19 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
+		
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
+			}
+		} else {
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, obj);\n");
+			}
+
 		}
+
 
 		output_code_block(binding,
 				  genbind_node_getnode(binding->getproperty));
@@ -344,7 +390,19 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
+		
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
+			}
+		} else {
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, obj);\n");
+			}
+
 		}
+
 
 		output_code_block(binding,
 				  genbind_node_getnode(binding->setproperty));
@@ -367,6 +425,17 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
+
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
+			}
+		} else {
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, obj);\n");
+			}
+
 		}
 
 		output_code_block(binding, genbind_node_getnode(binding->enumerate));
@@ -389,7 +458,18 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
+			}
+		} else {
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, obj);\n");
+			}
+
 		}
+
 
 		output_code_block(binding, genbind_node_getnode(binding->resolve));
 
@@ -410,6 +490,17 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(JSAPI_MARKCX, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
+
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", JSAPI_MARKCX, obj, private);\n");
+			}
+		} else {
+			if (options->dbglog) {
+				fprintf(binding->outfile,
+					"\tJSLOG(\"jscontext:%%p jsobject:%%p\", JSAPI_MARKCX, obj);\n");
+			}
+
 		}
 
 		output_code_block(binding, genbind_node_getnode(binding->mark));

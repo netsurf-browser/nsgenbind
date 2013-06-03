@@ -30,7 +30,7 @@ static struct options* process_cmdline(int argc, char **argv)
 		return NULL;
 	}
 
-	while ((opt = getopt(argc, argv, "vDW::d:I:o:h:")) != -1) {
+	while ((opt = getopt(argc, argv, "vgDW::d:I:o:h:")) != -1) {
 		switch (opt) {
 		case 'I':
 			options->idlpath = strdup(optarg);
@@ -56,13 +56,17 @@ static struct options* process_cmdline(int argc, char **argv)
 			options->debug = true;
 			break;
 
+		case 'g':
+			options->dbglog = true;
+			break;
+
 		case 'W':
 			options->warnings = 1; /* warning flags */
 			break;
 
 		default: /* '?' */
 			fprintf(stderr, 
-			     "Usage: %s [-v] [-D] [-W] [-d depfilename] [-I idlpath] [-o filename] [-h headerfile] inputfile\n",
+			     "Usage: %s [-v] [-g] [-D] [-W] [-d depfilename] [-I idlpath] [-o filename] [-h headerfile] inputfile\n",
 				argv[0]);
 			free(options);
 			return NULL;

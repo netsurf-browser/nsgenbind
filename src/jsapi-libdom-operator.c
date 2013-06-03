@@ -702,12 +702,50 @@ output_operator_placeholder(struct binding *binding,
 	     binding->interface,
 	     webidl_node_gettext(ident_node));
 
-	fprintf(binding->outfile,
-		"\tJSLOG(\"operation %s.%s has no implementation\");\n",
-		binding->interface,
-		webidl_node_gettext(ident_node));
+	if (options->dbglog) {
+		fprintf(binding->outfile,
+			"\tJSLOG(\"operation %s.%s has no implementation\");\n",
+			binding->interface,
+			webidl_node_gettext(ident_node));
+	}
 
 	return 0;
+}
+
+
+/* generate context data fetcher if the binding has private data */
+static inline int
+output_private_get(struct binding *binding, const char *argname)
+{
+	int ret = 0;
+
+	if (binding->has_private) {
+
+		ret = fprintf(binding->outfile,
+			      "\tstruct jsclass_private *%s;\n"
+			      "\n"
+			      "\t%s = JS_GetInstancePrivate(cx,\n"
+			      "\t\t\tJSAPI_THIS_OBJECT(cx,vp),\n"
+			      "\t\t\t&JSClass_%s,\n"
+			      "\t\t\targv);\n"
+			      "\tif (%s == NULL) {\n"
+			      "\t\treturn JS_FALSE;\n"
+			      "\t}\n\n",
+			      argname, argname, binding->interface, argname);
+
+		if (options->dbglog) {
+			ret += fprintf(binding->outfile,
+				       "\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, JSAPI_THIS_OBJECT(cx,vp), %s);\n", argname);
+		}
+	} else {
+		if (options->dbglog) {
+			ret += fprintf(binding->outfile,
+				       "\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, JSAPI_THIS_OBJECT(cx,vp));\n");
+		}
+
+	}
+
+	return ret;
 }
 
 static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
@@ -743,18 +781,7 @@ static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
 
 		output_variable_definitions(binding, webidl_node_getnode(node));
 
-		if (binding->has_private) {
-			fprintf(binding->outfile,
-				"\tstruct jsclass_private *private;\n"
-				"\n"
-				"\tprivate = JS_GetInstancePrivate(cx,\n"
-				"\t\t\tJSAPI_THIS_OBJECT(cx,vp),\n"
-				"\t\t\t&JSClass_%s,\n"
-				"\t\t\targv);\n"
-				"\tif (private == NULL)\n"
-				"\t\treturn JS_FALSE;\n\n",
-				binding->interface);
-		}
+		output_private_get(binding, "private");
 
 		output_operation_input(binding, webidl_node_getnode(node));
 

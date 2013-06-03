@@ -26,11 +26,11 @@ static int generate_property_body(struct binding *binding, const char *interface
 static inline int
 output_private_get(struct binding *binding, const char *argname)
 {
-	if (!binding->has_private) {
-		return 0;
-	}
+	int ret = 0;
 
-	return fprintf(binding->outfile,
+	if (binding->has_private) {
+
+		ret = fprintf(binding->outfile,
 		       "\tstruct jsclass_private *%s;\n"
 		       "\n"
 		       "\t%s = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n"
@@ -38,6 +38,20 @@ output_private_get(struct binding *binding, const char *argname)
 		       "\t\treturn JS_FALSE;\n"
 		       "\t}\n\n",
 		       argname, argname, binding->interface, argname);
+
+		if (options->dbglog) {
+			ret += fprintf(binding->outfile,
+				       "\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, %s);\n", argname);
+		}
+	} else {
+		if (options->dbglog) {
+			ret += fprintf(binding->outfile,
+				"\tJSLOG(\"jscontext:%%p jsobject:%%p\", cx, obj);\n");
+		}
+
+	}
+
+	return ret;
 }
 
 /* generate vars for property name getter */
@@ -756,10 +770,13 @@ output_property_placeholder(struct binding *binding,
 	     binding->interface,
 	     ident);
 
-	fprintf(binding->outfile,
-		"\tJSLOG(\"property %s.%s has no implementation\");\n",
-		binding->interface,
-		ident);
+
+	if (options->dbglog) {
+		fprintf(binding->outfile,
+			"\tJSLOG(\"property %s.%s has no implementation\");\n",
+			binding->interface,
+			ident);
+	}
 	return 0;
 }
 
