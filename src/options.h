@@ -14,10 +14,14 @@ struct options {
 	char *infilename; /**< binding source */
 
 	char *outfilename; /**< output source file */
+	FILE *outfilehandle; /**< output file handle */
+
 	char *hdrfilename; /**< output header file */
+	FILE *hdrfilehandle; /**< output file handle */
 
 	char *depfilename; /**< dependancy output*/
 	FILE *depfilehandle; /**< dependancy file handle */
+
 	char *idlpath; /**< path to IDL files */
 
 	bool verbose; /**< verbose processing */

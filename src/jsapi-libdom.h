@@ -9,12 +9,12 @@
 #ifndef nsgenbind_jsapi_libdom_h
 #define nsgenbind_jsapi_libdom_h
 
+struct options;
+
 struct binding {
 	struct genbind_node *gb_ast; /* root node of binding AST */
 	struct webidl_node *wi_ast; /* root node of webidl AST */
 
-
-	const char *name; /* name of the binding */
 	const char *interface; /* webidl interface binding is for */
 
 	bool has_private; /* true if the binding requires a private structure */
@@ -41,7 +41,7 @@ struct binding {
 };
 
 /** Generate binding between jsapi and netsurf libdom */
-int jsapi_libdom_output(char *outfile, char *hdrfile, struct genbind_node *genbind_root);
+int jsapi_libdom_output(struct options *options, struct genbind_node *genbind_ast, struct genbind_node *binding_node);
 
 /** output code block from a node */
 void output_code_block(struct binding *binding, struct genbind_node *codelist);

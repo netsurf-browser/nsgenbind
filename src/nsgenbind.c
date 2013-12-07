@@ -65,12 +65,12 @@ static struct options* process_cmdline(int argc, char **argv)
 			break;
 
 		default: /* '?' */
-			fprintf(stderr, 
+			fprintf(stderr,
 			     "Usage: %s [-v] [-g] [-D] [-W] [-d depfilename] [-I idlpath] [-o filename] [-h headerfile] inputfile\n",
 				argv[0]);
 			free(options);
 			return NULL;
-                   
+
 		}
 	}
 
@@ -86,6 +86,27 @@ static struct options* process_cmdline(int argc, char **argv)
 
 }
 
+static int generate_binding(struct genbind_node *binding_node, void *ctx)
+{
+	struct genbind_node *genbind_root = ctx;
+	char *type;
+	int res = 10;
+
+	type = genbind_node_gettext(
+		genbind_node_find_type(
+			genbind_node_getnode(binding_node),
+			NULL,
+			GENBIND_NODE_TYPE_TYPE));
+
+	if (strcmp(type, "jsapi_libdom") == 0) {
+		res = jsapi_libdom_output(options, genbind_root, binding_node);
+	} else {
+		fprintf(stderr, "Error: unsupported binding type \"%s\"\n", type);
+	}
+
+	return res;
+}
+
 int main(int argc, char **argv)
 {
 	int res;
@@ -96,9 +117,9 @@ int main(int argc, char **argv)
 		return 1; /* bad commandline */
 	}
 
-	if (options->verbose && 
+	if (options->verbose &&
 	    (options->outfilename == NULL)) {
-		fprintf(stderr, 
+		fprintf(stderr,
 			"Error: output to stdout with verbose logging would fail\n");
 		return 2;
 	}
@@ -117,6 +138,7 @@ int main(int argc, char **argv)
 		return 3;
 	}
 
+	/* open dependancy file */
 	if (options->depfilename != NULL) {
 		options->depfilehandle = fopen(options->depfilename, "w");
 		if (options->depfilehandle == NULL) {
@@ -129,19 +151,61 @@ int main(int argc, char **argv)
 			options->outfilename);
 	}
 
+	/* parse input and generate dependancy */
 	res = genbind_parsefile(options->infilename, &genbind_root);
 	if (res != 0) {
 		fprintf(stderr, "Error: parse failed with code %d\n", res);
 		return res;
 	}
 
+	/* dependancy generation complete */
+	if (options->depfilehandle != NULL) {
+		fputc('\n', options->depfilehandle);
+		fclose(options->depfilehandle);
+	}
+
+
+	/* open output file */
+	if (options->outfilename == NULL) {
+		options->outfilehandle = stdout;
+	} else {
+		options->outfilehandle = fopen(options->outfilename, "w");
+	}
+	if (options->outfilehandle == NULL) {
+		fprintf(stderr, "Error opening source output %s: %s\n",
+			options->outfilename,
+			strerror(errno));
+		return 5;
+	}
+
+	/* open output header file if required */
+	if (options->hdrfilename != NULL) {
+		options->hdrfilehandle = fopen(options->hdrfilename, "w");
+		if (options->hdrfilehandle == NULL) {
+			fprintf(stderr, "Error opening header output %s: %s\n",
+				options->hdrfilename,
+				strerror(errno));
+			/* close and unlink output file */
+			fclose(options->outfilehandle);
+			if (options->outfilename != NULL) {
+				unlink(options->outfilename);
+			}
+			return 6;
+		}
+	} else {
+		options->hdrfilehandle = NULL;
+	}
+
+	/* dump the AST */
 	if (options->verbose) {
 		genbind_ast_dump(genbind_root, 0);
 	}
 
-	res = jsapi_libdom_output(options->outfilename, 
-				  options->hdrfilename, 
-				  genbind_root);
+	/* generate output for each binding */
+	res = genbind_node_for_each_type(genbind_root,
+					 GENBIND_NODE_TYPE_BINDING,
+					 generate_binding,
+					 genbind_root);
 	if (res != 0) {
 		fprintf(stderr, "Error: output failed with code %d\n", res);
 		if (options->outfilename != NULL) {
@@ -149,14 +213,10 @@ int main(int argc, char **argv)
 		}
 		if (options->hdrfilename != NULL) {
 			unlink(options->hdrfilename);
-		} 
+		}
 		return res;
 	}
 
-	if (options->depfilehandle != NULL) {
-		fputc('\n', options->depfilehandle);
-		fclose(options->depfilehandle);
-	}
 
 	return 0;
-} 
+}

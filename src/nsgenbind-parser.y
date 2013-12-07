@@ -81,7 +81,6 @@ char *errtxt;
 %type <node> Binding
 %type <node> BindingArgs
 %type <node> BindingArg
-%type <node> Type
 %type <node> Private
 %type <node> Internal
 %type <node> Interface
@@ -265,7 +264,7 @@ Binding
         {
           $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING, 
                                 NULL, 
-                                genbind_new_node(GENBIND_NODE_TYPE_IDENT, $4, $2));
+                                genbind_new_node(GENBIND_NODE_TYPE_TYPE, $4, $2));
         }
         ;
 
@@ -281,8 +280,6 @@ BindingArgs
 
 BindingArg
         : 
-        Type
-        | 
         Private
         | 
         Internal
@@ -290,14 +287,6 @@ BindingArg
         Interface
         |
         Property
-        ;
-
-Type
-        :
-        TOK_TYPE TOK_IDENTIFIER ';'
-        {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_TYPE, NULL, $2);
-        }
         ;
 
 Private

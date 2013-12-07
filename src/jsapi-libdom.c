@@ -285,7 +285,7 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
-		
+
 			if (options->dbglog) {
 				fprintf(binding->outfile,
 					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
@@ -320,7 +320,7 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
-		
+
 			if (options->dbglog) {
 				fprintf(binding->outfile,
 					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
@@ -355,7 +355,7 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
-		
+
 			if (options->dbglog) {
 				fprintf(binding->outfile,
 					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
@@ -390,7 +390,7 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
-		
+
 			if (options->dbglog) {
 				fprintf(binding->outfile,
 					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
@@ -893,22 +893,25 @@ output_jsclass(struct binding *binding)
 	return 0;
 }
 
+/** generate structure definition for internal class data
+ *
+ * Every javascript object instance has an internal context to keep
+ * track of its state in object terms this would be considered the
+ * "this" pointer giving access to the classes members.
+ *
+ * Member access can be considered protected as all interfaces
+ * (classes) and subclasses generated within this binding have access
+ * to members.
+ *
+ * @param binding the binding to generate the structure for.
+ * @return 0 on success with output written and -1 on error.
+ */
 static int
 output_private_declaration(struct binding *binding)
 {
-	struct genbind_node *type_node;
 
 	if (!binding->has_private) {
 		return 0;
-	}
-
-	type_node = genbind_node_find(binding->binding_list,
-				      NULL,
-				      genbind_cmp_node_type,
-				      (void *)GENBIND_NODE_TYPE_TYPE);
-
-	if (type_node == NULL) {
-		return -1;
 	}
 
 	fprintf(binding->outfile, "struct jsclass_private {\n");
@@ -1024,37 +1027,19 @@ binding_has_global(struct binding *binding)
 }
 
 static struct binding *
-binding_new(char *outfilename,
-	    char *hdrfilename,
-	    struct genbind_node *genbind_ast)
+binding_new(struct options *options,
+	    struct genbind_node *genbind_ast,
+	    struct genbind_node *binding_node)
 {
 	struct binding *nb;
-	struct genbind_node *binding_node;
-	struct genbind_node *binding_list;
-	struct genbind_node *ident_node;
 	struct genbind_node *interface_node;
-	FILE *outfile = NULL; /* output source file */
-	FILE *hdrfile = NULL; /* output header file */
+	struct genbind_node *binding_list;
 	char *hdrguard = NULL;
 	struct webidl_node *webidl_ast = NULL;
 	int res;
 
-	binding_node = genbind_node_find_type(genbind_ast,
-					 NULL,
-					 GENBIND_NODE_TYPE_BINDING);
-	if (binding_node == NULL) {
-		return NULL;
-	}
-
 	binding_list = genbind_node_getnode(binding_node);
 	if (binding_list == NULL) {
-		return NULL;
-	}
-
-	ident_node = genbind_node_find_type(binding_list,
-					    NULL,
-					    GENBIND_NODE_TYPE_IDENT);
-	if (ident_node == NULL) {
 		return NULL;
 	}
 
@@ -1072,37 +1057,16 @@ binding_new(char *outfilename,
 		return NULL;
 	}
 
-	/* open output file */
-	if (outfilename == NULL) {
-		outfile = stdout;
-	} else {
-		outfile = fopen(outfilename, "w");
-	}
-	if (outfile == NULL) {
-		fprintf(stderr, "Error opening source output %s: %s\n",
-			outfilename,
-			strerror(errno));
-		return NULL;
-	}
-
-	/* output header file if required */
-	if (hdrfilename != NULL) {
+	/* header guard */
+	if (options->hdrfilename != NULL) {
 		int guardlen;
 		int pos;
 
-		hdrfile = fopen(hdrfilename, "w");
-		if (hdrfile == NULL) {
-			fprintf(stderr, "Error opening header output %s: %s\n",
-				hdrfilename,
-				strerror(errno));
-			fclose(outfile);
-			return NULL;
-		}
-		guardlen = strlen(hdrfilename);
+		guardlen = strlen(options->hdrfilename);
 		hdrguard = calloc(1, guardlen + 1);
 		for (pos = 0; pos < guardlen; pos++) {
-			if (isalpha(hdrfilename[pos])) {
-				hdrguard[pos] = toupper(hdrfilename[pos]);
+			if (isalpha(options->hdrfilename[pos])) {
+				hdrguard[pos] = toupper(options->hdrfilename[pos]);
 			} else {
 				hdrguard[pos] = '_';
 			}
@@ -1113,11 +1077,10 @@ binding_new(char *outfilename,
 
 	nb->gb_ast = genbind_ast;
 	nb->wi_ast = webidl_ast;
-	nb->name = genbind_node_gettext(ident_node);
 	nb->interface = genbind_node_gettext(interface_node);
-	nb->outfile = outfile;
-	nb->srcfile = outfile;
-	nb->hdrfile = hdrfile;
+	nb->outfile = options->outfilehandle;
+	nb->srcfile = options->outfilehandle;
+	nb->hdrfile = options->hdrfilehandle;
 	nb->hdrguard = hdrguard;
 	nb->has_private = binding_has_private(binding_list);
 	nb->has_global = binding_has_global(nb);
@@ -1145,14 +1108,14 @@ binding_new(char *outfilename,
 						      "setproperty");
 
 	nb->enumerate = genbind_node_find_type_ident(genbind_ast,
-						      NULL,
-						      GENBIND_NODE_TYPE_API,
-						      "enumerate");
+						     NULL,
+						     GENBIND_NODE_TYPE_API,
+						     "enumerate");
 
 	nb->resolve = genbind_node_find_type_ident(genbind_ast,
-						      NULL,
-						      GENBIND_NODE_TYPE_API,
-						      "resolve");
+						   NULL,
+						   GENBIND_NODE_TYPE_API,
+						   "resolve");
 
 	nb->finalise = genbind_node_find_type_ident(genbind_ast,
 						    NULL,
@@ -1160,23 +1123,23 @@ binding_new(char *outfilename,
 						    "finalise");
 
 	nb->mark = genbind_node_find_type_ident(genbind_ast,
-						    NULL,
-						    GENBIND_NODE_TYPE_API,
-						    "mark");
+						NULL,
+						GENBIND_NODE_TYPE_API,
+						"mark");
 	return nb;
 }
 
 
 int
-jsapi_libdom_output(char *outfilename,
-		    char *hdrfilename,
-		    struct genbind_node *genbind_ast)
+jsapi_libdom_output(struct options *options,
+		    struct genbind_node *genbind_ast,
+		    struct genbind_node *binding_node)
 {
 	int res;
 	struct binding *binding;
 
 	/* get general binding information used in output */
-	binding = binding_new(outfilename, hdrfilename, genbind_ast);
+	binding = binding_new(options, genbind_ast, binding_node);
 	if (binding == NULL) {
 		return 40;
 	}

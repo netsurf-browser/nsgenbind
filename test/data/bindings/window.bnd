@@ -27,8 +27,7 @@ epilogue %{
 
 #include "dom.bnd"
 
-binding window {
-	type js_libdom; /* the binding type */
+binding jsapi_libdom {
 
 	interface Window; /* Web IDL interface to generate */
 

@@ -53,17 +53,15 @@ epilogue %{
 #include "dom.bnd"
 
 
-/* this block describes the binding to be generated
+/* This block describes the binding to be generated
  *
  * Depending on the type of binding being generated multiple blocks
  * may be allowed.
  *
- * Note: the js_libdom (javascript to libdom) binding as currently
- * implemented only allows for a single binding per file, this may
- * be improved in future.
+ * Note: the jsapi_libdom (spidermonkey javascript to libdom) binding
+ * is the only type currently implemented
  */
-binding example {
-    type js_libdom; /* the binding type */
+binding jsapi_libdom {
 
     interface Navigator; /* The WebIDL interface to generate a binding for */
 
