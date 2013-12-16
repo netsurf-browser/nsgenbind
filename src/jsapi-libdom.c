@@ -211,6 +211,10 @@ output_epilogue(struct binding *binding)
 static int
 output_prologue(struct binding *binding)
 {
+	/* forward declare property list */
+	fprintf(binding->outfile,
+		"static JSPropertySpec jsclass_properties[];\n\n");
+
 	genbind_node_for_each_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_PROLOGUE,
 				   webidl_prologue_cb,
@@ -728,7 +732,7 @@ output_class_new(struct binding *binding)
 }
 
 static int
-output_jsclass(struct binding *binding)
+output_forward_declarations(struct binding *binding)
 {
 	/* forward declare add property */
 	if (binding->addproperty != NULL) {
@@ -778,10 +782,12 @@ output_jsclass(struct binding *binding)
 			"static void jsclass_finalize(JSContext *cx, JSObject *obj);\n\n");
 	}
 
-	/* forward declare property list */
-	fprintf(binding->outfile,
-		"static JSPropertySpec jsclass_properties[];\n\n");
+	return 0;
+}
 
+static int
+output_jsclass(struct binding *binding)
+{
 	/* output the class declaration */
 	HDROUTF(binding, "JSClass JSClass_%s;\n", binding->interface);
 
@@ -860,31 +866,36 @@ output_jsclass(struct binding *binding)
 
 	/* resolver */
 	if (binding->resolve != NULL) {
-		fprintf(binding->outfile, "\t(JSResolveOp)jsclass_resolve,\n");
+		fprintf(binding->outfile,
+			"\t(JSResolveOp)jsclass_resolve,\t/* resolve */\n");
 	} else {
-		fprintf(binding->outfile, "\tJS_ResolveStub,\n");
+		fprintf(binding->outfile,
+			"\tJS_ResolveStub,\t\t/* resolve */\n");
 	}
 
-	fprintf(binding->outfile, "\tJS_ConvertStub,\t/* convert */\n");
+	fprintf(binding->outfile, "\tJS_ConvertStub,\t\t/* convert */\n");
 
 	if (binding->has_private || (binding->finalise != NULL)) {
-		fprintf(binding->outfile, "\tjsclass_finalize,\n");
+		fprintf(binding->outfile,
+			"\tjsclass_finalize,\t/* finalizer */\n");
 	} else {
-		fprintf(binding->outfile, "\tJS_FinalizeStub,\n");
+		fprintf(binding->outfile,
+			"\tJS_FinalizeStub,\t/* finalizer */\n");
 	}
 	fprintf(binding->outfile,
-		"\t0,\t/* reserved */\n"
-		"\tNULL,\t/* checkAccess */\n"
-		"\tNULL,\t/* call */\n"
-		"\tNULL,\t/* construct */\n"
-		"\tNULL,\t/* xdr Object */\n"
-		"\tNULL,\t/* hasInstance */\n");
+		"\t0,\t\t\t/* reserved */\n"
+		"\tNULL,\t\t\t/* checkAccess */\n"
+		"\tNULL,\t\t\t/* call */\n"
+		"\tNULL,\t\t\t/* construct */\n"
+		"\tNULL,\t\t\t/* xdr Object */\n"
+		"\tNULL,\t\t\t/* hasInstance */\n");
 
 	/* trace/mark */
 	if (binding->mark != NULL) {
-		fprintf(binding->outfile, "\tJSAPI_JSCLASS_MARKOP(jsclass_mark),\n");
+		fprintf(binding->outfile,
+			"\tJSAPI_JSCLASS_MARKOP(jsclass_mark),\n");
 	} else {
-		fprintf(binding->outfile, "\tNULL, /* trace/mark */\n");
+		fprintf(binding->outfile, "\tNULL,\t\t\t/* trace/mark */\n");
 	}
 
 	fprintf(binding->outfile,
@@ -1011,6 +1022,7 @@ binding_has_private(struct genbind_node *binding_list)
 	return false;
 }
 
+/* determine if the binding has a global api marker */
 static bool
 binding_has_global(struct binding *binding)
 {
@@ -1034,6 +1046,7 @@ binding_new(struct options *options,
 	struct binding *nb;
 	struct genbind_node *interface_node;
 	struct genbind_node *binding_list;
+	struct genbind_node *binding_ident;
 	char *hdrguard = NULL;
 	struct webidl_node *webidl_ast = NULL;
 	int res;
@@ -1043,6 +1056,7 @@ binding_new(struct options *options,
 		return NULL;
 	}
 
+	/* find the first interface node - there must be at least one */
 	interface_node = genbind_node_find_type(binding_list,
 					   NULL,
 					   GENBIND_NODE_TYPE_BINDING_INTERFACE);
@@ -1050,7 +1064,18 @@ binding_new(struct options *options,
 		return NULL;
 	}
 
-	/* walk ast and load any web IDL files required */
+	/* get the binding identifier */
+	/* @todo it should be possible to specify this as part of the
+	 * binding instead of just using the first interface
+	 */
+	binding_ident = genbind_node_find_type(genbind_node_getnode(interface_node),
+					       NULL,
+					       GENBIND_NODE_TYPE_IDENT);
+	if (binding_ident == NULL) {
+		return NULL;
+	}
+
+	/* walk AST and load any web IDL files required */
 	res = read_webidl(genbind_ast, &webidl_ast);
 	if (res != 0) {
 		fprintf(stderr, "Error reading Web IDL files\n");
@@ -1077,7 +1102,8 @@ binding_new(struct options *options,
 
 	nb->gb_ast = genbind_ast;
 	nb->wi_ast = webidl_ast;
-	nb->interface = genbind_node_gettext(interface_node);
+	/* @todo binding name should not be called interface */
+	nb->interface = genbind_node_gettext(binding_ident);
 	nb->outfile = options->outfilehandle;
 	nb->srcfile = options->outfilehandle;
 	nb->hdrfile = options->hdrfilehandle;
@@ -1160,6 +1186,11 @@ jsapi_libdom_output(struct options *options,
 		return 70;
 	}
 
+	res = output_forward_declarations(binding);
+	if (res) {
+		return 75;
+	}
+
 	res = output_jsclass(binding);
 	if (res) {
 		return 80;
@@ -1170,7 +1201,7 @@ jsapi_libdom_output(struct options *options,
 		return 85;
 	}
 
-	/* user code outout just before function bodies emitted */
+	/* user code output just before function bodies emitted */
 	res = output_prologue(binding);
 	if (res) {
 		return 89;

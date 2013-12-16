@@ -229,6 +229,7 @@ get_binding_shared_modifier(struct binding *binding, const char *type, const cha
 {
 	struct genbind_node *shared_node;
 	struct genbind_node *shared_mod_node;
+	enum genbind_type_modifier *shared_modifier;
 
 	/* look for node matching the ident first */
 	shared_node = genbind_node_find_type_ident(binding->binding_list,
@@ -251,9 +252,11 @@ get_binding_shared_modifier(struct binding *binding, const char *type, const cha
 		shared_mod_node = genbind_node_find_type(genbind_node_getnode(shared_node),
 						NULL,
 						GENBIND_NODE_TYPE_MODIFIER);
-		if (shared_mod_node != NULL) {
-			return genbind_node_getint(shared_mod_node);
+		shared_modifier = (enum genbind_type_modifier *)genbind_node_getint(shared_mod_node);
+		if (shared_modifier != NULL) {
+			return *shared_modifier;
 		}
+
 	}
 	return GENBIND_TYPE_NONE;
 }
@@ -1108,14 +1111,16 @@ static int typehandler_property_cb(struct genbind_node *node, void *ctx)
 	struct genbind_node *ident_node;
 	const char *type;
 	struct genbind_node *mod_node;
-	enum genbind_type_modifier share_mod;
+	enum genbind_type_modifier *share_mod;
 	int ret = 0;
 
 	mod_node = genbind_node_find_type(genbind_node_getnode(node),
 					  NULL,
 					  GENBIND_NODE_TYPE_MODIFIER);
-	share_mod = genbind_node_getint(mod_node);
-	if ((share_mod & GENBIND_TYPE_TYPE) == GENBIND_TYPE_TYPE) {
+	share_mod = (enum genbind_type_modifier *)genbind_node_getint(mod_node);
+
+	if ((share_mod != NULL) &&
+	    ((*share_mod & GENBIND_TYPE_TYPE) == GENBIND_TYPE_TYPE)) {
 		/* type handler */
 
 		ident_node = genbind_node_find_type(genbind_node_getnode(node),

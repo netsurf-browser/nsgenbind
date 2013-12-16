@@ -54,6 +54,7 @@ char *errtxt;
 %token TOK_GETTER
 %token TOK_SETTER
 %token TOK_INTERFACE
+%token TOK_FLAGS
 %token TOK_TYPE
 %token TOK_PRIVATE
 %token TOK_INTERNAL
@@ -84,11 +85,15 @@ char *errtxt;
 %type <node> Private
 %type <node> Internal
 %type <node> Interface
+%type <node> InterfaceArgs
+%type <node> InterfaceArg
+%type <node> InterfaceFlags
 %type <node> Property
 %type <node> Operation
 %type <node> Api
 %type <node> Getter
 %type <node> Setter
+
 
 
 %%
@@ -260,7 +265,7 @@ Setter
 
 Binding
         :
-        TOK_BINDING TOK_IDENTIFIER '{' BindingArgs '}' 
+        TOK_BINDING TOK_IDENTIFIER '{' BindingArgs '}'
         {
           $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING, 
                                 NULL, 
@@ -313,7 +318,52 @@ Interface
         : 
         TOK_INTERFACE TOK_IDENTIFIER ';'
         {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_INTERFACE, NULL, $2);
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_INTERFACE, NULL,
+                 genbind_new_node(GENBIND_NODE_TYPE_IDENT, NULL, $2));
+        }
+        |
+        TOK_INTERFACE TOK_IDENTIFIER '{' '}'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_INTERFACE, NULL,
+                 genbind_new_node(GENBIND_NODE_TYPE_IDENT, NULL, $2));
+        }
+        |
+        TOK_INTERFACE TOK_IDENTIFIER '{' InterfaceArgs '}'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_INTERFACE,
+                                NULL,
+                                genbind_new_node(GENBIND_NODE_TYPE_IDENT, $4, $2));
+        }
+        ;
+
+InterfaceArgs
+        :
+        InterfaceArg
+        |
+        InterfaceArgs InterfaceArg
+        {
+          $$ = genbind_node_link($2, $1);
+        }
+        ;
+
+InterfaceArg
+        :
+        TOK_FLAGS InterfaceFlags ';'
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_BINDING_INTERFACE_FLAGS, NULL, $2);
+        }
+        ;
+
+InterfaceFlags
+        :
+        TOK_IDENTIFIER
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_IDENT, NULL, $1);
+        }
+        |
+        InterfaceFlags ',' TOK_IDENTIFIER
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_IDENT, $1, $3);
         }
         ;
 

@@ -104,6 +104,8 @@ binding                 return TOK_BINDING;
 
 interface               return TOK_INTERFACE;
 
+flags                   return TOK_FLAGS;
+
 type                    return TOK_TYPE;
 
 private                 return TOK_PRIVATE;

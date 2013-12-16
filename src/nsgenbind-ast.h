@@ -26,6 +26,7 @@ enum genbind_node_type {
 	GENBIND_NODE_TYPE_BINDING_PRIVATE,
 	GENBIND_NODE_TYPE_BINDING_INTERNAL,
 	GENBIND_NODE_TYPE_BINDING_INTERFACE,
+	GENBIND_NODE_TYPE_BINDING_INTERFACE_FLAGS,
 	GENBIND_NODE_TYPE_BINDING_PROPERTY,
 	GENBIND_NODE_TYPE_API,
 	GENBIND_NODE_TYPE_OPERATION,
@@ -41,6 +42,11 @@ enum genbind_type_modifier {
 	GENBIND_TYPE_TYPE_UNSHARED = 3, /**< identifies a unshared type handler */
 };
 
+/* interface flags */
+enum genbind_interface_flags {
+	GENBIND_INTERFACE_FLAG_NONE = 0,
+	GENBIND_INTERFACE_FLAG_GLOBAL = 1, /**< interface is global */
+};
 
 struct genbind_node;
 
@@ -111,8 +117,8 @@ genbind_node_find_type_ident(struct genbind_node *node,
  * @param prev The node at which to stop the search, either NULL to
  *             search the full tree depth (initial search) or the result 
  *             of a previous search to continue.
- * @param nodetype The type of node to seach for
- * @param type The text to match the type child node to
+ * @param nodetype The type of node to seach for.
+ * @param type The text to match the type child node to.
  */
 struct genbind_node *
 genbind_node_find_type_type(struct genbind_node *node,
@@ -122,9 +128,28 @@ genbind_node_find_type_type(struct genbind_node *node,
 
 int genbind_node_for_each_type(struct genbind_node *node, enum genbind_node_type type, genbind_callback_t *cb, void *ctx);
 
-char *genbind_node_gettext(struct genbind_node *node);
+/** get a nodes node list content
+ *
+ * @param node The nodes to get node list from
+ * @return pointer to the node list or NULL if the node does not contain a list
+ */
 struct genbind_node *genbind_node_getnode(struct genbind_node *node);
-int genbind_node_getint(struct genbind_node *node);
+
+/** get a nodes text content
+ *
+ * @param node The nodes to get text from
+ * @return pointer to the node text or NULL if the node is not of type
+ *         text or is empty.
+ */
+char *genbind_node_gettext(struct genbind_node *node);
+
+/** get a nodes integer value
+ *
+ * @param node The nodes to get integer from
+ * @return pointer to the node value or NULL if the node is not of type
+ *         int or is empty.
+ */
+int *genbind_node_getint(struct genbind_node *node);
 
 #ifdef _WIN32
 #define NEED_STRNDUP 1
