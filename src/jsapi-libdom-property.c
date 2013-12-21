@@ -108,7 +108,7 @@ output_property_tinyid_get(struct binding *binding, const char *argname)
 
 /******************************** tinyid ********************************/
 
-static int 
+static int
 webidl_property_tinyid_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -132,7 +132,7 @@ webidl_property_tinyid_cb(struct webidl_node *node, void *ctx)
 }
 
 /* callback to emit implements property spec */
-static int 
+static int
 webidl_property_tinyid_implements_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
@@ -211,7 +211,7 @@ output_property_tinyid(struct binding *binding)
 
 	res = generate_property_tinyid(binding, binding->interface);
 
-	fprintf(binding->outfile, 
+	fprintf(binding->outfile,
 		"\tJSAPI_PROP_TINYID_END,\n"
 		"};\n\n");
 
@@ -386,21 +386,21 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 		 * js doesnt provide storage and setter/getter must
 		 * perform all GC management.
 		 */
-		fprintf(binding->outfile, 
+		fprintf(binding->outfile,
 			"\t\t%s,\n"
 			"\t\tJSAPI_PROP_TINYID_%s,\n"
-			"\t\tJSPROP_SHARED | ", 
-			ident, 
+			"\t\tJSPROP_SHARED | ",
+			ident,
 			ident);
 		break;
 
 	case GENBIND_TYPE_TYPE:
 		/* shared property with a type handler */
-		fprintf(binding->outfile, 
+		fprintf(binding->outfile,
 			"\t\t%s,\n"
 			"\t\tJSAPI_PROP_TINYID_%s,\n"
-			"\t\tJSPROP_SHARED | ", 
-			type, 
+			"\t\tJSPROP_SHARED | ",
+			type,
 			ident);
 		break;
 
@@ -1028,9 +1028,9 @@ generate_property_body(struct binding *binding, const char *interface)
 
 
 /* setter for type handler */
-static int 
-output_property_type_setter(struct binding *binding, 
-			    struct genbind_node *node, 
+static int
+output_property_type_setter(struct binding *binding,
+			    struct genbind_node *node,
 			    const char *type)
 {
 	struct genbind_node *property_node;
@@ -1149,7 +1149,7 @@ output_property_body(struct binding *binding)
 	res = generate_property_body(binding, binding->interface);
 
 	if (res == 0) {
-		res = genbind_node_for_each_type(binding->binding_list,
+		res = genbind_node_foreach_type(binding->binding_list,
 					GENBIND_NODE_TYPE_BINDING_PROPERTY,
 					typehandler_property_cb,
 					binding);

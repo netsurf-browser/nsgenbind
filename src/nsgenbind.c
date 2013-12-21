@@ -202,10 +202,10 @@ int main(int argc, char **argv)
 	}
 
 	/* generate output for each binding */
-	res = genbind_node_for_each_type(genbind_root,
-					 GENBIND_NODE_TYPE_BINDING,
-					 generate_binding,
-					 genbind_root);
+	res = genbind_node_foreach_type(genbind_root,
+					GENBIND_NODE_TYPE_BINDING,
+					generate_binding,
+					genbind_root);
 	if (res != 0) {
 		fprintf(stderr, "Error: output failed with code %d\n", res);
 		if (options->outfilename != NULL) {

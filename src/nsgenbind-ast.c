@@ -49,7 +49,8 @@ char *genbind_strapp(char *a, char *b)
 	return fullstr;
 }
 
-struct genbind_node *genbind_node_link(struct genbind_node *tgt, struct genbind_node *src)
+struct genbind_node *
+genbind_node_link(struct genbind_node *tgt, struct genbind_node *src)
 {
 	tgt->l = src;
 	return tgt;
@@ -68,7 +69,7 @@ genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r)
 }
 
 int
-genbind_node_for_each_type(struct genbind_node *node,
+genbind_node_foreach_type(struct genbind_node *node,
 			   enum genbind_node_type type,
 			   genbind_callback_t *cb,
 			   void *ctx)
@@ -79,7 +80,7 @@ genbind_node_for_each_type(struct genbind_node *node,
 		return -1;
 	}
 	if (node->l != NULL) {
-		ret = genbind_node_for_each_type(node->l, type, cb, ctx);
+		ret = genbind_node_foreach_type(node->l, type, cb, ctx);
 		if (ret != 0) {
 			return ret;
 		}
@@ -147,16 +148,25 @@ genbind_node_find_type_ident(struct genbind_node *node,
 
 	found_node = genbind_node_find_type(node, prev, type);
 
-
 	while (found_node != NULL) {
 		/* look for an ident node  */
-		ident_node = genbind_node_find_type(genbind_node_getnode(found_node),
-					       NULL,
-					       GENBIND_NODE_TYPE_IDENT);
-		if (ident_node != NULL) {
-			if (strcmp(ident_node->r.text, ident) == 0)
-				break;
+		ident_node = genbind_node_find_type(
+			genbind_node_getnode(found_node),
+			NULL,
+			GENBIND_NODE_TYPE_IDENT);
+
+		while (ident_node != NULL) {
+			/* check for matching text */
+			if (strcmp(ident_node->r.text, ident) == 0) {
+				return found_node;
+			}
+
+			ident_node = genbind_node_find_type(
+				genbind_node_getnode(found_node),
+				ident_node,
+				GENBIND_NODE_TYPE_IDENT);
 		}
+
 
 		/* look for next matching node */
 		found_node = genbind_node_find_type(node, found_node, type);

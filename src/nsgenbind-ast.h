@@ -1,4 +1,4 @@
-/* binding file AST interface 
+/* binding file AST interface
  *
  * This file is part of nsnsgenbind.
  * Licensed under the MIT License,
@@ -42,12 +42,6 @@ enum genbind_type_modifier {
 	GENBIND_TYPE_TYPE_UNSHARED = 3, /**< identifies a unshared type handler */
 };
 
-/* interface flags */
-enum genbind_interface_flags {
-	GENBIND_INTERFACE_FLAG_NONE = 0,
-	GENBIND_INTERFACE_FLAG_GLOBAL = 1, /**< interface is global */
-};
-
 struct genbind_node;
 
 /** callback for search and iteration routines */
@@ -66,11 +60,11 @@ struct genbind_node *genbind_node_link(struct genbind_node *tgt, struct genbind_
 
 int genbind_ast_dump(struct genbind_node *ast, int indent);
 
-/** Depth first left hand search using user provided comparison 
+/** Depth first left hand search using user provided comparison
  *
  * @param node The node to start the search from
  * @param prev The node at which to stop the search, either NULL to
- *             search the full tree depth (initial search) or the result 
+ *             search the full tree depth (initial search) or the result
  *             of a previous search to continue.
  * @param cb Comparison callback
  * @param ctx Context for callback
@@ -85,7 +79,7 @@ genbind_node_find(struct genbind_node *node,
  *
  * @param node The node to start the search from
  * @param prev The node at which to stop the search, either NULL to
- *             search the full tree depth (initial search) or the result 
+ *             search the full tree depth (initial search) or the result
  *             of a previous search to continue.
  * @param nodetype The type of node to seach for
  */
@@ -99,7 +93,7 @@ genbind_node_find_type(struct genbind_node *node,
  *
  * @param node The node to start the search from
  * @param prev The node at which to stop the search, either NULL to
- *             search the full tree depth (initial search) or the result 
+ *             search the full tree depth (initial search) or the result
  *             of a previous search to continue.
  * @param nodetype The type of node to seach for
  * @param ident The text to match the ident child node to
@@ -110,12 +104,18 @@ genbind_node_find_type_ident(struct genbind_node *node,
 			     enum genbind_node_type nodetype,
 			     const char *ident);
 
-/** Depth first left hand search returning nodes of the specified type
- *    and a type child node with matching text
+/** Returning node of the specified type with a GENBIND_NODE_TYPE_TYPE
+ * subnode with matching text.
+ *
+ * This is a conveniance wrapper around nested calls to
+ * genbind_node_find_type() which performs a depth first left hand
+ * search returning nodes of the specified type and a child node of
+ * GENBIND_NODE_TYPE_TYPE with matching text.
+ *
  *
  * @param node The node to start the search from
  * @param prev The node at which to stop the search, either NULL to
- *             search the full tree depth (initial search) or the result 
+ *             search the full tree depth (initial search) or the result
  *             of a previous search to continue.
  * @param nodetype The type of node to seach for.
  * @param type The text to match the type child node to.
@@ -124,9 +124,19 @@ struct genbind_node *
 genbind_node_find_type_type(struct genbind_node *node,
 			     struct genbind_node *prev,
 			     enum genbind_node_type nodetype,
-			     const char *type);
+			     const char *type_text);
 
-int genbind_node_for_each_type(struct genbind_node *node, enum genbind_node_type type, genbind_callback_t *cb, void *ctx);
+/** Iterate all nodes of a certian type from a node with a callback.
+ *
+ * Depth first search for nodes of the given type calling the callback
+ * with context.
+ *
+ * @param node The node to start the search from.
+ */
+int genbind_node_foreach_type(struct genbind_node *node,
+			      enum genbind_node_type type,
+			      genbind_callback_t *cb,
+			      void *ctx);
 
 /** get a nodes node list content
  *

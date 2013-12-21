@@ -29,7 +29,9 @@ epilogue %{
 
 binding jsapi_libdom {
 
-	interface Window; /* Web IDL interface to generate */
+	interface Window {
+		flags global;
+	}
 
 	private "struct browser_window *" bw;
 	private "struct html_content *" htmlc;
@@ -62,8 +64,6 @@ api mark %{
 	}
 %}
 
-api global %{
-%}
 
 api init %{
 	JSObject *user_proto;

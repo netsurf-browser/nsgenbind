@@ -47,7 +47,7 @@ read_webidl(struct genbind_node *genbind_ast, struct webidl_node **webidl_ast)
 {
 	int res;
 
-	res = genbind_node_for_each_type(genbind_ast,
+	res = genbind_node_foreach_type(genbind_ast,
 					 GENBIND_NODE_TYPE_WEBIDLFILE,
 					 webidl_file_cb,
 					 webidl_ast);
@@ -101,7 +101,7 @@ static int webidl_hdrcomments_cb(struct genbind_node *node, void *ctx)
 
 static int webidl_hdrcomment_cb(struct genbind_node *node, void *ctx)
 {
-	genbind_node_for_each_type(genbind_node_getnode(node),
+	genbind_node_foreach_type(genbind_node_getnode(node),
 				   GENBIND_NODE_TYPE_STRING,
 				   webidl_hdrcomments_cb,
 				   ctx);
@@ -187,7 +187,7 @@ static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
 static int
 output_epilogue(struct binding *binding)
 {
-	genbind_node_for_each_type(binding->gb_ast,
+	genbind_node_foreach_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_EPILOGUE,
 				   webidl_epilogue_cb,
 				   binding);
@@ -215,7 +215,7 @@ output_prologue(struct binding *binding)
 	fprintf(binding->outfile,
 		"static JSPropertySpec jsclass_properties[];\n\n");
 
-	genbind_node_for_each_type(binding->gb_ast,
+	genbind_node_foreach_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_PROLOGUE,
 				   webidl_prologue_cb,
 				   binding);
@@ -604,7 +604,7 @@ output_class_new(struct binding *binding)
 			"\t\tJSObject *parent",
 			binding->interface);
 
-		genbind_node_for_each_type(binding->binding_list,
+		genbind_node_foreach_type(binding->binding_list,
 					   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 					   webidl_private_param_cb,
 					   binding);
@@ -621,7 +621,7 @@ output_class_new(struct binding *binding)
 		"\t\tJSObject *parent",
 		binding->interface);
 
-	genbind_node_for_each_type(binding->binding_list,
+	genbind_node_foreach_type(binding->binding_list,
 				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 				   webidl_private_param_cb,
 				   binding);
@@ -641,7 +641,7 @@ output_class_new(struct binding *binding)
 			"\t\treturn NULL;\n"
 			"\t}\n");
 
-		genbind_node_for_each_type(binding->binding_list,
+		genbind_node_foreach_type(binding->binding_list,
 					   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 					   webidl_private_assign_cb,
 					   binding);
@@ -785,21 +785,48 @@ output_forward_declarations(struct binding *binding)
 	return 0;
 }
 
-static int
-output_jsclass(struct binding *binding)
+static bool interface_is_global(struct genbind_node *interface_node)
 {
+	if (genbind_node_find_type_ident(
+		genbind_node_getnode(interface_node),
+		NULL,
+		GENBIND_NODE_TYPE_BINDING_INTERFACE_FLAGS,
+		"global") != NULL) {
+		return true;
+	}
+
+	return false;
+}
+
+static int output_jsclass(struct genbind_node *interface_node, void *ctx)
+{
+	struct binding *binding = ctx;
+	struct genbind_node *interface_list;
+	const char *interface_ident;
+
+	interface_list = genbind_node_getnode(interface_node);
+	if (interface_list == NULL)
+		return -1; /* bad AST */
+
+	interface_ident = genbind_node_gettext(
+		genbind_node_find_type(interface_list,
+				       NULL,
+				       GENBIND_NODE_TYPE_IDENT));
+	if (interface_ident == NULL)
+		return -1; /* bad AST */
+
 	/* output the class declaration */
-	HDROUTF(binding, "JSClass JSClass_%s;\n", binding->interface);
+	HDROUTF(binding, "JSClass JSClass_%s;\n", interface_ident);
 
 	/* output the class definition */
 	fprintf(binding->outfile,
 		"JSClass JSClass_%s = {\n"
 		"\t\"%s\",\n",
-		binding->interface,
-		binding->interface);
+		interface_ident,
+		interface_ident);
 
 	/* generate class flags */
-	if (binding->has_global) {
+	if (interface_is_global(interface_node)) {
 		fprintf(binding->outfile, "\tJSCLASS_GLOBAL_FLAGS");
 	} else {
 		fprintf(binding->outfile, "\t0");
@@ -901,7 +928,19 @@ output_jsclass(struct binding *binding)
 	fprintf(binding->outfile,
 		"\tJSAPI_CLASS_NO_INTERNAL_MEMBERS\n"
 		"};\n\n");
+
 	return 0;
+}
+
+static int
+output_jsclasses(struct binding *binding)
+{
+
+	return genbind_node_foreach_type(binding->binding_list,
+				  GENBIND_NODE_TYPE_BINDING_INTERFACE,
+				  output_jsclass,
+				  binding);
+
 }
 
 /** generate structure definition for internal class data
@@ -927,12 +966,12 @@ output_private_declaration(struct binding *binding)
 
 	fprintf(binding->outfile, "struct jsclass_private {\n");
 
-	genbind_node_for_each_type(binding->binding_list,
+	genbind_node_foreach_type(binding->binding_list,
 				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 				   webidl_private_cb,
 				   binding);
 
-	genbind_node_for_each_type(binding->binding_list,
+	genbind_node_foreach_type(binding->binding_list,
 				   GENBIND_NODE_TYPE_BINDING_INTERNAL,
 				   webidl_private_cb,
 				   binding);
@@ -946,7 +985,7 @@ output_private_declaration(struct binding *binding)
 static int
 output_preamble(struct binding *binding)
 {
-	genbind_node_for_each_type(binding->gb_ast,
+	genbind_node_foreach_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_PREAMBLE,
 				   webidl_preamble_cb,
 				   binding);
@@ -976,7 +1015,7 @@ output_header_comments(struct binding *binding)
 	const char *preamble = HDR_COMMENT_PREAMBLE;
 	fprintf(binding->outfile, preamble, options->infilename);
 
-	genbind_node_for_each_type(binding->gb_ast,
+	genbind_node_foreach_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_HDRCOMMENT,
 				   webidl_hdrcomment_cb,
 				   binding);
@@ -988,7 +1027,7 @@ output_header_comments(struct binding *binding)
 
 		fprintf(binding->outfile, preamble, options->infilename);
 
-		genbind_node_for_each_type(binding->gb_ast,
+		genbind_node_foreach_type(binding->gb_ast,
 					   GENBIND_NODE_TYPE_HDRCOMMENT,
 					   webidl_hdrcomment_cb,
 					   binding);
@@ -1017,22 +1056,6 @@ binding_has_private(struct genbind_node *binding_list)
 				      NULL,
 				      GENBIND_NODE_TYPE_BINDING_INTERNAL);
 	if (node != NULL) {
-		return true;
-	}
-	return false;
-}
-
-/* determine if the binding has a global api marker */
-static bool
-binding_has_global(struct binding *binding)
-{
-	struct genbind_node *api_node;
-
-	api_node = genbind_node_find_type_ident(binding->gb_ast,
-						NULL,
-						GENBIND_NODE_TYPE_API,
-						"global");
-	if (api_node != NULL) {
 		return true;
 	}
 	return false;
@@ -1109,7 +1132,6 @@ binding_new(struct options *options,
 	nb->hdrfile = options->hdrfilehandle;
 	nb->hdrguard = hdrguard;
 	nb->has_private = binding_has_private(binding_list);
-	nb->has_global = binding_has_global(nb);
 	nb->binding_list = binding_list;
 
 	/* class API */
@@ -1191,7 +1213,7 @@ jsapi_libdom_output(struct options *options,
 		return 75;
 	}
 
-	res = output_jsclass(binding);
+	res = output_jsclasses(binding);
 	if (res) {
 		return 80;
 	}

@@ -18,7 +18,6 @@ struct binding {
 	const char *interface; /* webidl interface binding is for */
 
 	bool has_private; /* true if the binding requires a private structure */
-	bool has_global; /* true if the binding is for a global */
 	struct genbind_node *binding_list; /* node list of the binding */
 
 	struct genbind_node *addproperty; /* binding api add property node or NULL */
