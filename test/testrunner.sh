@@ -11,6 +11,8 @@ TESTDIR=$2
 
 # locations
 LOGFILE=${BUILDDIR}/testlog
+RESFILE=${BUILDDIR}/testres
+ERRFILE=${BUILDDIR}/testerr
 
 GENJSBIND=${BUILDDIR}/nsgenbind
 
@@ -28,11 +30,18 @@ for TEST in ${BINDINGTESTS};do
   echo -n "    TEST: ${TESTNAME}......"
   outline
 
-  echo  ${GENJSBIND} -D -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c -h ${BUILDDIR}/test_${TESTNAME}.h ${TEST} >>${LOGFILE} 2>&1   
+  echo  ${GENJSBIND} -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c -h ${BUILDDIR}/test_${TESTNAME}.h ${TEST} >>${LOGFILE} 2>&1   
 
-  ${GENJSBIND} -D -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c -h ${BUILDDIR}/test_${TESTNAME}.h ${TEST} >>${LOGFILE} 2>&1
+  ${GENJSBIND} -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c -h ${BUILDDIR}/test_${TESTNAME}.h ${TEST} >${RESFILE} 2>${ERRFILE}
 
-  if [ $? -eq 0 ]; then
+  RESULT=$?
+
+  echo >> ${LOGFILE}
+  cat ${ERRFILE} >> ${LOGFILE}
+  echo >> ${LOGFILE}
+  cat ${RESFILE} >> ${LOGFILE}
+
+  if [ ${RESULT} -eq 0 ]; then
     echo "PASS"
   else
     echo "FAIL"
