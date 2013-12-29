@@ -68,6 +68,8 @@ genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r)
 	return nn;
 }
 
+
+/* exported interface defined in nsgenbind-ast.h */
 int
 genbind_node_foreach_type(struct genbind_node *node,
 			   enum genbind_node_type type,
@@ -92,6 +94,25 @@ genbind_node_foreach_type(struct genbind_node *node,
 	return 0;
 }
 
+static int genbind_enumerate_node(struct genbind_node *node, void *ctx)
+{
+	node = node;
+	(*((int *)ctx))++;
+	return 0;
+}
+
+/* exported interface defined in nsgenbind-ast.h */
+int
+genbind_node_enumerate_type(struct genbind_node *node,
+			    enum genbind_node_type type)
+{
+	int count = 0;
+	genbind_node_foreach_type(node,
+				  type,
+				  genbind_enumerate_node,
+				  &count);
+	return count;
+}
 
 /* exported interface defined in nsgenbind-ast.h */
 struct genbind_node *

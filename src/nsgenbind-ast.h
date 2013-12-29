@@ -82,11 +82,26 @@ genbind_node_find(struct genbind_node *node,
  *             search the full tree depth (initial search) or the result
  *             of a previous search to continue.
  * @param nodetype The type of node to seach for
+ * @return The found node or NULL for no nodes.
  */
 struct genbind_node *
 genbind_node_find_type(struct genbind_node *node,
 		       struct genbind_node *prev,
 		       enum genbind_node_type nodetype);
+
+/** count how many nodes of a specified type.
+ *
+ * Enumerate how many nodes of the specified type there are by
+ * performing a depth first search for nodes of the given type and
+ * counting the number of results.
+ *
+ * @param node The node to start the search from
+ * @param nodetype The type of node to count
+ * @return The number of nodes found.
+ */
+int
+genbind_node_enumerate_type(struct genbind_node *node,
+			    enum genbind_node_type type);
 
 /** Depth first left hand search returning nodes of the specified type
  *    and a ident child node with matching text

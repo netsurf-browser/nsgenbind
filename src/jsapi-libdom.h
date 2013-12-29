@@ -11,9 +11,22 @@
 
 struct options;
 
+struct binding_interface {
+	const char *name; /* name of interface */
+	struct genbind_node *node; /* node of interface in binding */
+	struct webidl_node *widl_node; /* node of interface in webidl */
+	const char *inherit_name; /* name of interface this inherits from */
+	int inherit_idx; /* index into binding map of inherited interface or -1 for not in map */
+	int refcount; /* number of entries in map that refer to this interface */
+};
+
 struct binding {
 	struct genbind_node *gb_ast; /* root node of binding AST */
 	struct webidl_node *wi_ast; /* root node of webidl AST */
+
+	const char *name; /* Name of binding (first interface name by default) */
+	int interfacec; /* numer of interfaces in the interface map */
+	struct binding_interface *interfaces; /* binding interface map */
 
 	const char *interface; /* webidl interface binding is for */
 
@@ -33,7 +46,7 @@ struct binding {
 
 	FILE *outfile ; /* file handle output should be written to,
 			 * allows reuse of callback routines to output
-			 * to headers and source files 
+			 * to headers and source files
 			 */
 	FILE *srcfile ; /* output source file */
 	FILE *hdrfile ; /* output header file */
@@ -55,16 +68,15 @@ int output_function_spec(struct binding *binding);
  *
  * This walks the web IDL AST to find all operator interface members
  * and construct appropriate jsapi native function body to implement
- * them. 
+ * them.
  *
  * Function body contents can be overriden with an operator code
  * block in the binding definition.
  *
- * @param binding The binding information 
+ * @param binding The binding information
  * @param interface The interface to generate operator bodys for
  */
 int output_operator_body(struct binding *binding, const char *interface);
-
 
 /** generate property tinyid enum */
 int output_property_tinyid(struct binding *binding);
@@ -75,10 +87,8 @@ int output_property_spec(struct binding *binding);
 /** generate property function bodies */
 int output_property_body(struct binding *binding);
 
-/** generate property definitions for constants */
-int output_const_defines(struct binding *binding, const char *interface);
-
-
+/** generate binding initialisation */
+int output_class_init(struct binding *binding);
 
 
 #endif

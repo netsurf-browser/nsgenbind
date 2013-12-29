@@ -531,62 +531,6 @@ output_code_block(struct binding *binding, struct genbind_node *codelist)
 	}
 }
 
-/** generate class initialiser which create the javascript class prototype */
-static int
-output_class_init(struct binding *binding)
-{
-	int res = 0;
-	struct genbind_node *api_node;
-
-	/* class Initialisor declaration */
-	if (binding->hdrfile) {
-		binding->outfile = binding->hdrfile;
-
-	fprintf(binding->outfile,
-		"JSObject *jsapi_InitClass_%s(JSContext *cx, JSObject *parent);\n",
-		binding->interface);
-
-		binding->outfile = binding->srcfile;
-	}
-
-	/* class Initialisor definition */
-	fprintf(binding->outfile,
-		"JSObject *jsapi_InitClass_%s(JSContext *cx, JSObject *parent)\n"
-		"{\n"
-		"\tJSObject *prototype;\n",
-		binding->interface);
-
-	api_node = genbind_node_find_type_ident(binding->gb_ast,
-						      NULL,
-						      GENBIND_NODE_TYPE_API,
-						      "init");
-
-	if (api_node != NULL) {
-		output_code_block(binding, genbind_node_getnode(api_node));
-	} else {
-		fprintf(binding->outfile,
-			"\n"
-			"\tprototype = JS_InitClass(cx,\n"
-			"\t\tparent,\n"
-			"\t\tNULL,\n"
-			"\t\t&JSClass_%s,\n"
-			"\t\tNULL,\n"
-			"\t\t0,\n"
-			"\t\tNULL,\n"
-			"\t\tNULL, \n"
-			"\t\tNULL, \n"
-			"\t\tNULL);\n",
-			binding->interface);
-	}
-
-	output_const_defines(binding, binding->interface);
-
-	fprintf(binding->outfile,
-		"\treturn prototype;\n"
-		"}\n\n");
-
-	return res;
-}
 
 static int
 output_class_new(struct binding *binding)
@@ -1061,47 +1005,158 @@ binding_has_private(struct genbind_node *binding_list)
 	return false;
 }
 
+/* build interface map and return the first interface */
+static struct genbind_node *
+build_interface_map(struct genbind_node *binding_node,
+		    struct webidl_node *webidl_ast,
+		    int *interfacec_out,
+		    struct binding_interface **interfaces_out)
+{
+	int interfacec;
+	int idx;
+	struct binding_interface *interfaces;
+	struct genbind_node *node = NULL;
+
+	/* count number of interfaces listed in binding */
+	interfacec = genbind_node_enumerate_type(
+					genbind_node_getnode(binding_node),
+					GENBIND_NODE_TYPE_BINDING_INTERFACE);
+
+	if (interfacec == 0) {
+		return NULL;
+	}
+	if (options->verbose) {
+		printf("Binding has %d interfaces\n", interfacec);
+	}
+
+	interfaces = malloc(interfacec * sizeof(struct binding_interface));
+	if (interfaces == NULL) {
+		return NULL;
+	}
+
+	/* fill in map with node data */
+	for (idx = 0; idx < interfacec; idx++ ) {
+		node = genbind_node_find_type(
+			genbind_node_getnode(binding_node),
+			node,
+			GENBIND_NODE_TYPE_BINDING_INTERFACE);
+		if (node == NULL) {
+			free(interfaces);
+			return NULL;
+		}
+
+		interfaces[idx].node = node;
+
+		/* get interface name */
+		interfaces[idx].name = genbind_node_gettext(
+			genbind_node_find_type(genbind_node_getnode(node),
+					       NULL,
+					       GENBIND_NODE_TYPE_IDENT));
+		if (interfaces[idx].name == NULL) {
+			free(interfaces);
+			return NULL;
+		}
+
+		/* get web IDL node for interface */
+		interfaces[idx].widl_node = webidl_node_find_type_ident(
+			webidl_ast,
+			WEBIDL_NODE_TYPE_INTERFACE,
+			interfaces[idx].name);
+		if (interfaces[idx].widl_node == NULL) {
+			free(interfaces);
+			return NULL;
+		}
+
+		interfaces[idx].inherit_name = webidl_node_gettext(
+			webidl_node_find_type(
+				webidl_node_getnode(interfaces[idx].widl_node),
+				NULL,
+				WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE));
+
+		interfaces[idx].refcount = 0;
+	}
+
+	/* find index of inherited node if it is one of those listed
+	 * in the binding also maintain refcounts
+	 */
+	for (idx = 0; idx < interfacec; idx++ ) {
+		int inf;
+		interfaces[idx].inherit_idx = -1;
+		for (inf = 0; inf < interfacec; inf++ ) {
+			/* cannot inherit from self. and name must match */
+			if ((inf != idx) &&
+			    (strcmp(interfaces[idx].inherit_name,
+				       interfaces[inf].name) == 0)) {
+				interfaces[idx].inherit_idx = inf;
+				interfaces[inf].refcount++;
+				break;
+			}
+		}
+	}
+
+	/** @todo There should be a topoligical sort based on the refcount
+	 *
+	 * do not need to consider loops as constructed graph is a acyclic
+	 *
+	 * alloc a second copy of the map
+	 * repeat until all entries copied:
+	 *   walk source mapping until first entry with zero refcount
+	 *   put the entry  at the end of the output map
+	 *   reduce refcount on inherit index if !=-1
+	 *   remove entry from source map
+	 */
+
+	/* show the interface map */
+	if (options->verbose) {
+		for (idx = 0; idx < interfacec; idx++ ) {
+			printf("interface num:%d name:%s node:%p widl:%p inherit:%s inherit idx:%d refcount:%d\n",
+			       idx,
+			       interfaces[idx].name,
+			       interfaces[idx].node,
+			       interfaces[idx].widl_node,
+			       interfaces[idx].inherit_name,
+			       interfaces[idx].inherit_idx,
+			       interfaces[idx].refcount);
+		}
+	}
+
+	*interfacec_out = interfacec;
+	*interfaces_out = interfaces;
+
+	return interfaces[0].node;
+}
+
 static struct binding *
 binding_new(struct options *options,
 	    struct genbind_node *genbind_ast,
 	    struct genbind_node *binding_node)
 {
 	struct binding *nb;
+
+	int interfacec; /* numer of interfaces in the interface map */
+	struct binding_interface *interfaces; /* binding interface map */
+
 	struct genbind_node *interface_node;
 	struct genbind_node *binding_list;
-	struct genbind_node *binding_ident;
 	char *hdrguard = NULL;
 	struct webidl_node *webidl_ast = NULL;
 	int res;
 
-	binding_list = genbind_node_getnode(binding_node);
-	if (binding_list == NULL) {
-		return NULL;
-	}
-
-	/* find the first interface node - there must be at least one */
-	interface_node = genbind_node_find_type(binding_list,
-					   NULL,
-					   GENBIND_NODE_TYPE_BINDING_INTERFACE);
-	if (interface_node == NULL) {
-		return NULL;
-	}
-
-	/* get the binding identifier */
-	/* @todo it should be possible to specify this as part of the
-	 * binding instead of just using the first interface
-	 */
-	binding_ident = genbind_node_find_type(genbind_node_getnode(interface_node),
-					       NULL,
-					       GENBIND_NODE_TYPE_IDENT);
-	if (binding_ident == NULL) {
-		return NULL;
-	}
-
 	/* walk AST and load any web IDL files required */
 	res = read_webidl(genbind_ast, &webidl_ast);
 	if (res != 0) {
-		fprintf(stderr, "Error reading Web IDL files\n");
+		fprintf(stderr, "Error: failed reading Web IDL\n");
+		return NULL;
+	}
+
+	/* build the bindings interface (class) name map */
+	interface_node = build_interface_map(binding_node,
+					     webidl_ast,
+					     &interfacec,
+					     &interfaces);
+	if (interface_node == NULL) {
+		/* the binding must have at least one interface */
+		fprintf(stderr, "Error: Binding must have a valid interface\n");
 		return NULL;
 	}
 
@@ -1121,18 +1176,35 @@ binding_new(struct options *options,
 		}
 	}
 
+	binding_list = genbind_node_getnode(binding_node);
+	if (binding_list == NULL) {
+		return NULL;
+	}
+
 	nb = calloc(1, sizeof(struct binding));
 
 	nb->gb_ast = genbind_ast;
 	nb->wi_ast = webidl_ast;
-	/* @todo binding name should not be called interface */
-	nb->interface = genbind_node_gettext(binding_ident);
+
+	/* keep the binding list node */
+	nb->binding_list = binding_list;
+
+	/* store the interface mapping */
+	nb->interfaces = interfaces;
+	nb->interfacec = interfacec;
+
+	/* @todo it should be possible to specify the binding name
+	 * instead of just using the name of the first interface.
+	 *
+	 * @todo get rid of the interface element out of the binding
+	 * struct and use the interface map instead.
+	 */
+	nb->name = nb->interface = interfaces[0].name;
 	nb->outfile = options->outfilehandle;
 	nb->srcfile = options->outfilehandle;
 	nb->hdrfile = options->hdrfilehandle;
 	nb->hdrguard = hdrguard;
 	nb->has_private = binding_has_private(binding_list);
-	nb->binding_list = binding_list;
 
 	/* class API */
 	nb->addproperty = genbind_node_find_type_ident(genbind_ast,
