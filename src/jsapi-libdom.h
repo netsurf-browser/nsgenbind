@@ -90,5 +90,8 @@ int output_property_body(struct binding *binding);
 /** generate binding initialisation */
 int output_class_init(struct binding *binding);
 
+/** generate binding class constructors */
+int output_class_new(struct binding *binding);
+
 
 #endif

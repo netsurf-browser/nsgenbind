@@ -1,4 +1,5 @@
-/* const property generation
+/* Javascript spidemonkey API to libdom binding generation for class
+ * initilisation
  *
  * This file is part of nsgenbind.
  * Licensed under the MIT License,
