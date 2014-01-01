@@ -162,6 +162,26 @@ int webidl_cmp_node_type(struct webidl_node *node, void *ctx)
 	return 0;
 }
 
+static int webidl_enumerate_node(struct webidl_node *node, void *ctx)
+{
+	node = node;
+	(*((int *)ctx))++;
+	return 0;
+}
+
+/* exported interface defined in nsgenbind-ast.h */
+int
+webidl_node_enumerate_type(struct webidl_node *node,
+			    enum webidl_node_type type)
+{
+	int count = 0;
+	webidl_node_for_each_type(node,
+				  type,
+				  webidl_enumerate_node,
+				  &count);
+	return count;
+}
+
 /* exported interface defined in webidl-ast.h */
 struct webidl_node *
 webidl_node_find(struct webidl_node *node,

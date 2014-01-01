@@ -986,9 +986,10 @@ generate_property_body(struct binding *binding, const char *interface)
 	}
 
 	/* generate property bodies */
-	members_node = webidl_node_find_type(webidl_node_getnode(interface_node),
-					NULL,
-					WEBIDL_NODE_TYPE_LIST);
+	members_node = webidl_node_find_type(
+		webidl_node_getnode(interface_node),
+		NULL,
+		WEBIDL_NODE_TYPE_LIST);
 	while (members_node != NULL) {
 
 		fprintf(binding->outfile,"/**** %s ****/\n", interface);
@@ -1000,9 +1001,10 @@ generate_property_body(struct binding *binding, const char *interface)
 					  binding);
 
 
-		members_node = webidl_node_find_type(webidl_node_getnode(interface_node),
-						members_node,
-						WEBIDL_NODE_TYPE_LIST);
+		members_node = webidl_node_find_type(
+			webidl_node_getnode(interface_node),
+			members_node,
+			WEBIDL_NODE_TYPE_LIST);
 
 	}
 

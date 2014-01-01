@@ -819,6 +819,33 @@ binding_has_private(struct genbind_node *binding_list)
 	return false;
 }
 
+
+/** count the number of methods or properties for an interface */
+static int
+enumerate_interface_own(struct webidl_node *interface_node,
+			enum webidl_node_type node_type)
+{
+	int count = 0;
+	struct webidl_node *members_node;
+
+	members_node = webidl_node_find_type(
+		webidl_node_getnode(interface_node),
+		NULL,
+		WEBIDL_NODE_TYPE_LIST);
+	while (members_node != NULL) {
+		count += webidl_node_enumerate_type(
+			webidl_node_getnode(members_node),
+			node_type);
+
+		members_node = webidl_node_find_type(
+			webidl_node_getnode(interface_node),
+			members_node,
+			WEBIDL_NODE_TYPE_LIST);
+	}
+
+	return count;
+}
+
 /* build interface map and return the first interface */
 static struct genbind_node *
 build_interface_map(struct genbind_node *binding_node,
@@ -881,6 +908,17 @@ build_interface_map(struct genbind_node *binding_node,
 			return NULL;
 		}
 
+		/* enumerate the number of functions */
+		interfaces[idx].own_functions = enumerate_interface_own(
+			interfaces[idx].widl_node,
+			WEBIDL_NODE_TYPE_OPERATION);
+
+		/* enumerate the number of properties */
+		interfaces[idx].own_properties = enumerate_interface_own(
+			interfaces[idx].widl_node,
+			WEBIDL_NODE_TYPE_ATTRIBUTE);
+
+		/* extract the name of the inherited interface (if any) */
 		interfaces[idx].inherit_name = webidl_node_gettext(
 			webidl_node_find_type(
 				webidl_node_getnode(interfaces[idx].widl_node),
@@ -923,14 +961,19 @@ build_interface_map(struct genbind_node *binding_node,
 	/* show the interface map */
 	if (options->verbose) {
 		for (idx = 0; idx < interfacec; idx++ ) {
-			printf("interface num:%d name:%s node:%p widl:%p inherit:%s inherit idx:%d refcount:%d\n",
+			printf("interface num:%d\n"
+			       "          name:%s node:%p widl:%p\n"
+			       "          inherit:%s inherit idx:%d refcount:%d\n"
+			       "          own functions:%d own properties:%d\n",
 			       idx,
 			       interfaces[idx].name,
 			       interfaces[idx].node,
 			       interfaces[idx].widl_node,
 			       interfaces[idx].inherit_name,
 			       interfaces[idx].inherit_idx,
-			       interfaces[idx].refcount);
+			       interfaces[idx].refcount,
+			       interfaces[idx].own_functions,
+			       interfaces[idx].own_properties);
 		}
 	}
 

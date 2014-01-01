@@ -837,10 +837,10 @@ output_function_body(struct binding *binding, const char *interface)
 		return -1;
 	}
 
-	members_node = webidl_node_find(webidl_node_getnode(interface_node),
-					NULL,
-					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_LIST);
+	members_node = webidl_node_find_type(
+		webidl_node_getnode(interface_node),
+		NULL,
+		WEBIDL_NODE_TYPE_LIST);
 	while (members_node != NULL) {
 
 		fprintf(binding->outfile,"/**** %s ****/\n", interface);
@@ -851,10 +851,10 @@ output_function_body(struct binding *binding, const char *interface)
 					  webidl_operator_body_cb,
 					  binding);
 
-		members_node = webidl_node_find(webidl_node_getnode(interface_node),
-						members_node,
-						webidl_cmp_node_type,
-						(void *)WEBIDL_NODE_TYPE_LIST);
+		members_node = webidl_node_find_type(
+			webidl_node_getnode(interface_node),
+			members_node,
+			WEBIDL_NODE_TYPE_LIST);
 	}
 
 	/* check for inherited nodes and insert them too */

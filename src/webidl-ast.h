@@ -95,6 +95,8 @@ int webidl_node_for_each_type(struct webidl_node *node,
 			   webidl_callback_t *cb,
 			      void *ctx);
 
+int webidl_node_enumerate_type(struct webidl_node *node, enum webidl_node_type type);
+
 struct webidl_node *
 webidl_node_find(struct webidl_node *node,
 		  struct webidl_node *prev,
