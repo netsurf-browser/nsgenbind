@@ -1,4 +1,4 @@
-/* function/operator generation
+/* jsapi function generation for webidl bodies
  *
  * This file is part of nsgenbind.
  * Licensed under the MIT License,
@@ -813,12 +813,12 @@ static int webidl_implements_cb(struct webidl_node *node, void *ctx)
 {
 	struct binding *binding = ctx;
 
-	return output_operator_body(binding, webidl_node_gettext(node));
+	return output_function_body(binding, webidl_node_gettext(node));
 }
 
 /* exported interface documented in jsapi-libdom.h */
 int
-output_operator_body(struct binding *binding, const char *interface)
+output_function_body(struct binding *binding, const char *interface)
 {
 	struct webidl_node *interface_node;
 	struct webidl_node *members_node;
@@ -863,7 +863,7 @@ output_operator_body(struct binding *binding, const char *interface)
 					WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
 
 	if (inherit_node != NULL) {
-		res = output_operator_body(binding,
+		res = output_function_body(binding,
 					   webidl_node_gettext(inherit_node));
 	}
 

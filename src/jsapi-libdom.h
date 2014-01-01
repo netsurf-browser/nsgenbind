@@ -18,6 +18,9 @@ struct binding_interface {
 	const char *inherit_name; /* name of interface this inherits from */
 	int inherit_idx; /* index into binding map of inherited interface or -1 for not in map */
 	int refcount; /* number of entries in map that refer to this interface */
+	int own_properties; /* the number of properties the interface has */
+	int own_functions; /* the number of functions the interface has */
+
 };
 
 struct binding {
@@ -76,7 +79,7 @@ int output_function_spec(struct binding *binding);
  * @param binding The binding information
  * @param interface The interface to generate operator bodys for
  */
-int output_operator_body(struct binding *binding, const char *interface);
+int output_function_body(struct binding *binding, const char *interface);
 
 /** generate property tinyid enum */
 int output_property_tinyid(struct binding *binding);

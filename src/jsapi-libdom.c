@@ -897,7 +897,7 @@ build_interface_map(struct genbind_node *binding_node,
 		int inf;
 		interfaces[idx].inherit_idx = -1;
 		for (inf = 0; inf < interfacec; inf++ ) {
-			/* cannot inherit from self. and name must match */
+			/* cannot inherit from self and name must match */
 			if ((inf != idx) &&
 			    (strcmp(interfaces[idx].inherit_name,
 				       interfaces[inf].name) == 0)) {
@@ -1109,15 +1109,15 @@ jsapi_libdom_output(struct options *options,
 		return 85;
 	}
 
-	/* user code output just before function bodies emitted */
+	/* user code output just before interface code bodies emitted */
 	res = output_prologue(binding);
 	if (res) {
 		return 89;
 	}
 
-	/* operator and atrtribute body generation */
+	/* method (function) and property body generation */
 
-	res = output_operator_body(binding, binding->interface);
+	res = output_function_body(binding, binding->interface);
 	if (res) {
 		return 90;
 	}
@@ -1127,7 +1127,7 @@ jsapi_libdom_output(struct options *options,
 		return 100;
 	}
 
-	/* operator and atrtribute specifier generation */
+	/* method (function) and property specifier generation */
 
 	res = output_function_spec(binding);
 	if (res) {
