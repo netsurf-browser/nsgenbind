@@ -77,9 +77,8 @@ int output_function_spec(struct binding *binding);
  * block in the binding definition.
  *
  * @param binding The binding information
- * @param interface The interface to generate operator bodys for
  */
-int output_function_body(struct binding *binding, const char *interface);
+int output_function_bodies(struct binding *binding);
 
 /** generate property tinyid enum */
 int output_property_tinyid(struct binding *binding);

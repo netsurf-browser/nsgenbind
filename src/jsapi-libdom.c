@@ -1160,7 +1160,7 @@ jsapi_libdom_output(struct options *options,
 
 	/* method (function) and property body generation */
 
-	res = output_function_body(binding, binding->interface);
+	res = output_function_bodies(binding);
 	if (res) {
 		return 90;
 	}
