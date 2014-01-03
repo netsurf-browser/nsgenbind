@@ -16,11 +16,11 @@ struct binding_interface {
 	struct genbind_node *node; /* node of interface in binding */
 	struct webidl_node *widl_node; /* node of interface in webidl */
 	const char *inherit_name; /* name of interface this inherits from */
-	int inherit_idx; /* index into binding map of inherited interface or -1 for not in map */
-	int refcount; /* number of entries in map that refer to this interface */
 	int own_properties; /* the number of properties the interface has */
 	int own_functions; /* the number of functions the interface has */
 
+	int inherit_idx; /* index into binding map of inherited interface or -1 for not in map */
+	int refcount; /* number of entries in map that refer to this interface */
 };
 
 struct binding {
@@ -57,6 +57,13 @@ struct binding {
 
 /** Generate binding between jsapi and netsurf libdom */
 int jsapi_libdom_output(struct options *options, struct genbind_node *genbind_ast, struct genbind_node *binding_node);
+
+/** build interface mapping */
+struct genbind_node *
+build_interface_map(struct genbind_node *binding_node,
+		    struct webidl_node *webidl_ast,
+		    int *interfacec_out,
+		    struct binding_interface **interfaces_out);
 
 /** output code block from a node */
 void output_code_block(struct binding *binding, struct genbind_node *codelist);

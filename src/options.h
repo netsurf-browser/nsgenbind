@@ -34,9 +34,10 @@ extern struct options *options;
 
 enum opt_warnings {
 	WARNING_UNIMPLEMENTED = 1,
+	WARNING_DUPLICATED = 2,
 };
 
-#define WARNING_ALL (WARNING_UNIMPLEMENTED)
+#define WARNING_ALL (WARNING_UNIMPLEMENTED | WARNING_DUPLICATED)
 
 #define WARN(flags, msg, args...) do {			\
 		if ((options->warnings & flags) != 0) {			\

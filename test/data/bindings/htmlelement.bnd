@@ -37,7 +37,10 @@ preamble %{
 
 binding jsapi_libdom {
 
+        interface Text;
+        interface Comment;
 	interface HTMLElement;
+	interface HTMLAnchorElement;
 	interface HTMLAnchorElement;
 	interface HTMLAppletElement;
 	interface HTMLAreaElement;
@@ -45,7 +48,6 @@ binding jsapi_libdom {
 	interface HTMLBaseFontElement;
 	interface HTMLBodyElement;
 	interface HTMLBRElement;
-
 	interface HTMLButtonElement;
 	interface HTMLCanvasElement;
 	interface HTMLCommandElement;
