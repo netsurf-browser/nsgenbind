@@ -25,11 +25,6 @@
 	" * nsgenbind is similar to a compiler is a purely transformative tool which\n" \
 	" * explicitly makes no copyright claim on this generated output"
 
-#define HDROUTF(bndg, fmt, args...) do {			\
-		if (bndg->hdrfile != NULL) {			\
-			fprintf(bndg->hdrfile, fmt, ##args);	\
-		}						\
-	} while(0)
 
 
 static int webidl_file_cb(struct genbind_node *node, void *ctx)
@@ -543,163 +538,7 @@ output_forward_declarations(struct binding *binding)
 	return 0;
 }
 
-static bool interface_is_global(struct genbind_node *interface_node)
-{
-	if (genbind_node_find_type_ident(
-		genbind_node_getnode(interface_node),
-		NULL,
-		GENBIND_NODE_TYPE_BINDING_INTERFACE_FLAGS,
-		"global") != NULL) {
-		return true;
-	}
 
-	return false;
-}
-
-static int output_jsclass(struct genbind_node *interface_node, void *ctx)
-{
-	struct binding *binding = ctx;
-	struct genbind_node *interface_list;
-	const char *interface_ident;
-
-	interface_list = genbind_node_getnode(interface_node);
-	if (interface_list == NULL)
-		return -1; /* bad AST */
-
-	interface_ident = genbind_node_gettext(
-		genbind_node_find_type(interface_list,
-				       NULL,
-				       GENBIND_NODE_TYPE_IDENT));
-	if (interface_ident == NULL)
-		return -1; /* bad AST */
-
-	/* output the class declaration */
-	HDROUTF(binding, "JSClass JSClass_%s;\n", interface_ident);
-
-	/* output the class definition */
-	fprintf(binding->outfile,
-		"JSClass JSClass_%s = {\n"
-		"\t\"%s\",\n",
-		interface_ident,
-		interface_ident);
-
-	/* generate class flags */
-	if (interface_is_global(interface_node)) {
-		fprintf(binding->outfile, "\tJSCLASS_GLOBAL_FLAGS");
-	} else {
-		fprintf(binding->outfile, "\t0");
-	}
-
-	if (binding->resolve != NULL) {
-		fprintf(binding->outfile, " | JSCLASS_NEW_RESOLVE");
-	}
-
-	if (binding->mark != NULL) {
-		fprintf(binding->outfile, " | JSAPI_JSCLASS_MARK_IS_TRACE");
-	}
-
-	if (binding->has_private) {
-		fprintf(binding->outfile, " | JSCLASS_HAS_PRIVATE");
-	}
-
-	fprintf(binding->outfile, ",\n");
-
-	/* add property */
-	if (binding->addproperty != NULL) {
-		fprintf(binding->outfile,
-			"\tjsapi_property_add,\t/* addProperty */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_PropertyStub,\t/* addProperty */\n");
-	}
-
-	/* del property */
-	if (binding->delproperty != NULL) {
-		fprintf(binding->outfile,
-			"\tjsapi_property_del,\t/* delProperty */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_PropertyStub,\t/* delProperty */\n");
-	}
-
-	/* get property */
-	if (binding->getproperty != NULL) {
-		fprintf(binding->outfile,
-			"\tjsapi_property_get,\t/* getProperty */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_PropertyStub,\t/* getProperty */\n");
-	}
-
-	/* set property */
-	if (binding->setproperty != NULL) {
-		fprintf(binding->outfile,
-			"\tjsapi_property_set,\t/* setProperty */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_StrictPropertyStub,\t/* setProperty */\n");
-	}
-
-	/* enumerate */
-	if (binding->enumerate != NULL) {
-		fprintf(binding->outfile,
-			"\tjsclass_enumerate,\t/* enumerate */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_EnumerateStub,\t/* enumerate */\n");
-	}
-
-	/* resolver */
-	if (binding->resolve != NULL) {
-		fprintf(binding->outfile,
-			"\t(JSResolveOp)jsclass_resolve,\t/* resolve */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_ResolveStub,\t\t/* resolve */\n");
-	}
-
-	fprintf(binding->outfile, "\tJS_ConvertStub,\t\t/* convert */\n");
-
-	if (binding->has_private || (binding->finalise != NULL)) {
-		fprintf(binding->outfile,
-			"\tjsclass_finalize,\t/* finalizer */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_FinalizeStub,\t/* finalizer */\n");
-	}
-	fprintf(binding->outfile,
-		"\t0,\t\t\t/* reserved */\n"
-		"\tNULL,\t\t\t/* checkAccess */\n"
-		"\tNULL,\t\t\t/* call */\n"
-		"\tNULL,\t\t\t/* construct */\n"
-		"\tNULL,\t\t\t/* xdr Object */\n"
-		"\tNULL,\t\t\t/* hasInstance */\n");
-
-	/* trace/mark */
-	if (binding->mark != NULL) {
-		fprintf(binding->outfile,
-			"\tJSAPI_JSCLASS_MARKOP(jsclass_mark),\n");
-	} else {
-		fprintf(binding->outfile, "\tNULL,\t\t\t/* trace/mark */\n");
-	}
-
-	fprintf(binding->outfile,
-		"\tJSAPI_CLASS_NO_INTERNAL_MEMBERS\n"
-		"};\n\n");
-
-	return 0;
-}
-
-static int
-output_jsclasses(struct binding *binding)
-{
-
-	return genbind_node_foreach_type(binding->binding_list,
-				  GENBIND_NODE_TYPE_BINDING_INTERFACE,
-				  output_jsclass,
-				  binding);
-
-}
 
 /** generate structure definition for internal class data
  *
@@ -821,6 +660,24 @@ binding_has_private(struct genbind_node *binding_list)
 
 
 
+/** obtain the name to use for the binding.
+ *
+ * @todo it should be possible to specify the binding name instead of
+ * just using the name of the first interface.
+ */
+static const char *get_binding_name(struct genbind_node *binding_node)
+{
+	return genbind_node_gettext(
+		genbind_node_find_type(
+			genbind_node_getnode(
+				genbind_node_find_type(
+					genbind_node_getnode(binding_node),
+					NULL,
+					GENBIND_NODE_TYPE_BINDING_INTERFACE)),
+			NULL,
+			GENBIND_NODE_TYPE_IDENT));
+}
+
 static struct binding *
 binding_new(struct options *options,
 	    struct genbind_node *genbind_ast,
@@ -831,7 +688,6 @@ binding_new(struct options *options,
 	int interfacec; /* numer of interfaces in the interface map */
 	struct binding_interface *interfaces; /* binding interface map */
 
-	struct genbind_node *interface_node;
 	struct genbind_node *binding_list;
 	char *hdrguard = NULL;
 	struct webidl_node *webidl_ast = NULL;
@@ -845,11 +701,10 @@ binding_new(struct options *options,
 	}
 
 	/* build the bindings interface (class) name map */
-	interface_node = build_interface_map(binding_node,
-					     webidl_ast,
-					     &interfacec,
-					     &interfaces);
-	if (interface_node == NULL) {
+	if (build_interface_map(binding_node,
+				webidl_ast,
+				&interfacec,
+				&interfaces) != 0) {
 		/* the binding must have at least one interface */
 		fprintf(stderr, "Error: Binding must have a valid interface\n");
 		return NULL;
@@ -888,13 +743,10 @@ binding_new(struct options *options,
 	nb->interfaces = interfaces;
 	nb->interfacec = interfacec;
 
-	/* @todo it should be possible to specify the binding name
-	 * instead of just using the name of the first interface.
-	 *
-	 * @todo get rid of the interface element out of the binding
+	/* @todo get rid of the interface element out of the binding
 	 * struct and use the interface map instead.
 	 */
-	nb->name = nb->interface = interfaces[0].name;
+	nb->name = nb->interface = get_binding_name(binding_node);
 	nb->outfile = options->outfilehandle;
 	nb->srcfile = options->outfilehandle;
 	nb->hdrfile = options->hdrfilehandle;

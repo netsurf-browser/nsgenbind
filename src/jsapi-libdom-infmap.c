@@ -160,7 +160,7 @@ interface_topoligical_sort(struct binding_interface *srcinf, int infc)
 }
 
 /* build interface map and return the first interface */
-struct genbind_node *
+int
 build_interface_map(struct genbind_node *binding_node,
 		    struct webidl_node *webidl_ast,
 		    int *interfacec_out,
@@ -179,7 +179,7 @@ build_interface_map(struct genbind_node *binding_node,
 					GENBIND_NODE_TYPE_BINDING_INTERFACE);
 
 	if (interfacec == 0) {
-		return NULL;
+		return -1;
 	}
 	if (options->verbose) {
 		printf("Binding has %d interfaces\n", interfacec);
@@ -187,15 +187,14 @@ build_interface_map(struct genbind_node *binding_node,
 
 	interfaces = calloc(interfacec, sizeof(struct binding_interface));
 	if (interfaces == NULL) {
-		return NULL;
+		return -1;
 	}
 
 	/* fill in map with binding node data */
 	idx = 0;
-	node = genbind_node_find_type(
-		genbind_node_getnode(binding_node),
-		node,
-		GENBIND_NODE_TYPE_BINDING_INTERFACE);
+	node = genbind_node_find_type(genbind_node_getnode(binding_node),
+				      node,
+				      GENBIND_NODE_TYPE_BINDING_INTERFACE);
 	while (node != NULL) {
 
 		/* binding node */
@@ -208,13 +207,13 @@ build_interface_map(struct genbind_node *binding_node,
 					       GENBIND_NODE_TYPE_IDENT));
 		if (interfaces[idx].name == NULL) {
 			free(interfaces);
-			return NULL;
+			return -1;
 		}
 
 		/* get interface info from webidl */
 		if (fill_binding_interface(webidl_ast, interfaces + idx) == -1) {
 			free(interfaces);
-			return NULL;
+			return -1;
 		}
 
 		interfaces[idx].refcount = 0;
@@ -260,7 +259,7 @@ build_interface_map(struct genbind_node *binding_node,
 			if (reinterfaces == NULL) {
 				fprintf(stderr,"Unable to grow interface map\n");
 				free(interfaces);
-				return NULL;
+				return -1;
 			}
 			interfaces = reinterfaces;
 
@@ -280,7 +279,7 @@ build_interface_map(struct genbind_node *binding_node,
 					interfaces[idx].name,
 					interfaces[idx].inherit_name);
 				free(interfaces);
-				return NULL;
+				return -1;
 			}
 
 			interfaces[interfacec].inherit_idx = -1;
@@ -305,12 +304,23 @@ build_interface_map(struct genbind_node *binding_node,
 	reinterfaces = interface_topoligical_sort(interfaces, interfacec);
 	free(interfaces);
 	if (reinterfaces == NULL) {
-		return NULL;
+		return -1;
 	}
 	interfaces = reinterfaces;
 
 	/* compute inheritance and refcounts on sorted map */
 	compute_inherit_refcount(interfaces, interfacec);
+
+	/* setup output index values */
+	inf = 0;
+	for (idx = 0; idx < interfacec; idx++ ) {
+		if (interfaces[idx].node == NULL) {
+			interfaces[idx].output_idx = -1;
+		} else {
+			interfaces[idx].output_idx = inf;
+			inf++;
+		}
+	}
 
 	/* show the interface map */
 	if (options->verbose) {
@@ -318,7 +328,7 @@ build_interface_map(struct genbind_node *binding_node,
 			printf("interface num:%d\n"
 			       "          name:%s node:%p widl:%p\n"
 			       "          inherit:%s inherit idx:%d refcount:%d\n"
-			       "          own functions:%d own properties:%d\n",
+			       "          own functions:%d own properties:%d output idx:%d\n",
 			       idx,
 			       interfaces[idx].name,
 			       interfaces[idx].node,
@@ -327,12 +337,13 @@ build_interface_map(struct genbind_node *binding_node,
 			       interfaces[idx].inherit_idx,
 			       interfaces[idx].refcount,
 			       interfaces[idx].own_functions,
-			       interfaces[idx].own_properties);
+			       interfaces[idx].own_properties,
+			       interfaces[idx].output_idx);
 		}
 	}
 
 	*interfacec_out = interfacec;
 	*interfaces_out = interfaces;
 
-	return interfaces[0].node;
+	return 0;
 }

@@ -21,6 +21,7 @@ struct binding_interface {
 
 	int inherit_idx; /* index into binding map of inherited interface or -1 for not in map */
 	int refcount; /* number of entries in map that refer to this interface */
+	int output_idx; /* for interfaces that will be output (node is valid) this is the output array index */
 };
 
 struct binding {
@@ -59,14 +60,17 @@ struct binding {
 int jsapi_libdom_output(struct options *options, struct genbind_node *genbind_ast, struct genbind_node *binding_node);
 
 /** build interface mapping */
-struct genbind_node *
-build_interface_map(struct genbind_node *binding_node,
+int build_interface_map(struct genbind_node *binding_node,
 		    struct webidl_node *webidl_ast,
 		    int *interfacec_out,
 		    struct binding_interface **interfaces_out);
 
+
 /** output code block from a node */
 void output_code_block(struct binding *binding, struct genbind_node *codelist);
+
+/** generate classes */
+int output_jsclasses(struct binding *binding);
 
 /* Generate jsapi native function specifiers */
 int output_function_spec(struct binding *binding);

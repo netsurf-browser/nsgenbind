@@ -19,8 +19,6 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
-static int output_const_defines(struct binding *binding, const char *interface);
-
 static int output_cast_literal(struct binding *binding,
 			 struct webidl_node *node)
 {
@@ -159,60 +157,64 @@ output_interface_consts(struct binding *binding,
 	return 0;
 }
 
-/* callback to emit implements property spec */
-static int webidl_const_spec_implements_cb(struct webidl_node *node, void *ctx)
+
+static int generate_prototype_init(struct binding *binding, int inf)
 {
-	struct binding *binding = ctx;
+	int inherit_inf;
 
-	return output_const_defines(binding, webidl_node_gettext(node));
-}
-
-/** generate property definitions for constants */
-static int
-output_const_defines(struct binding *binding, const char *interface)
-{
-	struct webidl_node *interface_node;
-	struct webidl_node *inherit_node;
-	int res = 0;
-
-	/* find interface in webidl with correct ident attached */
-	interface_node = webidl_node_find_type_ident(binding->wi_ast,
-						     WEBIDL_NODE_TYPE_INTERFACE,
-						     interface);
-
-	if (interface_node == NULL) {
-		fprintf(stderr,
-			"Unable to find interface %s in loaded WebIDL\n",
-			interface);
-		return -1;
+	/* find this interfaces parent interface to inherit prototype from */
+	inherit_inf = binding->interfaces[inf].inherit_idx;
+	while ((inherit_inf != -1) &&
+	       (binding->interfaces[inherit_inf].node == NULL)) {
+		inherit_inf = binding->interfaces[inherit_inf].inherit_idx;
 	}
 
-	fprintf(binding->outfile, "\t/**** %s ****/\n", interface);
+	fprintf(binding->outfile,
+		"\n"
+		"\tprototype = JS_InitClass(cx, "
+		"parent, ");
 
-	/* write the property defines for this interface */
-	res = output_interface_consts(binding, interface_node);
-
-
-	/* check for inherited nodes and insert them too */
-	inherit_node = webidl_node_find_type(
-		webidl_node_getnode(interface_node),
-		NULL,
-		WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
-
-	if (inherit_node != NULL) {
-		res = output_const_defines(binding,
-				webidl_node_gettext(inherit_node));
+	/* either this init is being constructed without a chain or is
+	 * using a prototype of a previously initialised class
+	 */
+	if (inherit_inf == -1) {
+		fprintf(binding->outfile,
+			"NULL, ");
+	} else {
+		fprintf(binding->outfile,
+			"prototypes[%d], ",
+			binding->interfaces[inherit_inf].output_idx);
 	}
 
-	if (res == 0) {
-		res = webidl_node_for_each_type(
-			webidl_node_getnode(interface_node),
-			WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
-			webidl_const_spec_implements_cb,
-			binding);
-	}
+	fprintf(binding->outfile,
+		"&JSClass_%s, "
+		"NULL, "
+		"0, "
+		"NULL, "
+		"NULL, "
+		"NULL, "
+		"NULL);\n",
+		binding->interfaces[inf].name);
 
-	return res;
+	/* check prototype construction */
+	fprintf(binding->outfile,
+		"\tif (prototype == NULL) {\n"
+		"\t\treturn %d;\n"
+		"\t}\n\n",
+		binding->interfaces[inf].output_idx);
+
+	/* store result */
+	fprintf(binding->outfile,
+		"\tprototypes[%d] = prototype;\n",
+		binding->interfaces[inf].output_idx);
+
+	/* output the consts for the interface and ancestors if necessary */
+	do  {
+		output_interface_consts(binding, binding->interfaces[inf].widl_node);
+		inf = binding->interfaces[inf].inherit_idx;
+	} while (inf != inherit_inf);
+
+	return 0;
 }
 
 /** generate class initialisers
@@ -263,75 +265,16 @@ int output_class_init(struct binding *binding)
 	if (api_node != NULL) {
 		output_code_block(binding, genbind_node_getnode(api_node));
 	} else {
+		/* generate interface init for each class in binding */
 		for (inf = 0; inf < binding->interfacec; inf++) {
-
-			fprintf(binding->outfile,
-				"\n"
-				"\tprototype = JS_InitClass(cx, "
-				"parent, ");
-
-			if (binding->interfaces[inf].inherit_idx == -1) {
-				/* interface does not get its
-				 * prototypes from another interface
-				 * we are generating
-				 */
-				fprintf(binding->outfile,
-					"NULL, "
-					"&JSClass_%s, "
-					"NULL, "
-					"0, "
-					"NULL, "
-					"NULL, "
-					"NULL, "
-					"NULL);\n",
-					binding->interfaces[inf].name);
-
-				fprintf(binding->outfile,
-					"\tif (prototype == NULL) {\n"
-					"\t\treturn %d;\n"
-					"\t}\n\n",
-					inf);
-
-				fprintf(binding->outfile,
-					"\tprototypes[%d] = prototype;\n",
-					inf);
-
-				output_const_defines(binding,
-					     binding->interfaces[inf].name);
-
-			} else {
-				/* interface prototype is based on one
-				 * we already generated (interface map
-				 * is topologicaly sorted */
-				assert(binding->interfaces[inf].inherit_idx < inf);
-
-				fprintf(binding->outfile,
-					"prototypes[%d], "
-					"&JSClass_%s, "
-					"NULL, "
-					"0, "
-					"NULL, "
-					"NULL, "
-					"NULL, "
-					"NULL);\n",
-					binding->interfaces[inf].inherit_idx,
-					binding->interfaces[inf].name);
-
-				fprintf(binding->outfile,
-					"\tif (prototype == NULL) {\n"
-					"\t\treturn %d;\n"
-					"\t}\n\n",
-					inf);
-
-				fprintf(binding->outfile,
-					"\tprototypes[%d] = prototype;\n",
-					inf);
-
-				output_interface_consts(binding,
-					binding->interfaces[inf].widl_node);
-
+			/* skip generating javascript class
+			 * initialisation for interfaces not in binding
+			 */
+			if (binding->interfaces[inf].node != NULL) {
+				generate_prototype_init(binding, inf);
 			}
 		}
+
 		fprintf(binding->outfile,
 			"\n\treturn %d;\n",
 			inf);
