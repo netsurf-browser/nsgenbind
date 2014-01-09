@@ -45,13 +45,6 @@ static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
 
 static int generate_function_spec(struct binding *binding, const char *interface);
 
-/* callback to emit implements operator spec */
-static int webidl_function_spec_implements_cb(struct webidl_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-
-	return generate_function_spec(binding, webidl_node_gettext(node));
-}
 
 static int
 generate_function_spec(struct binding *binding, const char *interface)
@@ -102,13 +95,6 @@ generate_function_spec(struct binding *binding, const char *interface)
 	if (inherit_node != NULL) {
 		res = generate_function_spec(binding,
 					      webidl_node_gettext(inherit_node));
-	}
-
-	if (res == 0) {
-		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
-					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
-					webidl_function_spec_implements_cb,
-					binding);
 	}
 
 	return res;
@@ -878,14 +864,6 @@ output_function_body(struct binding *binding,
 		res = webidl_implements_cb(inherit_node, binding);
 	}
 
-	if (res == 0) {
-		res = webidl_node_for_each_type(
-			webidl_node_getnode(interface_node),
-			WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
-			webidl_implements_cb,
-			binding);
-	}
-
 	return res;
 }
 
@@ -893,7 +871,7 @@ int
 output_function_bodies(struct binding *binding)
 {
 	int inf;
-	int res;
+	int res = 0;
 
 	for (inf=0; inf < binding->interfacec; inf++) {
 		if (binding->interfaces[inf].inherit_idx == -1) {

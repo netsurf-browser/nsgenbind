@@ -21,8 +21,8 @@ extern void webidl_restart(FILE*);
 extern int webidl_parse(struct webidl_node **webidl_ast);
 
 struct webidl_node {
-	enum webidl_node_type type;
-	struct webidl_node *l;
+	enum webidl_node_type type; /* the type of the node */
+	struct webidl_node *l; /* link to the next sibling node */
 	union {
 		void *value;
 		struct webidl_node *node; /* node has a list of nodes */
@@ -223,6 +223,7 @@ webidl_node_find_type(struct webidl_node *node,
 }
 
 
+/* exported interface defined in webidl-ast.h */
 struct webidl_node *
 webidl_node_find_type_ident(struct webidl_node *root_node,
 			    enum webidl_node_type type,
@@ -250,6 +251,7 @@ webidl_node_find_type_ident(struct webidl_node *root_node,
 }
 
 
+/* exported interface defined in webidl-ast.h */
 char *webidl_node_gettext(struct webidl_node *node)
 {
 	if (node != NULL) {
@@ -261,12 +263,13 @@ char *webidl_node_gettext(struct webidl_node *node)
 			return node->r.text;
 
 		default:
-			break;	
+			break;
 		}
 	}
 	return NULL;
 }
 
+/* exported interface defined in webidl-ast.h */
 int
 webidl_node_getint(struct webidl_node *node)
 {
@@ -285,12 +288,14 @@ webidl_node_getint(struct webidl_node *node)
 
 }
 
+/* exported interface defined in webidl-ast.h */
 enum webidl_node_type webidl_node_gettype(struct webidl_node *node)
 {
 	return node->type;
 }
 
 
+/* exported interface defined in webidl-ast.h */
 struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 {
 	if (node != NULL) {
@@ -314,6 +319,7 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 
 }
 
+/* exported interface defined in webidl-ast.h */
 static const char *webidl_node_type_to_str(enum webidl_node_type type)
 {
 	switch(type) {
@@ -381,6 +387,7 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 }
 
 
+/* exported interface defined in webidl-ast.h */
 int webidl_ast_dump(struct webidl_node *node, int indent)
 {
 	const char *SPACES="                                                                               ";	char *txt;
@@ -408,18 +415,19 @@ int webidl_ast_dump(struct webidl_node *node, int indent)
 	return 0;
 }
 
+/* exported interface defined in webidl-ast.h */
 static FILE *idlopen(const char *filename)
 {
 	FILE *idlfile;
 	char *fullname;
-	int fulllen; 
+	int fulllen;
 
 	if (options->idlpath == NULL) {
 		if (options->verbose) {
 			printf("Opening IDL file %s\n", filename);
 		}
 		return fopen(filename, "r");
-	} 
+	}
 
 	fulllen = strlen(options->idlpath) + strlen(filename) + 2;
 	fullname = malloc(fulllen);
@@ -429,10 +437,11 @@ static FILE *idlopen(const char *filename)
 	}
 	idlfile = fopen(fullname, "r");
 	free(fullname);
-	
+
 	return idlfile;
 }
 
+/* exported interface defined in webidl-ast.h */
 int webidl_parsefile(char *filename, struct webidl_node **webidl_ast)
 {
 
@@ -456,4 +465,108 @@ int webidl_parsefile(char *filename, struct webidl_node **webidl_ast)
 
 	/* parse the file */
 	return webidl_parse(webidl_ast);
+}
+
+/* unlink a child node from a parent */
+static int
+webidl_unlink(struct webidl_node *parent, struct webidl_node *node)
+{
+	struct webidl_node *child;
+
+	child = webidl_node_getnode(parent);
+	if (child == NULL) {
+		/* parent does not have children to remove node from */
+		return -1;
+	}
+
+	if (child == node) {
+		/* parent is pointing at the node we want to remove */
+		parent->r.node = node->l; /* point parent at next sibing */
+		node->l = NULL;
+		return 0;
+	}
+
+	while (child->l != NULL) {
+		if (child->l == node) {
+			/* found node, unlink from list */
+			child->l = node->l;
+			node->l = NULL;
+			return 0;
+		}
+		child = child->l;
+	}
+	return -1; /* failed to remove node */
+}
+
+static int implements_copy_nodes(struct webidl_node *src_node,
+				 struct webidl_node *dst_node)
+{
+	struct webidl_node *src;
+	struct webidl_node *dst;
+
+	src = webidl_node_getnode(src_node);
+	dst = webidl_node_getnode(dst_node);
+
+	while (src != NULL) {
+		if (src->type == WEBIDL_NODE_TYPE_LIST) {
+			/** @todo technicaly this should copy WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE */
+			dst = webidl_node_new(src->type, dst, src->r.text);
+		}
+		src = src->l;
+	}
+
+	dst_node->r.node = dst;
+
+	return 0;
+}
+
+static int
+intercalate_implements(struct webidl_node *interface_node, void *ctx)
+{
+	struct webidl_node *implements_node;
+	struct webidl_node *implements_interface_node;
+	struct webidl_node *webidl_ast = ctx;
+
+	implements_node = webidl_node_find_type(
+		webidl_node_getnode(interface_node),
+		NULL,
+		WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS);
+	while (implements_node != NULL) {
+
+		implements_interface_node = webidl_node_find_type_ident(
+			webidl_ast,
+			WEBIDL_NODE_TYPE_INTERFACE,
+			webidl_node_gettext(implements_node));
+
+		/* recurse, ensuring all subordinate interfaces have
+		 * their implements intercalated first
+		 */
+		intercalate_implements(implements_interface_node, webidl_ast);
+
+		implements_copy_nodes(implements_interface_node, interface_node);
+
+		/* once we have copied the implemntation remove entry */
+		webidl_unlink(interface_node, implements_node);
+
+		implements_node = webidl_node_find_type(
+			webidl_node_getnode(interface_node),
+			implements_node,
+			WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS);
+	}
+	return 0;
+}
+
+/* exported interface defined in webidl-ast.h */
+int webidl_intercalate_implements(struct webidl_node *webidl_ast)
+{
+	/* for each interface:
+	 *   for each implements entry:
+	 *     find interface from implemets
+	 *     recusrse into that interface
+	 *     copy the interface into this one
+	 */
+	return webidl_node_for_each_type(webidl_ast,
+					 WEBIDL_NODE_TYPE_INTERFACE,
+					 intercalate_implements,
+					 webidl_ast);
 }

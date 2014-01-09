@@ -47,6 +47,10 @@ read_webidl(struct genbind_node *genbind_ast, struct webidl_node **webidl_ast)
 					 webidl_file_cb,
 					 webidl_ast);
 
+	if (res == 0) {
+		res = webidl_intercalate_implements(*webidl_ast);
+	}
+
 	/* debug dump of web idl AST */
 	if (options->verbose) {
 		webidl_ast_dump(*webidl_ast, 0);

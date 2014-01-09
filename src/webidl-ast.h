@@ -120,4 +120,7 @@ int webidl_ast_dump(struct webidl_node *node, int indent);
 /** parse web idl file */
 int webidl_parsefile(char *filename, struct webidl_node **webidl_ast);
 
+/** perform replacement of implements elements with copies of ast data */
+int webidl_intercalate_implements(struct webidl_node *node);
+
 #endif

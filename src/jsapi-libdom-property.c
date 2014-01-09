@@ -131,14 +131,6 @@ webidl_property_tinyid_cb(struct webidl_node *node, void *ctx)
 	return 0;
 }
 
-/* callback to emit implements property spec */
-static int
-webidl_property_tinyid_implements_cb(struct webidl_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-
-	return generate_property_tinyid(binding, webidl_node_gettext(node));
-}
 
 static int
 generate_property_tinyid(struct binding *binding, const char *interface)
@@ -188,13 +180,6 @@ generate_property_tinyid(struct binding *binding, const char *interface)
 
 	if (inherit_node != NULL) {
 		res = generate_property_tinyid(binding, webidl_node_gettext(inherit_node));
-	}
-
-	if (res == 0) {
-		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
-					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
-					webidl_property_tinyid_implements_cb,
-					binding);
 	}
 
 	return res;
@@ -429,13 +414,6 @@ static int webidl_property_spec_cb(struct webidl_node *node, void *ctx)
 }
 
 
-/* callback to emit implements property spec */
-static int webidl_property_spec_implements_cb(struct webidl_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-
-	return generate_property_spec(binding, webidl_node_gettext(node));
-}
 
 static int
 generate_property_spec(struct binding *binding, const char *interface)
@@ -486,13 +464,6 @@ generate_property_spec(struct binding *binding, const char *interface)
 	if (inherit_node != NULL) {
 		res = generate_property_spec(binding,
 					      webidl_node_gettext(inherit_node));
-	}
-
-	if (res == 0) {
-		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
-					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
-					webidl_property_spec_implements_cb,
-					binding);
 	}
 
 	return res;
@@ -954,17 +925,6 @@ static int webidl_property_body_cb(struct webidl_node *node, void *ctx)
 }
 
 
-
-/* callback to emit implements property bodys */
-static int webidl_implements_cb(struct webidl_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-
-	return generate_property_body(binding, webidl_node_gettext(node));
-}
-
-
-
 static int
 generate_property_body(struct binding *binding, const char *interface)
 {
@@ -1016,13 +976,6 @@ generate_property_body(struct binding *binding, const char *interface)
 	if (inherit_node != NULL) {
 		res = generate_property_body(binding,
 					   webidl_node_gettext(inherit_node));
-	}
-
-	if (res == 0) {
-		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
-					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
-					webidl_implements_cb,
-					binding);
 	}
 
 	return res;
