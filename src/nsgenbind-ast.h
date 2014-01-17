@@ -126,4 +126,9 @@ char *genbind_node_gettext(struct genbind_node *node);
 struct genbind_node *genbind_node_getnode(struct genbind_node *node);
 int genbind_node_getint(struct genbind_node *node);
 
+#ifdef _WIN32
+#define NEED_STRNDUP 1
+char *strndup(const char *s, size_t n);
+#endif
+
 #endif

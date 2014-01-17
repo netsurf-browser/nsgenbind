@@ -445,3 +445,25 @@ int genbind_parsefile(char *infilename, struct genbind_node **ast)
 	return nsgenbind_parse(ast);
 
 }
+
+#ifdef NEED_STRNDUP
+
+char *strndup(const char *s, size_t n)
+{
+	size_t len;
+	char *s2;
+
+	for (len = 0; len != n && s[len]; len++)
+		continue;
+
+	s2 = malloc(len + 1);
+	if (!s2)
+		return 0;
+
+	memcpy(s2, s, len);
+	s2[len] = 0;
+	return s2;
+}
+
+#endif
+
