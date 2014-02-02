@@ -12,16 +12,22 @@
 struct options;
 
 struct binding_interface {
-	const char *name; /* name of interface */
-	struct genbind_node *node; /* node of interface in binding */
-	struct webidl_node *widl_node; /* node of interface in webidl */
-	const char *inherit_name; /* name of interface this inherits from */
-	int own_properties; /* the number of properties the interface has */
-	int own_functions; /* the number of functions the interface has */
+	const char *name; /**< name of interface */
+	struct genbind_node *node; /**< node of interface in binding */
+	struct webidl_node *widl_node; /**< node of interface in webidl */
+	const char *inherit_name; /**< name of interface this inherits from */
+	int own_properties; /**< the number of properties the interface has */
+	int own_functions; /**< the number of functions the interface has */
 
-	int inherit_idx; /* index into binding map of inherited interface or -1 for not in map */
-	int refcount; /* number of entries in map that refer to this interface */
-	int output_idx; /* for interfaces that will be output (node is valid) this is the output array index */
+	int inherit_idx; /**< index into binding map of inherited
+			  * interface or -1 for not in map
+			  */
+	int refcount; /**< number of entries in map that refer to this
+		       * interface
+		       */
+	int output_idx; /**< for interfaces that will be output (node
+			 * is valid) this is the output array index
+			 */
 };
 
 struct binding {
@@ -59,11 +65,24 @@ struct binding {
 /** Generate binding between jsapi and netsurf libdom */
 int jsapi_libdom_output(struct options *options, struct genbind_node *genbind_ast, struct genbind_node *binding_node);
 
-/** build interface mapping */
+/** Build interface map.
+ *
+ * Generate a map of all interfaces referenced from a binding and
+ * their relationships to each other.
+ *
+ * The map will contain all the interfaces both directly referenced by
+ * the binding and all those inherited through the WebIDL.
+ *
+ * The map is topoligicaly sorted to ensure no forward inheritance
+ * references.
+ *
+ * The map contains an monotinicaly incrementing index for all
+ * interfaces referenced in the binding (i.e. those to be exported).
+ */
 int build_interface_map(struct genbind_node *binding_node,
-		    struct webidl_node *webidl_ast,
-		    int *interfacec_out,
-		    struct binding_interface **interfaces_out);
+			struct webidl_node *webidl_ast,
+			int *interfacec_out,
+			struct binding_interface **interfaces_out);
 
 
 /** output code block from a node */
@@ -75,7 +94,8 @@ int output_jsclasses(struct binding *binding);
 /* Generate jsapi native function specifiers */
 int output_function_spec(struct binding *binding);
 
-/* Generate jsapi native function bodys
+/**
+ * Generate jsapi native function bodies.
  *
  * web IDL describes methods as operators
  * http://www.w3.org/TR/WebIDL/#idl-operations

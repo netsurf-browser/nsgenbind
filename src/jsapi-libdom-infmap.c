@@ -159,12 +159,11 @@ interface_topoligical_sort(struct binding_interface *srcinf, int infc)
 	return dstinf;
 }
 
-/* build interface map and return the first interface */
-int
-build_interface_map(struct genbind_node *binding_node,
-		    struct webidl_node *webidl_ast,
-		    int *interfacec_out,
-		    struct binding_interface **interfaces_out)
+/* exported interface documented in jsapi-libdom.h */
+int build_interface_map(struct genbind_node *binding_node,
+			struct webidl_node *webidl_ast,
+			int *interfacec_out,
+			struct binding_interface **interfaces_out)
 {
 	int interfacec;
 	int inf; /* interface loop counter */
@@ -263,7 +262,7 @@ build_interface_map(struct genbind_node *binding_node,
 			}
 			interfaces = reinterfaces;
 
-			/* setup all fileds in new interface */
+			/* setup all fields in new interface */
 
 			/* this interface is not in the binding and
 			 * will not be exported
