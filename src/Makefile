@@ -7,12 +7,12 @@ SOURCES := $(SOURCES) $(BUILDDIR)/nsgenbind-parser.c $(BUILDDIR)/nsgenbind-lexer
 
 $(BUILDDIR)/%-lexer.c $(BUILDDIR)/%-lexer.h: src/%-lexer.l
 	$(VQ)$(ECHO) "    FLEX: $<"
-	$(Q)flex --outfile=$(BUILDDIR)/$(*F)-lexer.c --header-file=$(BUILDDIR)/$(*F)-lexer.h $<
+	$(Q)$(FLEX) --outfile=$(BUILDDIR)/$(*F)-lexer.c --header-file=$(BUILDDIR)/$(*F)-lexer.h $<
 
 $(BUILDDIR)/%-lexer.c: $(BUILDDIR)/%-parser.h
 
 # Bison 2.6 and later require api.prefix, but this breaks Bison 2.5 and earlier.
-bisonvsn := $(word 4,$(shell bison --version))
+bisonvsn := $(word 4,$(shell $(BISON) --version))
 bisonmaj := $(word 1,$(subst ., ,$(bisonvsn)))
 bisonmin := $(word 2,$(subst ., ,$(bisonvsn)))
 ifeq ($(bisonmaj),1)
@@ -31,7 +31,7 @@ endif
 
 $(BUILDDIR)/%-parser.c $(BUILDDIR)/%-parser.h: src/%-parser.y
 	$(VQ)$(ECHO) "   BISON: $<"
-	$(Q)bison -d -t $(BISON_DEFINES) --report=all --output=$(BUILDDIR)/$(*F)-parser.c --defines=$(BUILDDIR)/$(*F)-parser.h $<
+	$(Q)$(BISON) -d -t $(BISON_DEFINES) --report=all --output=$(BUILDDIR)/$(*F)-parser.c --defines=$(BUILDDIR)/$(*F)-parser.h $<
 
 # Grab the core makefile
 include $(NSBUILD)/Makefile.subdir
