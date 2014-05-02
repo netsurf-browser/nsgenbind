@@ -28,7 +28,10 @@ char *errtxt;
 %}
 
 %locations
-%define api.pure
+ /* bison prior to 2.4 cannot cope with %define api.pure so we use the
+  *  deprecated directive 
+  */
+%pure-parser
 %error-verbose
 %parse-param { struct genbind_node **genbind_ast }
 
