@@ -19,6 +19,10 @@ struct binding_interface {
 	int own_properties; /**< the number of properties the interface has */
 	int own_functions; /**< the number of functions the interface has */
 
+	bool has_type_properties; /**< some of the properties on the
+				   * interface have a type handler
+				   */
+
 	int inherit_idx; /**< index into binding map of inherited
 			  * interface or -1 for not in map
 			  */

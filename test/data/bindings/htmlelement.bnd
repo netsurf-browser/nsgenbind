@@ -37,8 +37,6 @@ preamble %{
 
 binding jsapi_libdom {
 
-        interface Text;
-        interface Comment;
 	interface HTMLElement;
 	interface HTMLAnchorElement;
 	interface HTMLAnchorElement;
@@ -110,6 +108,8 @@ binding jsapi_libdom {
 	interface HTMLTrackElement;
 	interface HTMLUListElement;
 	interface HTMLUnknownElement;
+        interface Text;
+        interface Comment;
 
 	private "dom_element *" node;
 	private "struct html_content *" htmlc;

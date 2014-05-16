@@ -720,6 +720,11 @@ output_private_get(struct binding *binding, const char *argname)
 	return ret;
 }
 
+/**
+ * Generate operator (function) body
+ *
+ *
+ */
 static int webidl_operator_body(struct binding *binding,
 				struct binding_interface *inf,
 				struct webidl_node *node)
