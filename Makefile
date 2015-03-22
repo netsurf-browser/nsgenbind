@@ -1,3 +1,9 @@
+#!/bin/make
+#
+# Makefile for nsgenbind
+#
+# Copyright 2013-2015 Vincent Sanders <vince@netsurf-browser.org>
+
 # Define the component name
 COMPONENT := nsgenbind
 # And the component type
@@ -16,14 +22,19 @@ TESTRUNNER := test/testrunner.sh
 WARNFLAGS := -Wall -W -Wundef -Wpointer-arith -Wcast-align \
 	-Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes \
 	-Wmissing-declarations -Wnested-externs
-# BeOS/Haiku/AmigaOS have standard library errors that issue warnings.
-ifneq ($(BUILD),i586-pc-haiku)
-  ifneq ($(findstring amigaos,$(BUILD)),amigaos)
-#    WARNFLAGS := $(WARNFLAGS) -Werror
+# Non release variants should make compile warnings errors
+ifneq ($(VARIANT),release)
+  # BeOS/Haiku/AmigaOS have standard library errors that issue warnings.
+  ifneq ($(BUILD),i586-pc-haiku)
+    ifneq ($(findstring amigaos,$(BUILD)),amigaos)
+      WARNFLAGS:= $(WARNFLAGS) -Werror
+    endif
   endif
 endif
-CFLAGS := -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -I$(CURDIR)/include/ \
-	-I$(CURDIR)/src $(WARNFLAGS) $(CFLAGS)
+
+CFLAGS := -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L \
+	-I$(CURDIR)/include/ -I$(CURDIR)/src \
+	$(WARNFLAGS) $(CFLAGS)
 ifneq ($(GCCVER),2)
   CFLAGS := $(CFLAGS) -std=c99
 else
