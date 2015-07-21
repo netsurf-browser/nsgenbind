@@ -8,3 +8,63 @@ building
 --------
 
 The tool requires bison and flex as pre-requisites
+
+Commandline
+-----------
+
+nsgenbind [-v] [-g] [-D] [-W] [-I idlpath] inputfile outputdir
+
+-v
+The verbose switch makes the tool verbose about what operations it is
+performing instead of teh default of only reporting errors.
+
+-g
+The generated code will be augmented with runtime debug logging so it
+can be traced
+
+-D
+The tool will generate output to allow debugging of output conversion.
+This includes dumps of the binding and IDL files AST
+
+-W
+This switch will make the tool generate warnings about various issues
+with the binding or IDL files being processed.
+
+-I
+An additional search path may be given so idl files can be located.
+
+The tool requires a binding file as input and an output directory in
+which to place its output.
+
+
+Web IDL
+-------
+
+The IDL is specified in a w3c document[1] but the second edition is in
+draft[2] and covers many of the features actually used in the whatwg
+dom and html spec.
+
+The principal usage of the IDL is to define the interface between
+scripts and a browsers internal state. For example the DOM[3] and
+HTML[4] specs contain all the IDL for acessing the DOM and interacting
+with a web browser (this not strictly true as there are several
+interfaces simply not in the standards such as console).
+
+The IDL uses some slightly strange names than other object orientated
+systems.
+
+   IDL     |  JS              |  OOP           |  Notes
+-----------+------------------+----------------+----------------------------
+ interface | prototype        | class          | The data definition of
+           |                  |                |  the object
+ constants | read-only value  | class variable | Belong to class, one copy
+           |  property on the |                |
+           |  prototype       |                |
+ operation | method           | method         | functions that can be called
+ attribute | property         | property       | Variables set per instance
+-----------+------------------+----------------+----------------------------
+
+[1] http://www.w3.org/TR/WebIDL/
+[2] https://heycam.github.io/webidl/
+[3] https://dom.spec.whatwg.org/
+[4] https://html.spec.whatwg.org/

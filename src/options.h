@@ -12,16 +12,11 @@
 /** global options */
 struct options {
 	char *infilename; /**< binding source */
-
-	char *outfilename; /**< output source file */
-	FILE *outfilehandle; /**< output file handle */
-
-	char *hdrfilename; /**< output header file */
-	FILE *hdrfilehandle; /**< output file handle */
-
-	char *depfilename; /**< dependancy output*/
-	FILE *depfilehandle; /**< dependancy file handle */
-
+	char *outdirname; /**< output directory */
+FILE *hdrfilehandle;
+char *hdrfilename;
+char *outfilename;
+FILE *outfilehandle;
 	char *idlpath; /**< path to IDL files */
 
 	bool verbose; /**< verbose processing */

@@ -1,0 +1,66 @@
+/* Binding for browser using ductape and libdom
+ *
+ * Copyright 2015 Vincent Sanders <vince@netsurf-browser.org>
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+binding duk_libdom {
+	webidl "dom.idl";
+	webidl "html.idl";
+	webidl "console.idl";
+
+	preface %{
+		%};
+
+	prologue %{
+		%};
+
+	epilogue %{
+		%};
+
+	postface %{
+		%};	
+}
+
+class Node {
+	private "dom_node *" node;
+
+	preface %{
+		%};
+
+	prologue %{
+		%};
+
+	epilogue %{
+		%};
+
+	postface %{
+		%};	
+}
+
+init Node("dom_node *" node)
+%{
+    private->node = node;
+    dom_node_ref(node);
+%}
+
+fini Node()
+%{
+    dom_node_unref(private->node);
+%}
+
+method Node::AppendChild()
+%{
+%}
+
+getter Node::aprop()
+%{
+%}
+
+setter Node::aprop()
+%{
+%}
