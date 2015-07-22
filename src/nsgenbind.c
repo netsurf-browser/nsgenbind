@@ -15,6 +15,7 @@
 #include <errno.h>
 
 #include "nsgenbind-ast.h"
+#include "webidl-ast.h"
 #include "jsapi-libdom.h"
 #include "options.h"
 
@@ -104,6 +105,51 @@ static int generate_binding(struct genbind_node *binding_node, void *ctx)
         return res;
 }
 
+
+static int webidl_file_cb(struct genbind_node *node, void *ctx)
+{
+	struct webidl_node **webidl_ast = ctx;
+	char *filename;
+
+	filename = genbind_node_gettext(node);
+
+        if (options->verbose) {
+                printf("Opening IDL file \"%s\"\n", filename);
+        }
+
+	return webidl_parsefile(filename, webidl_ast);
+}
+
+static int genbind_load_idl(struct genbind_node *genbind,
+                            struct webidl_node **webidl_out)
+{
+        int res;
+        struct genbind_node *binding_node;
+
+        binding_node = genbind_node_find_type(genbind, NULL,
+                                              GENBIND_NODE_TYPE_BINDING);
+
+	/* walk AST and load any web IDL files required */
+	res = genbind_node_foreach_type(
+                genbind_node_getnode(binding_node),
+                GENBIND_NODE_TYPE_WEBIDL,
+                webidl_file_cb,
+                webidl_out);
+	if (res != 0) {
+		fprintf(stderr, "Error: failed reading Web IDL\n");
+		return -1;
+	}
+
+        /* implements are implemented as mixins so intercalate them */
+        res = webidl_intercalate_implements(*webidl_out);
+	if (res != 0) {
+		fprintf(stderr, "Error: Failed to intercalate implements\n");
+		return -1;
+	}
+
+        return 0;
+}
+
 /**
  * get the type of binding
  */
@@ -147,6 +193,7 @@ int main(int argc, char **argv)
 {
         int res;
         struct genbind_node *genbind_root = NULL;
+        struct webidl_node *webidl_root = NULL;
         enum bindingtype_e bindingtype;
 
         options = process_cmdline(argc, argv);
@@ -170,8 +217,16 @@ int main(int argc, char **argv)
                 return 3;
         }
 
+        /* load the IDL files specified in the binding */
+        res = genbind_load_idl(genbind_root, &webidl_root);
+        if (res != 0) {
+                return 4;
+        }
+
+	/* debug dump of web idl AST */
+        webidl_dump_ast(webidl_root);
+
 #if 0
-        genbind_load_idl(genbind_root);
 
         /* generate output for each binding */
         res = genbind_node_foreach_type(genbind_root,

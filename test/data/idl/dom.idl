@@ -107,10 +107,10 @@ DocumentType implements ChildNode;
 Element implements ChildNode;
 CharacterData implements ChildNode;
 
-class Elements extends Array {
-  Element? query(DOMString relativeSelectors);
-  Elements queryAll(DOMString relativeSelectors);
-};
+//class Elements extends Array {
+//  Element? query(DOMString relativeSelectors);
+//  Elements queryAll(DOMString relativeSelectors);
+//};
 
 [Exposed=Window]
 interface NodeList {

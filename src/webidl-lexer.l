@@ -86,7 +86,7 @@ lineend             ([\n\r]|{LS}|{PS})
 hexdigit            [0-9A-Fa-f]
 hexint              0(x|X){hexdigit}+
 
-decimalint          0|([1-9][0-9]*)
+decimalint          0|([\+\-]?[1-9][0-9]*)
 
 octalint            (0[0-8]+)
 
@@ -207,6 +207,11 @@ void                return TOK_VOID;
 
 readonly            return TOK_READONLY;
 
+Promise             return TOK_PROMISE;
+
+iterable            return TOK_ITERABLE;
+
+legacyiterable      return TOK_LEGACYITERABLE;
 
 {identifier}        {
                         /* A leading "_" is used to escape an identifier from 

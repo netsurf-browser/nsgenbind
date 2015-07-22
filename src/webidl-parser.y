@@ -9,6 +9,9 @@
  *
  * Derived from the the grammar in apendix A of W3C WEB IDL
  *   http://www.w3.org/TR/WebIDL/
+ *
+ * WebIDL now has a second edition draft (mid 2015) that the dom and
+ *   html specs are using. https://heycam.github.io/webidl
  */
 
 #include <stdio.h>
@@ -17,10 +20,16 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "webidl-ast.h"
+#define YYFPRINTF webidl_fprintf
+#define YY_LOCATION_PRINT(File, Loc)                            \
+  webidl_fprintf(File, "%d.%d-%d.%d",                           \
+                 (Loc).first_line, (Loc).first_column,          \
+                 (Loc).last_line,  (Loc).last_column)
 
 #include "webidl-parser.h"
 #include "webidl-lexer.h"
+
+#include "webidl-ast.h"
 
 char *errtxt;
 
@@ -77,6 +86,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_INFINITY
 %token TOK_INHERIT
 %token TOK_INTERFACE
+%token TOK_ITERABLE
+%token TOK_LEGACYITERABLE
 %token TOK_LONG
 %token TOK_MODULE
 %token TOK_NAN
@@ -88,6 +99,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_OPTIONAL
 %token TOK_OR
 %token TOK_PARTIAL
+%token TOK_PROMISE
 %token TOK_RAISES
 %token TOK_READONLY
 %token TOK_SETRAISES
@@ -105,12 +117,12 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %token TOK_POUND_SIGN
 
-%token <text>       TOK_IDENTIFIER
-%token <value>      TOK_INT_LITERAL
-%token <text>       TOK_FLOAT_LITERAL
-%token <text>       TOK_STRING_LITERAL
-%token <text>       TOK_OTHER_LITERAL
-%token <text>       TOK_JAVADOC
+%token <text>  TOK_IDENTIFIER
+%token <value> TOK_INT_LITERAL
+%token <text>  TOK_FLOAT_LITERAL
+%token <text>  TOK_STRING_LITERAL
+%token <text>  TOK_OTHER_LITERAL
+%token <text>  TOK_JAVADOC
 
 %type <text> Inheritance
 
@@ -153,6 +165,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <text> ArgumentName
 %type <text> ArgumentNameKeyword
 %type <node> Ellipsis
+%type <node> Iterable
+%type <node> OptionalType
 
 %type <node> Type
 %type <node> ReturnType
@@ -165,6 +179,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> FloatType
 %type <node> UnsignedIntegerType
 %type <node> IntegerType
+%type <node> PromiseType
 
 %type <node> TypeSuffix
 %type <node> TypeSuffixStartingWithArray
@@ -356,7 +371,7 @@ InterfaceMembers:
 
             if (ident_node == NULL) {
                 /* something with no ident - possibly constructors? */
-                /* @todo understand this abtter */
+                /* @todo understand this better */
 
                 $$ = webidl_node_prepend($1, $3);
 
@@ -389,11 +404,17 @@ InterfaceMembers:
         }
         ;
 
- /* [10] */
+ /* [10]
+  * SE[10]
+  * Second edition actually splits up AttributeOrOperation completely
+  * here we "just" add Iterable as thats what the specs use
+  */
 InterfaceMember:
         Const
         |
         AttributeOrOperation
+        |
+        Iterable
         ;
 
  /* [11] */
@@ -474,17 +495,27 @@ Enum:
         }
         ;
 
-/* [21] */
+ /* Second edition changes enumeration rules to allow trailing comma */
+
+  /* SE[20] */
 EnumValueList:
-        TOK_STRING_LITERAL EnumValues
+        TOK_STRING_LITERAL EnumValueListComma
         ;
 
-/* [22] */
-EnumValues:
-        /* empty */
+ /* SE[21] */
+EnumValueListComma:
+        ',' EnumValueListString
         |
-        ',' TOK_STRING_LITERAL EnumValues
+        /* empty */
         ;
+
+ /* SE[22] */
+EnumValueListString:
+        TOK_STRING_LITERAL EnumValueListComma
+        |
+        /* empty */
+        ;
+
 
  /* [23] - bug in w3c grammar? it doesnt list the equals as a terminal  */
 CallbackRest:
@@ -832,6 +863,32 @@ Ellipsis:
         TOK_ELLIPSIS
         {
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_ELLIPSIS, NULL, NULL);
+        }
+        ;
+
+ /* SE[59] */
+Iterable:
+        TOK_ITERABLE '<' Type OptionalType '>' ';'
+        {
+            $$ = NULL;
+        }
+        |
+        TOK_LEGACYITERABLE '<' Type '>' ';'
+        {
+            $$ = NULL;
+        }
+        ;
+
+ /* SE[60] */
+OptionalType:
+        /* empty */
+        {
+            $$ = NULL;
+        }
+        |
+        ',' Type
+        {
+            $$ = NULL;
         }
         ;
 
@@ -1301,10 +1358,19 @@ UnionMemberTypes:
         TOK_OR UnionMemberType UnionMemberTypes
         ;
 
- /* [62] */
+ /* [62]
+  * SE[78]
+  * Second edition adds several types
+  */
 NonAnyType:
         PrimitiveType TypeSuffix
         {
+            $$ = webidl_node_prepend($1, $2);
+        }
+        |
+        PromiseType TypeSuffix
+        {
+            /* second edition adds promise types */
             $$ = webidl_node_prepend($1, $2);
         }
         |
@@ -1439,6 +1505,14 @@ OptionalLong:
         TOK_LONG
         {
             $$ = true;
+        }
+        ;
+
+/* SE[87] */
+PromiseType:
+        TOK_PROMISE '<' ReturnType '>'
+        {
+            $$ = NULL;
         }
         ;
 

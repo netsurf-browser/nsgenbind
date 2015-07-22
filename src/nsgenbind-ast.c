@@ -20,6 +20,11 @@
 #include "nsgenbind-ast.h"
 #include "options.h"
 
+/**
+ * standard IO handle for parse trace logging.
+ */
+static FILE *genbind_parsetracef;
+
 /* parser and lexer interface */
 extern int nsgenbind_debug;
 extern int nsgenbind__flex_debug;
@@ -448,23 +453,23 @@ static int genbind_ast_dump(FILE *dfile, struct genbind_node *node, int indent)
 /* exported interface documented in nsgenbind-ast.h */
 int genbind_dump_ast(struct genbind_node *node)
 {
-    FILE *dumpf;
+        FILE *dumpf;
 
-    /* only dump AST to file if required */
-    if (!options->debug) {
+        /* only dump AST to file if required */
+        if (!options->debug) {
+                return 0;
+        }
+
+        dumpf = genb_fopen("binding-ast", "w");
+        if (dumpf == NULL) {
+                return 2;
+        }
+
+        genbind_ast_dump(dumpf, node, 0);
+
+        fclose(dumpf);
+
         return 0;
-    }
-
-    dumpf = genb_fopen("binding-ast", "w");
-    if (dumpf == NULL) {
-        return 2;
-    }
-
-    genbind_ast_dump(dumpf, node, 0);
-
-    fclose(dumpf);
-
-    return 0;
 }
 
 FILE *genbindopen(const char *filename)
@@ -545,10 +550,6 @@ FILE *genbindopen(const char *filename)
         return genfile;
 }
 
-/**
- * standard IO handle for parse trace logging.
- */
-static FILE *genbind_parsetracef;
 
 int genbind_parsefile(char *infilename, struct genbind_node **ast)
 {

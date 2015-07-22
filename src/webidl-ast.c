@@ -11,9 +11,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <stdarg.h>
 
+#include "utils.h"
 #include "webidl-ast.h"
 #include "options.h"
+
+/**
+ * standard IO handle for parse trace logging.
+ */
+static FILE *webidl_parsetracef;
 
 extern int webidl_debug;
 extern int webidl__flex_debug;
@@ -386,13 +393,16 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 
 }
 
-
-/* exported interface defined in webidl-ast.h */
-int webidl_ast_dump(struct webidl_node *node, int indent)
+/**
+ * Recursively dump the AST nodes increasing indent as appropriate
+ */
+static int webidl_ast_dump(FILE *dumpf, struct webidl_node *node, int indent)
 {
-	const char *SPACES="                                                                               ";	char *txt;
+	const char *SPACES="                                                                               ";
+	char *txt;
 	while (node != NULL) {
-		printf("%.*s%s", indent, SPACES, webidl_node_type_to_str(node->type));
+                fprintf(dumpf, "%.*s%s", indent, SPACES,
+                        webidl_node_type_to_str(node->type));
 
 		txt = webidl_node_gettext(node);
 		if (txt == NULL) {
@@ -401,18 +411,41 @@ int webidl_ast_dump(struct webidl_node *node, int indent)
 			next = webidl_node_getnode(node);
 
 			if (next != NULL) {
-				printf("\n");
-				webidl_ast_dump(next, indent + 2);
+				fprintf(dumpf, "\n");
+				webidl_ast_dump(dumpf, next, indent + 2);
 			} else {
 				/* not txt or node has to be an int */
-				printf(": %d\n", webidl_node_getint(node));
+				fprintf(dumpf, ": %d\n",
+                                       webidl_node_getint(node));
 			}
 		} else {
-			printf(": \"%s\"\n", txt);
+			fprintf(dumpf, ": \"%s\"\n", txt);
 		}
 		node = node->l;
 	}
 	return 0;
+}
+
+/* exported interface documented in webidl-ast.h */
+int webidl_dump_ast(struct webidl_node *node)
+{
+        FILE *dumpf;
+
+        /* only dump AST to file if required */
+        if (!options->debug) {
+                return 0;
+        }
+
+        dumpf = genb_fopen("webidl-ast", "w");
+        if (dumpf == NULL) {
+                return 2;
+        }
+
+        webidl_ast_dump(dumpf, node, 0);
+
+        fclose(dumpf);
+
+        return 0;
 }
 
 /* exported interface defined in webidl-ast.h */
@@ -444,8 +477,8 @@ static FILE *idlopen(const char *filename)
 /* exported interface defined in webidl-ast.h */
 int webidl_parsefile(char *filename, struct webidl_node **webidl_ast)
 {
-
 	FILE *idlfile;
+        int ret;
 
 	idlfile = idlopen(filename);
 	if (!idlfile) {
@@ -455,16 +488,51 @@ int webidl_parsefile(char *filename, struct webidl_node **webidl_ast)
 		return 2;
 	}
 
-	if (options->debug) {
+        /* if debugging enabled enable parser tracing and send to file */
+        if (options->debug) {
+                char *tracename;
+                int tracenamelen;
 		webidl_debug = 1;
 		webidl__flex_debug = 1;
-	}
+
+                tracenamelen = SLEN("webidl--trace") + strlen(filename) + 1;
+                tracename = malloc(tracenamelen);
+                snprintf(tracename, tracenamelen,"webidl-%s-trace", filename);
+                webidl_parsetracef = genb_fopen(tracename, "w");
+                free(tracename);
+        } else {
+                webidl_parsetracef = NULL;
+        }
 
 	/* set flex to read from file */
 	webidl_restart(idlfile);
 
 	/* parse the file */
-	return webidl_parse(webidl_ast);
+	ret = webidl_parse(webidl_ast);
+
+        /* close tracefile if open */
+        if (webidl_parsetracef != NULL) {
+                fclose(webidl_parsetracef);
+        }
+        return ret;
+}
+
+/* exported interface defined in webidl-ast.h */
+int webidl_fprintf(FILE *stream, const char *format, ...)
+{
+        va_list ap;
+        int ret;
+
+        va_start(ap, format);
+
+        if (webidl_parsetracef == NULL) {
+                ret = vfprintf(stream, format, ap);
+        } else {
+                ret = vfprintf(webidl_parsetracef, format, ap);
+        }
+        va_end(ap);
+
+        return ret;
 }
 
 /* unlink a child node from a parent */
