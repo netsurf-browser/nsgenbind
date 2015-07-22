@@ -70,6 +70,10 @@ char *genbind_strapp(char *a, char *b);
 struct genbind_node *genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r);
 struct genbind_node *genbind_node_link(struct genbind_node *tgt, struct genbind_node *src);
 
+struct genbind_node *genbind_node_prepend(struct genbind_node *list, struct genbind_node *inst);
+
+struct genbind_node *genbind_node_add(struct genbind_node *node, struct genbind_node *list);
+
 /**
  * Dump the binding AST to file
  *

@@ -20,6 +20,12 @@
 
 struct options *options;
 
+enum bindingtype_e {
+    BINDINGTYPE_UNKNOWN,
+    BINDINGTYPE_JSAPI_LIBDOM,
+    BINDINGTYPE_DUK_LIBDOM,
+};
+
 static struct options* process_cmdline(int argc, char **argv)
 {
         int opt;
@@ -98,12 +104,6 @@ static int generate_binding(struct genbind_node *binding_node, void *ctx)
         return res;
 }
 
-enum bindingtype_e {
-    BINDINGTYPE_UNKNOWN,
-    BINDINGTYPE_JSAPI_LIBDOM,
-    BINDINGTYPE_DUK_LIBDOM,
-};
-
 /**
  * get the type of binding
  */
@@ -146,7 +146,7 @@ static enum bindingtype_e genbind_get_type(struct genbind_node *node)
 int main(int argc, char **argv)
 {
         int res;
-        struct genbind_node *genbind_root;
+        struct genbind_node *genbind_root = NULL;
         enum bindingtype_e bindingtype;
 
         options = process_cmdline(argc, argv);
@@ -154,17 +154,17 @@ int main(int argc, char **argv)
                 return 1; /* bad commandline */
         }
 
-        /* parse input and generate dependancy */
+        /* parse binding */
         res = genbind_parsefile(options->infilename, &genbind_root);
         if (res != 0) {
                 fprintf(stderr, "Error: parse failed with code %d\n", res);
                 return res;
         }
 
-        /* dump the AST */
+        /* dump the binding AST */
         genbind_dump_ast(genbind_root);
 
-        /* get bindingtype */
+        /* get type of binding */
         bindingtype = genbind_get_type(genbind_root);
         if (bindingtype == BINDINGTYPE_UNKNOWN) {
                 return 3;

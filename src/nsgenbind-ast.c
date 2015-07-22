@@ -38,6 +38,63 @@ struct genbind_node {
         } r;
 };
 
+/* insert node(s) at beginning of a list */
+struct genbind_node *
+genbind_node_prepend(struct genbind_node *list, struct genbind_node *inst)
+{
+	struct genbind_node *end = inst;
+
+	if (inst == NULL) {
+		return list; /* no node to prepend - return existing list */
+	}
+
+	/* find end of inserted node list */
+	while (end->l != NULL) {
+		end = end->l;
+	}
+
+	end->l = list;
+
+	return inst;
+}
+
+/* prepend list to a nodes list
+ *
+ * inserts a list into the beginning of a nodes r list
+ *
+ * CAUTION: if the \a node element is not a node type the node will not be added
+ */
+struct genbind_node *
+genbind_node_add(struct genbind_node *node, struct genbind_node *list)
+{
+	if (node == NULL) {
+		return list;
+	}
+
+	/* this does not use genbind_node_getnode() as it cannot
+	 * determine between an empty node and a node which is not a
+	 * list type
+	 */
+	switch (node->type) {
+        case GENBIND_NODE_TYPE_BINDING:
+        case GENBIND_NODE_TYPE_CLASS:
+        case GENBIND_NODE_TYPE_PRIVATE:
+        case GENBIND_NODE_TYPE_INTERNAL:
+        case GENBIND_NODE_TYPE_PROPERTY:
+        case GENBIND_NODE_TYPE_FLAGS:
+        case GENBIND_NODE_TYPE_METHOD:
+        case GENBIND_NODE_TYPE_PARAMETER:
+                break;
+
+	default:
+                /* not a node type */
+                return list;
+	}
+
+	node->r.node =	genbind_node_prepend(node->r.node, list);
+
+	return node;
+}
 
 char *genbind_strapp(char *a, char *b)
 {

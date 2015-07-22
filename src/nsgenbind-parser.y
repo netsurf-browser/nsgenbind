@@ -128,7 +128,7 @@ Statements
         | 
         Statements Statement  
         {
-          $$ = genbind_node_link($2, $1);
+          $$ = *genbind_ast = genbind_node_prepend($2, $1);
         }
         | 
         error ';' 
@@ -330,11 +330,52 @@ Method
         :
         MethodType MethodDeclarator CBlock
         {
-                $$ = genbind_new_node(GENBIND_NODE_TYPE_METHOD, NULL,
+                struct genbind_node *declarator;
+                struct genbind_node *method_node;
+                struct genbind_node *class_node;
+                char *class_name;
+
+                declarator = $2;
+
+                /* extract the class name from the declarator */
+                class_name = genbind_node_gettext(
+                        genbind_node_find_type(
+                                genbind_node_getnode(
+                                        genbind_node_find_type(
+                                                declarator,
+                                                NULL,
+                                                GENBIND_NODE_TYPE_CLASS)),
+                                NULL,
+                                GENBIND_NODE_TYPE_IDENT));
+
+                /* generate method node */
+                method_node = genbind_new_node(GENBIND_NODE_TYPE_METHOD, NULL,
                         genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
                                 genbind_new_node(GENBIND_NODE_TYPE_CDATA,
-                                                 $2, $3),
+                                                 declarator, $3),
                                          (void *)$1));
+
+
+
+                class_node = genbind_node_find_type_ident(*genbind_ast,
+                                                          NULL,
+                                                          GENBIND_NODE_TYPE_CLASS,
+                                                          class_name);
+                if (class_node == NULL) {
+                        /* no existing class so manufacture one and attach method */
+                        $$ = genbind_new_node(GENBIND_NODE_TYPE_CLASS, NULL,
+                                      genbind_new_node(GENBIND_NODE_TYPE_IDENT,
+                                                       method_node,
+                                                       class_name));
+
+                } else {
+                        /* update the existing class */
+
+                        /* link member node into class_node */
+                        genbind_node_add(class_node, method_node);
+
+                        $$ = NULL; /* updating so no need to add a new node */
+                }
         }
 
 
