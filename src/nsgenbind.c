@@ -14,10 +14,11 @@
 #include <getopt.h>
 #include <errno.h>
 
+#include "options.h"
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
-#include "options.h"
+#include "interface-map.h"
 
 struct options *options;
 
@@ -194,6 +195,7 @@ int main(int argc, char **argv)
         int res;
         struct genbind_node *genbind_root = NULL;
         struct webidl_node *webidl_root = NULL;
+        struct interface_map *interface_map = NULL;
         enum bindingtype_e bindingtype;
 
         options = process_cmdline(argc, argv);
@@ -226,6 +228,15 @@ int main(int argc, char **argv)
 	/* debug dump of web idl AST */
         webidl_dump_ast(webidl_root);
 
+        /* generate index of interfaces in idl sorted by inheritance */
+        res = interface_map_new(genbind_root, webidl_root, &interface_map);
+        if (res != 0) {
+                return 5;
+        }
+
+        /* dump the interface mapping */
+        interface_map_dump(interface_map);
+        interface_map_dumpdot(interface_map);
 #if 0
 
         /* generate output for each binding */

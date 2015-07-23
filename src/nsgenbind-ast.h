@@ -130,7 +130,7 @@ genbind_node_enumerate_type(struct genbind_node *node,
                             enum genbind_node_type type);
 
 /** Depth first left hand search returning nodes of the specified type
- *    and a ident child node with matching text
+ *    with an ident child node with matching text
  *
  * @param node The node to start the search from
  * @param prev The node at which to stop the search, either NULL to

@@ -37,6 +37,30 @@ The tool requires a binding file as input and an output directory in
 which to place its output.
 
 
+Debug output
+------------
+
+as well as the generated source the tool will output seevral debugging
+files with the -D switch in use.
+
+interface.dot
+
+  The interfaces IDL dot file contains all the interfaces and their
+   relationship. graphviz can be used to convert this into a visual
+   representation which is sometimes useful to help in debugging
+   missing or incorrect IDL inheritance.
+
+  Processing the dot file with graphviz can produce very large files
+   so care must be taken with options. Some examples that produce
+   adequate output:
+
+  # classical tree
+  dot -O -Tsvg interface.dot
+
+  # radial output
+  twopi -Granksep=10.0 -Gnodesep=1.0 -Groot=0009 -O -Tsvg interface.dot
+
+
 Web IDL
 -------
 

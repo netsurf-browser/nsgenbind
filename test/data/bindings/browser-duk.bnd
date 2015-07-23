@@ -11,6 +11,7 @@
 binding duk_libdom {
 	webidl "dom.idl";
 	webidl "html.idl";
+	webidl "uievents.idl";
 	webidl "console.idl";
 
 	preface %{
