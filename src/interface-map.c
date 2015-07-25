@@ -290,3 +290,16 @@ int interface_map_dumpdot(struct interface_map *index)
 
         return 0;
 }
+
+struct interface_map_entry *
+interface_map_inherit_entry(struct interface_map *map,
+                           struct interface_map_entry *entry)
+{
+        struct interface_map_entry *res = NULL;
+
+        if ((entry != NULL) &&
+            (entry->inherit_idx != -1)) {
+                res = &map->entries[entry->inherit_idx];
+        }
+        return res;
+}

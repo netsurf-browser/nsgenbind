@@ -13,10 +13,6 @@
 struct options {
 	char *infilename; /**< binding source */
 	char *outdirname; /**< output directory */
-FILE *hdrfilehandle;
-char *hdrfilename;
-char *outfilename;
-FILE *outfilehandle;
 	char *idlpath; /**< path to IDL files */
 
 	bool verbose; /**< verbose processing */

@@ -17,8 +17,9 @@
 #include "options.h"
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
-#include "jsapi-libdom.h"
 #include "interface-map.h"
+#include "jsapi-libdom.h"
+#include "duk-libdom.h"
 
 struct options *options;
 
@@ -84,28 +85,6 @@ static struct options* process_cmdline(int argc, char **argv)
         return options;
 
 }
-
-static int generate_binding(struct genbind_node *binding_node, void *ctx)
-{
-        struct genbind_node *genbind_root = ctx;
-        char *type;
-        int res = 10;
-
-        type = genbind_node_gettext(
-                genbind_node_find_type(
-                        genbind_node_getnode(binding_node),
-                        NULL,
-                        GENBIND_NODE_TYPE_TYPE));
-
-        if (strcmp(type, "jsapi_libdom") == 0) {
-                res = jsapi_libdom_output(options, genbind_root, binding_node);
-        } else {
-                fprintf(stderr, "Error: unsupported binding type \"%s\"\n", type);
-        }
-
-        return res;
-}
-
 
 static int webidl_file_cb(struct genbind_node *node, void *ctx)
 {
@@ -237,24 +216,17 @@ int main(int argc, char **argv)
         /* dump the interface mapping */
         interface_map_dump(interface_map);
         interface_map_dumpdot(interface_map);
-#if 0
 
-        /* generate output for each binding */
-        res = genbind_node_foreach_type(genbind_root,
-                                        GENBIND_NODE_TYPE_BINDING,
-                                        generate_binding,
-                                        genbind_root);
-        if (res != 0) {
-                fprintf(stderr, "Error: output failed with code %d\n", res);
-                if (options->outfilename != NULL) {
-                        unlink(options->outfilename);
-                }
-                if (options->hdrfilename != NULL) {
-                        unlink(options->hdrfilename);
-                }
-                return res;
+        /* generate binding */
+        switch (bindingtype) {
+        case BINDINGTYPE_DUK_LIBDOM:
+                res = duk_libdom_output(genbind_root, webidl_root, interface_map);
+                break;
+
+        default:
+                fprintf(stderr, "Unable to generate binding of this type\n");
+                res = 7;
         }
 
-#endif
-        return 0;
+        return res;
 }

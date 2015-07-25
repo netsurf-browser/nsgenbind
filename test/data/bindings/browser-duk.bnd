@@ -15,17 +15,29 @@ binding duk_libdom {
 	webidl "console.idl";
 
 	preface %{
+/* DukTape JavaScript bindings for NetSurf browser
+ *
+ * Copyright 2015 Vincent Sanders <vince@netsurf-browser.org>
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ * Released under the terms of the MIT License,
+ *        http://www.opensource.org/licenses/mit-license
+ */
 		%};
 
 	prologue %{
+/* binding prologue */
 		%};
 
 	epilogue %{
+/* binding epilogue */
 		%};
 
 	postface %{
+/* binding postface */
 		%};	
 }
+
+#include "HTMLUnknownElement.bnd"
 
 class Node {
 	private "dom_node *" node;

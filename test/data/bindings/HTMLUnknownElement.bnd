@@ -1,0 +1,17 @@
+class HTMLUnknownElement {
+	preface %{
+/* class pre */
+		%};
+
+	prologue %{
+/* class pro  */
+		%};
+
+	epilogue %{
+/* class epi */
+		%};
+
+	postface %{
+/* class post */
+		%};	
+}
