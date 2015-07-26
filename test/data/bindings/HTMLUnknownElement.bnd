@@ -15,3 +15,5 @@ class HTMLUnknownElement {
 /* class post */
 		%};	
 }
+
+init HTMLUnknownElement("struct dom_html_element *" html_unknown_element::html_element);

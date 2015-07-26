@@ -32,6 +32,65 @@ static void nsgenbind_error(YYLTYPE *locp,
     errtxt = strdup(str);
 }
 
+static struct genbind_node *
+add_method(struct genbind_node **genbind_ast,
+           long methodtype,
+           struct genbind_node *declarator,
+           char *cdata)
+{
+        struct genbind_node *res_node;
+        struct genbind_node *method_node;
+        struct genbind_node *class_node;
+        struct genbind_node *cdata_node;
+        char *class_name;
+
+        /* extract the class name from the declarator */
+        class_name = genbind_node_gettext(
+                genbind_node_find_type(
+                        genbind_node_getnode(
+                                genbind_node_find_type(
+                                        declarator,
+                                        NULL,
+                                        GENBIND_NODE_TYPE_CLASS)),
+                        NULL,
+                        GENBIND_NODE_TYPE_IDENT));
+
+        if (cdata == NULL) {
+                cdata_node = declarator;
+        } else {
+                cdata_node = genbind_new_node(GENBIND_NODE_TYPE_CDATA,
+                                              declarator,
+                                              cdata);
+        }
+
+        /* generate method node */
+        method_node = genbind_new_node(GENBIND_NODE_TYPE_METHOD,
+                                 NULL,
+                                 genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
+                                                  cdata_node,
+                                                  (void *)methodtype));
+
+        class_node = genbind_node_find_type_ident(*genbind_ast,
+                                                  NULL,
+                                                  GENBIND_NODE_TYPE_CLASS,
+                                                  class_name);
+        if (class_node == NULL) {
+                /* no existing class so manufacture one and attach method */
+                res_node = genbind_new_node(GENBIND_NODE_TYPE_CLASS, NULL,
+                                      genbind_new_node(GENBIND_NODE_TYPE_IDENT,
+                                                       method_node,
+                                                       class_name));
+
+        } else {
+                /* update the existing class */
+
+                /* link member node into class_node */
+                genbind_node_add(class_node, method_node);
+
+                res_node = NULL; /* updating so no need to add a new node */
+        }
+        return res_node;
+}
 
 %}
 
@@ -199,6 +258,17 @@ TypeIdent
           $$ = genbind_new_node(GENBIND_NODE_TYPE_IDENT,
                  genbind_new_node(GENBIND_NODE_TYPE_TYPE, NULL, $1), $2);
         }
+        |
+        TOK_STRING_LITERAL TOK_IDENTIFIER TOK_DBLCOLON TOK_IDENTIFIER
+        {
+          $$ = genbind_new_node(GENBIND_NODE_TYPE_IDENT,
+                       genbind_new_node(GENBIND_NODE_TYPE_IDENT,
+                               genbind_new_node(GENBIND_NODE_TYPE_TYPE, 
+                                                NULL, 
+                                                $1),
+                                        $2),
+                                $4);
+        }
         ;
 
 Preface
@@ -330,54 +400,14 @@ Method
         :
         MethodType MethodDeclarator CBlock
         {
-                struct genbind_node *declarator;
-                struct genbind_node *method_node;
-                struct genbind_node *class_node;
-                char *class_name;
-
-                declarator = $2;
-
-                /* extract the class name from the declarator */
-                class_name = genbind_node_gettext(
-                        genbind_node_find_type(
-                                genbind_node_getnode(
-                                        genbind_node_find_type(
-                                                declarator,
-                                                NULL,
-                                                GENBIND_NODE_TYPE_CLASS)),
-                                NULL,
-                                GENBIND_NODE_TYPE_IDENT));
-
-                /* generate method node */
-                method_node = genbind_new_node(GENBIND_NODE_TYPE_METHOD, NULL,
-                        genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
-                                genbind_new_node(GENBIND_NODE_TYPE_CDATA,
-                                                 declarator, $3),
-                                         (void *)$1));
-
-
-
-                class_node = genbind_node_find_type_ident(*genbind_ast,
-                                                          NULL,
-                                                          GENBIND_NODE_TYPE_CLASS,
-                                                          class_name);
-                if (class_node == NULL) {
-                        /* no existing class so manufacture one and attach method */
-                        $$ = genbind_new_node(GENBIND_NODE_TYPE_CLASS, NULL,
-                                      genbind_new_node(GENBIND_NODE_TYPE_IDENT,
-                                                       method_node,
-                                                       class_name));
-
-                } else {
-                        /* update the existing class */
-
-                        /* link member node into class_node */
-                        genbind_node_add(class_node, method_node);
-
-                        $$ = NULL; /* updating so no need to add a new node */
-                }
+                $$ = add_method(genbind_ast, $1, $2, $3);
         }
-
+        |
+        MethodType MethodDeclarator ';'
+        {
+                $$ = add_method(genbind_ast, $1, $2, NULL);
+        }
+        ;
 
 Class
         :
