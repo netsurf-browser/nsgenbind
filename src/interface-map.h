@@ -38,6 +38,9 @@ struct interface_map_entry {
                            * might lowercase the name or add underscores
                            * instead of caps
                            */
+        int class_init_argc; /**< The number of parameters on the class
+                              * initializer.
+                              */
 };
 
 struct interface_map {

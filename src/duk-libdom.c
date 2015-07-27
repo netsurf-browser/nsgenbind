@@ -186,9 +186,11 @@ static int output_ducky_safe_get_private(FILE* outf, char *class_name, int idx)
 static int
 output_interface_constructor(FILE* outf, struct interface_map_entry *interfacee)
 {
+        int init_argc;
+
         /* constructor definition */
         fprintf(outf,
-                "duk_ret_t %s_%s___constructor(duk_context *ctx)\n",
+                "static duk_ret_t %s_%s___constructor(duk_context *ctx)\n",
                 DLPFX, interfacee->class_name);
         fprintf(outf,"{\n");
 
@@ -196,8 +198,15 @@ output_interface_constructor(FILE* outf, struct interface_map_entry *interfacee)
 
         /* generate call to initialisor */
         fprintf(outf,
-                "\t%s_%s___init(ctx, priv, duk_get_pointer(ctx, 1));\n",
+                "\t%s_%s___init(ctx, priv",
                 DLPFX, interfacee->class_name);
+        for (init_argc = 1;
+             init_argc <= interfacee->class_init_argc;
+             init_argc++) {
+                fprintf(outf, ", duk_get_pointer(ctx, %d)", init_argc);
+        }
+        fprintf(outf, ");\n");
+
 
         fprintf(outf, "\tduk_set_top(ctx, 1);\n");
         fprintf(outf, "\treturn 1;\n");
@@ -215,7 +224,7 @@ output_interface_destructor(FILE* outf, struct interface_map_entry *interfacee)
 {
         /* destructor definition */
         fprintf(outf,
-                "duk_ret_t %s_%s___destructor(duk_context *ctx)\n",
+                "static duk_ret_t %s_%s___destructor(duk_context *ctx)\n",
                 DLPFX, interfacee->class_name);
         fprintf(outf,"{\n");
 
@@ -351,11 +360,15 @@ output_interface_init(FILE* outf,
                 "void %s_%s___init(duk_context *ctx, %s_private_t *priv",
                 DLPFX, interfacee->class_name, interfacee->class_name);
 
+        /* count the number of arguments on the initializer */
+        interfacee->class_init_argc = 0;
+
         /* output the paramters on the method (if any) */
         param_node = genbind_node_find_type(
                 genbind_node_getnode(init_node),
                 NULL, GENBIND_NODE_TYPE_PARAMETER);
         while (param_node != NULL) {
+                interfacee->class_init_argc++;
                 fprintf(outf, ", ");
                 output_cdata(outf, param_node, GENBIND_NODE_TYPE_TYPE);
                 output_cdata(outf, param_node, GENBIND_NODE_TYPE_IDENT);
@@ -402,8 +415,8 @@ output_interface_fini(FILE* outf,
 
         /* finaliser definition */
         fprintf(outf,
-                "void dukky_%s___fini(duk_context *ctx, %s_private_t *priv)\n",
-                interfacee->class_name, interfacee->class_name);
+                "void %s_%s___fini(duk_context *ctx, %s_private_t *priv)\n",
+                DLPFX, interfacee->class_name, interfacee->class_name);
         fprintf(outf,"{\n");
 
         /* generate log statement */
@@ -418,14 +431,107 @@ output_interface_fini(FILE* outf,
         /* if this interface inherits ensure we call its finaliser */
         if (inherite != NULL) {
                 fprintf(outf,
-                        "\tdukky_%s___fini(ctx, &priv->parent);\n",
-                        inherite->class_name);
+                        "\t%s_%s___fini(ctx, &priv->parent);\n",
+                        DLPFX, inherite->class_name);
         }
         fprintf(outf, "}\n\n");
 
         return 0;
 }
 
+/**
+ * generate code that gets a prototype by name
+ */
+static int output_get_prototype(FILE* outf, const char *interface_name)
+{
+        char *proto_name;
+        int pnamelen;
+
+        /* duplicate the interface name in upper case */
+        pnamelen = strlen(interface_name) + 1; /* allow for null byte */
+        proto_name = malloc(pnamelen);
+        for ( ; pnamelen >= 0; pnamelen--) {
+                proto_name[pnamelen] = toupper(interface_name[pnamelen]);
+        }
+
+        fprintf(outf,"\tduk_get_global_string(ctx, PROTO_MAGIC);\n");
+        fprintf(outf,"\tduk_get_prop_string(ctx, -1, PROTO_NAME(%s));\n",
+                proto_name);
+        fprintf(outf,"\tduk_replace(ctx, -2);\n");
+
+        free(proto_name);
+
+        return 0;
+}
+
+/**
+ * generate code that sets a destructor in a prototype
+ */
+static int output_set_destructor(FILE* outf, char *class_name, int idx)
+{
+        fprintf(outf, "\t/* Set the destructor */\n");
+        fprintf(outf, "\tduk_dup(ctx, %d);\n", idx);
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s___destructor, 1);\n",
+                DLPFX, class_name);
+        fprintf(outf, "\tduk_set_finalizer(ctx, -2);\n");
+        fprintf(outf, "\tduk_pop(ctx);\n\n");
+
+        return 0;
+}
+
+/**
+ * generate code that sets a constructor in a prototype
+ */
+static int
+output_set_constructor(FILE* outf, char *class_name, int idx, int argc)
+{
+        fprintf(outf, "\t/* Set the constructor */\n");
+        fprintf(outf, "\tduk_dup(ctx, %d);\n", idx);
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s___constructor, %d);\n",
+                DLPFX, class_name, 1 + argc);
+        fprintf(outf, "\tduk_put_prop_string(ctx, -2, INIT_MAGIC);\n");
+        fprintf(outf, "\tduk_pop(ctx);\n\n");
+
+        return 0;
+}
+
+/**
+ * generate the interface prototype creator
+ */
+static int
+output_interface_prototype(FILE* outf,
+                           struct interface_map_entry *interfacee,
+                           struct interface_map_entry *inherite)
+{
+        /* prototype definition */
+        fprintf(outf,
+                "duk_ret_t %s_%s___proto(duk_context *ctx)\n",
+                DLPFX, interfacee->class_name);
+        fprintf(outf,"{\n");
+
+        /* generate prototype chaining if interface has a parent */
+        if (inherite != NULL) {
+                fprintf(outf,
+                      "\t/* Set this prototype's prototype (left-parent) */\n");
+                output_get_prototype(outf, inherite->name);
+                fprintf(outf, "\tduk_set_prototype(ctx, 0);\n\n");
+        }
+
+        /* generate setting of destructor */
+        output_set_destructor(outf, interfacee->class_name, 0);
+
+        /* generate setting of constructor */
+        output_set_constructor(outf,
+                               interfacee->class_name,
+                               0,
+                               interfacee->class_init_argc);
+
+        fprintf(outf,"\treturn 1; /* The prototype object */\n");
+
+        fprintf(outf, "}\n\n");
+
+        return 0;
+}
 
 /**
  * generate a source file to implement an interface using duk and libdom.
@@ -493,6 +599,9 @@ static int output_interface(struct genbind_node *genbind,
 
         /* destructor */
         output_interface_destructor(ifacef, interfacee);
+
+        /* prototype */
+        output_interface_prototype(ifacef, interfacee, inherite);
 
         fprintf(ifacef, "\n");
 
