@@ -132,6 +132,34 @@ find_class_method(struct genbind_node *node,
 }
 
 /**
+ * find method by type on class with a specific ident
+ */
+static struct genbind_node *
+find_class_method_ident(struct genbind_node *node,
+                        struct genbind_node *prev,
+                        enum genbind_node_type nodetype,
+                        char *ident)
+{
+        struct genbind_node *res_node;
+        char *method_ident;
+
+        res_node = find_class_method(node, prev, nodetype);
+        while (res_node != NULL) {
+              method_ident = genbind_node_gettext(
+                      genbind_node_find_type(
+                              genbind_node_getnode(res_node),
+                              NULL,
+                              GENBIND_NODE_TYPE_IDENT));
+              if ((method_ident != NULL) && strcmp(ident, method_ident) == 0) {
+                      break;
+              }
+
+              res_node = find_class_method(node, res_node, nodetype);
+        }
+        return res_node;
+}
+
+/**
  * output character data of node of given type.
  *
  * used for pre/pro/epi/post sections
@@ -158,6 +186,7 @@ output_cdata(FILE* outf,
  */
 static int output_duckky_create_private(FILE* outf, char *class_name)
 {
+        fprintf(outf, "\t/* create private data and attach to instance */");
         fprintf(outf, "\t%s_private_t *priv = calloc(1, sizeof(*priv));\n",
                 class_name);
         fprintf(outf, "\tif (priv == NULL) return 0;\n");
@@ -453,11 +482,11 @@ static int output_get_prototype(FILE* outf, const char *interface_name)
         for ( ; pnamelen >= 0; pnamelen--) {
                 proto_name[pnamelen] = toupper(interface_name[pnamelen]);
         }
-
-        fprintf(outf,"\tduk_get_global_string(ctx, PROTO_MAGIC);\n");
-        fprintf(outf,"\tduk_get_prop_string(ctx, -1, PROTO_NAME(%s));\n",
+        fprintf(outf, "\t/* get prototype */\n");
+        fprintf(outf, "\tduk_get_global_string(ctx, PROTO_MAGIC);\n");
+        fprintf(outf, "\tduk_get_prop_string(ctx, -1, PROTO_NAME(%s));\n",
                 proto_name);
-        fprintf(outf,"\tduk_replace(ctx, -2);\n");
+        fprintf(outf, "\tduk_replace(ctx, -2);\n");
 
         free(proto_name);
 
@@ -496,6 +525,135 @@ output_set_constructor(FILE* outf, char *class_name, int idx, int argc)
 }
 
 /**
+ * generate code that adds a method in a prototype
+ */
+static int
+output_add_method(FILE* outf, char *class_name, char *method, int argc)
+{
+        //#define DUKKY_ADD_METHOD(klass,meth,nargs)
+        fprintf(outf, "\t/* Add a method */\n");
+        fprintf(outf, "\tduk_dup(ctx, 0);\n");
+        fprintf(outf, "\tduk_push_string(ctx, %s);\n", method);
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s, ",
+                DLPFX, class_name, method);
+        if (argc == -1) {
+                fprintf(outf, "DUK_VARARGS);\n");
+
+        } else {
+                fprintf(outf, "%d);\n", argc);
+        }
+        fprintf(outf, "\tDUKKY_DUMP_STACK(ctx);\n");
+        fprintf(outf, "\tduk_def_prop(ctx, -3,\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_VALUE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_WRITABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\tduk_pop(ctx)\n\n");
+
+        return 0;
+}
+
+/**
+ * count the number of arguments to an operation
+ *
+ * \todo this needs to consider multiple lists (overloaded calls?), varadic
+ *       parameters.
+ *
+ * \retuen number of arguments or -1 if variable
+ */
+static int count_operation_arguments(struct webidl_node *node)
+{
+        int argc;
+        struct webidl_node *list_node;
+        list_node = webidl_node_find_type(
+                webidl_node_getnode(node),
+                NULL,
+                WEBIDL_NODE_TYPE_LIST);
+        if (list_node == NULL) {
+                /** \todo is having no argument list an error or a warning? */
+                return 0;
+        }
+        argc = webidl_node_enumerate_type(webidl_node_getnode(list_node),
+                                          WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT);
+        if (argc != 0) {
+                return -1;
+        }
+        return webidl_node_enumerate_type(webidl_node_getnode(list_node),
+                                          WEBIDL_NODE_TYPE_ARGUMENT);
+}
+
+/**
+ * generate a prototype add for a single class method
+ */
+static int
+output_prototype_method(FILE* outf,
+                        struct interface_map_entry *interfacee,
+                        struct webidl_node *op_node)
+{
+        char *op_name;
+        int op_argc;
+
+        op_name = webidl_node_gettext(
+                webidl_node_find_type(
+                        webidl_node_getnode(op_node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_IDENT));
+
+        op_argc = count_operation_arguments(op_node);
+
+        output_add_method(outf, interfacee->class_name, op_name, op_argc);
+
+        return 0;
+
+}
+
+/**
+ * generate prototype method definitions
+ */
+static int
+output_prototype_methods(FILE *outf, struct interface_map_entry *interfacee)
+{
+        int res;
+        struct webidl_node *list_node;
+        struct webidl_node *op_node; /* operation on list node */
+
+        /* iterate each list node within the interface */
+        list_node = webidl_node_find_type(
+                webidl_node_getnode(interfacee->node),
+                NULL,
+                WEBIDL_NODE_TYPE_LIST);
+
+        while (list_node != NULL) {
+                /* iterate through operations in a list */
+                op_node = webidl_node_find_type(
+                        webidl_node_getnode(list_node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_OPERATION);
+
+                while (op_node != NULL) {
+                        res = output_prototype_method(outf, interfacee, op_node);
+                        if (res != 0) {
+                                return res;
+                        }
+
+                        op_node = webidl_node_find_type(
+                                webidl_node_getnode(list_node),
+                                op_node,
+                                WEBIDL_NODE_TYPE_OPERATION);
+                }
+
+
+                list_node = webidl_node_find_type(
+                        webidl_node_getnode(interfacee->node),
+                        list_node,
+                        WEBIDL_NODE_TYPE_LIST);
+        }
+
+        return 0;
+
+}
+
+/**
  * generate the interface prototype creator
  */
 static int
@@ -517,6 +675,9 @@ output_interface_prototype(FILE* outf,
                 fprintf(outf, "\tduk_set_prototype(ctx, 0);\n\n");
         }
 
+        /* generate setting of methods */
+        output_prototype_methods(outf, interfacee);
+
         /* generate setting of destructor */
         output_set_destructor(outf, interfacee->class_name, 0);
 
@@ -529,6 +690,107 @@ output_interface_prototype(FILE* outf,
         fprintf(outf,"\treturn 1; /* The prototype object */\n");
 
         fprintf(outf, "}\n\n");
+
+        return 0;
+}
+
+/**
+ * generate code that gets a private pointer for a method
+ */
+static int
+output_get_method_private(FILE* outf, char *class_name)
+{
+        fprintf(outf, "\t/* Get private data for method */\n");
+        fprintf(outf, "\t%s_private_t *priv = NULL;\n", class_name);
+        fprintf(outf, "\tduk_push_this(ctx);\n");
+        fprintf(outf, "\tduk_get_prop_string(ctx, -1, PRIVATE_MAGIC);\n");
+        fprintf(outf, "\tpriv = duk_get_pointer(ctx, -1);\n");
+        fprintf(outf, "\tduk_pop_2(ctx);\n");
+        fprintf(outf, "\tif (priv == NULL) return 0; /* can do? No can do. */\n\n");
+        return 0;
+}
+
+/**
+ * generate a single class method for an interface operation
+ */
+static int
+output_interface_operation(FILE* outf,
+                           struct interface_map_entry *interfacee,
+                           struct webidl_node *op_node)
+{
+        char *op_name;
+        struct genbind_node *method_node;
+
+        op_name = webidl_node_gettext(
+                webidl_node_find_type(
+                        webidl_node_getnode(op_node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_IDENT));
+
+        method_node = find_class_method_ident(interfacee->class,
+                                              NULL,
+                                              GENBIND_METHOD_TYPE_METHOD,
+                                              op_name);
+
+        /* method definition */
+        fprintf(outf,
+                "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
+                DLPFX, interfacee->class_name, op_name);
+        fprintf(outf,"{\n");
+
+        output_get_method_private(outf, interfacee->class_name);
+
+        output_cdata(outf, method_node, GENBIND_NODE_TYPE_CDATA);
+
+        fprintf(outf,"\treturn 0;\n");
+
+        fprintf(outf, "}\n\n");
+
+        return 0;
+
+}
+
+/**
+ * generate class methods for each interface operation
+ */
+static int
+output_interface_operations(FILE* outf, struct interface_map_entry *interfacee)
+{
+        int res;
+        struct webidl_node *list_node;
+        struct webidl_node *op_node; /* operation on list node */
+
+        /* iterate each list node within the interface */
+        list_node = webidl_node_find_type(
+                webidl_node_getnode(interfacee->node),
+                NULL,
+                WEBIDL_NODE_TYPE_LIST);
+
+        while (list_node != NULL) {
+                /* iterate through operations in a list */
+                op_node = webidl_node_find_type(
+                        webidl_node_getnode(list_node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_OPERATION);
+
+                while (op_node != NULL) {
+                        res = output_interface_operation(outf, interfacee, op_node);
+                        if (res != 0) {
+                                return res;
+                        }
+
+                        op_node = webidl_node_find_type(
+                                webidl_node_getnode(list_node),
+                                op_node,
+                                WEBIDL_NODE_TYPE_OPERATION);
+                }
+
+
+                list_node = webidl_node_find_type(
+                        webidl_node_getnode(interfacee->node),
+                        list_node,
+                        WEBIDL_NODE_TYPE_LIST);
+        }
 
         return 0;
 }
@@ -599,6 +861,11 @@ static int output_interface(struct genbind_node *genbind,
 
         /* destructor */
         output_interface_destructor(ifacef, interfacee);
+
+        /* operations */
+        output_interface_operations(ifacef, interfacee);
+
+        /* attributes */
 
         /* prototype */
         output_interface_prototype(ifacef, interfacee, inherite);

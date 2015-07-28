@@ -147,8 +147,18 @@ fini Node()
 	dom_node_unref(priv->node);
 %}
 
-method Node::AppendChild()
+method Node::appendChild()
 %{
+	if (!dukky_instanceof(ctx, PROTO_NAME(NODE))) return 0;
+
+	DUKKY_SAFE_GET_ANOTHER(other,node,0);
+
+	dom_exception err;
+	dom_node *spare;
+
+	err = dom_node_append_child(priv->node, other->node, &spare);
+	if (err != DOM_NO_ERR) return 0;
+	dom_node_unref(spare);
 %}
 
 getter Node::aprop()
