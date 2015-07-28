@@ -101,7 +101,8 @@ genbind_node_find(struct genbind_node *node,
                   genbind_callback_t *cb,
                   void *ctx);
 
-/** Depth first left hand search returning nodes of the specified type
+/**
+ * Depth first left hand search returning nodes of the specified type
  *
  * @param node The node to start the search from
  * @param prev The node at which to stop the search, either NULL to
@@ -115,7 +116,8 @@ genbind_node_find_type(struct genbind_node *node,
                        struct genbind_node *prev,
                        enum genbind_node_type nodetype);
 
-/** count how many nodes of a specified type.
+/**
+ * count how many nodes of a specified type.
  *
  * Enumerate how many nodes of the specified type there are by
  * performing a depth first search for nodes of the given type and
@@ -129,7 +131,9 @@ int
 genbind_node_enumerate_type(struct genbind_node *node,
                             enum genbind_node_type type);
 
-/** Depth first left hand search returning nodes of the specified type
+
+/**
+ * Depth first left hand search returning nodes of the specified type
  *    with an ident child node with matching text
  *
  * @param node The node to start the search from
@@ -145,7 +149,9 @@ genbind_node_find_type_ident(struct genbind_node *node,
                              enum genbind_node_type nodetype,
                              const char *ident);
 
-/** Returning node of the specified type with a GENBIND_NODE_TYPE_TYPE
+
+/**
+ * Returning node of the specified type with a GENBIND_NODE_TYPE_TYPE
  * subnode with matching text.
  *
  * This is a conveniance wrapper around nested calls to
@@ -167,7 +173,43 @@ genbind_node_find_type_type(struct genbind_node *node,
                              enum genbind_node_type nodetype,
                              const char *type_text);
 
-/** Iterate all nodes of a certian type from a node with a callback.
+
+/**
+ * Find a method node of a given method type
+ *
+ * \param node A node of type GENBIND_NODE_TYPE_CLASS to search for methods.
+ * \param prev The node at which to stop the search, either NULL to
+ *             search the full tree depth (initial search) or the result
+ *             of a previous search to continue.
+ * \param methodtype The type of method to find.
+ * \return A node of type GENBIND_NODE_TYPE_METHOD on success or NULL on faliure
+ */
+struct genbind_node *
+genbind_node_find_method(struct genbind_node *node,
+                         struct genbind_node *prev,
+                         enum genbind_method_type methodtype);
+
+
+/**
+ * Find a method node of a given method type and identifier
+ *
+ * \param node A node of type GENBIND_NODE_TYPE_CLASS to search for methods.
+ * \param prev The node at which to stop the search, either NULL to
+ *             search the full tree depth (initial search) or the result
+ *             of a previous search to continue.
+ * \param methodtype The type of method to find.
+ * \param ident The identifier to search for
+ * \return A node of type GENBIND_NODE_TYPE_METHOD on success or NULL on faliure
+ */
+struct genbind_node *
+genbind_node_find_method_ident(struct genbind_node *node,
+                               struct genbind_node *prev,
+                               enum genbind_method_type methodtype,
+                               const char *ident);
+
+
+/**
+ * Iterate all nodes of a certian type from a node with a callback.
  *
  * Depth first search for nodes of the given type calling the callback
  * with context.

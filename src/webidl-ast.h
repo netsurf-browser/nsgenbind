@@ -62,9 +62,10 @@ enum webidl_type {
 };
 
 enum webidl_type_modifier {
+        WEBIDL_TYPE_MODIFIER_NONE,
 	WEBIDL_TYPE_MODIFIER_UNSIGNED,
 	WEBIDL_TYPE_MODIFIER_UNRESTRICTED,
-	WEBIDL_TYPE_READONLY,
+	WEBIDL_TYPE_MODIFIER_READONLY,
 };
 
 struct webidl_node;
@@ -86,7 +87,7 @@ struct webidl_node *webidl_node_add(struct webidl_node *node, struct webidl_node
 /* node contents acessors */
 char *webidl_node_gettext(struct webidl_node *node);
 struct webidl_node *webidl_node_getnode(struct webidl_node *node);
-int webidl_node_getint(struct webidl_node *node);
+int *webidl_node_getint(struct webidl_node *node);
 enum webidl_node_type webidl_node_gettype(struct webidl_node *node);
 
 /* node searches */

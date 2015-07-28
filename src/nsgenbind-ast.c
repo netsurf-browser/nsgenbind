@@ -288,6 +288,69 @@ genbind_node_find_type_type(struct genbind_node *node,
         return found_node;
 }
 
+
+/* exported interface documented in nsgenbind-ast.h */
+struct genbind_node *
+genbind_node_find_method(struct genbind_node *node,
+                         struct genbind_node *prev,
+                         enum genbind_method_type methodtype)
+{
+        struct genbind_node *res_node;
+
+        res_node = genbind_node_find_type(
+                genbind_node_getnode(node),
+                prev, GENBIND_NODE_TYPE_METHOD);
+        while (res_node != NULL) {
+                struct genbind_node *type_node;
+                enum genbind_method_type *type;
+
+                type_node = genbind_node_find_type(
+                        genbind_node_getnode(res_node),
+                        NULL, GENBIND_NODE_TYPE_METHOD_TYPE);
+
+                type = (enum genbind_method_type *)genbind_node_getint(type_node);
+                if (*type == methodtype) {
+                        break;
+                }
+
+                res_node = genbind_node_find_type(
+                        genbind_node_getnode(node),
+                        res_node, GENBIND_NODE_TYPE_METHOD);
+        }
+
+        return res_node;
+}
+
+
+/* exported interface documented in nsgenbind-ast.h */
+struct genbind_node *
+genbind_node_find_method_ident(struct genbind_node *node,
+                               struct genbind_node *prev,
+                               enum genbind_method_type nodetype,
+                               const char *ident)
+{
+        struct genbind_node *res_node;
+        char *method_ident;
+
+        res_node = genbind_node_find_method(node, prev, nodetype);
+        while (res_node != NULL) {
+              method_ident = genbind_node_gettext(
+                      genbind_node_find_type(
+                              genbind_node_getnode(res_node),
+                              NULL,
+                              GENBIND_NODE_TYPE_IDENT));
+              if ((method_ident != NULL) &&
+                  strcmp(ident, method_ident) == 0) {
+                      break;
+              }
+
+              res_node = genbind_node_find_method(node, res_node, nodetype);
+        }
+        return res_node;
+}
+
+
+/* exported interface documented in nsgenbind-ast.h */
 int genbind_cmp_node_type(struct genbind_node *node, void *ctx)
 {
         if (node->type == (enum genbind_node_type)ctx)

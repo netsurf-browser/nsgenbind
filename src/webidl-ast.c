@@ -277,7 +277,7 @@ char *webidl_node_gettext(struct webidl_node *node)
 }
 
 /* exported interface defined in webidl-ast.h */
-int
+int *
 webidl_node_getint(struct webidl_node *node)
 {
 	if (node != NULL) {
@@ -285,14 +285,13 @@ webidl_node_getint(struct webidl_node *node)
 		case WEBIDL_NODE_TYPE_MODIFIER:
 		case WEBIDL_NODE_TYPE_TYPE_BASE:
 		case WEBIDL_NODE_TYPE_LITERAL_INT:
-			return node->r.number;
+			return &node->r.number;
 
 		default:
 			break;
 		}
 	}
-	return -1;
-
+	return NULL;
 }
 
 /* exported interface defined in webidl-ast.h */
@@ -400,6 +399,7 @@ static int webidl_ast_dump(FILE *dumpf, struct webidl_node *node, int indent)
 {
 	const char *SPACES="                                                                               ";
 	char *txt;
+        int *value;
 	while (node != NULL) {
                 fprintf(dumpf, "%.*s%s", indent, SPACES,
                         webidl_node_type_to_str(node->type));
@@ -415,8 +415,10 @@ static int webidl_ast_dump(FILE *dumpf, struct webidl_node *node, int indent)
 				webidl_ast_dump(dumpf, next, indent + 2);
 			} else {
 				/* not txt or node has to be an int */
-				fprintf(dumpf, ": %d\n",
-                                       webidl_node_getint(node));
+                                value = webidl_node_getint(node);
+                                if (value != NULL) {
+                                        fprintf(dumpf, ": %d\n", *value);
+                                }
 			}
 		} else {
 			fprintf(dumpf, ": \"%s\"\n", txt);

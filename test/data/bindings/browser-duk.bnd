@@ -161,10 +161,23 @@ method Node::appendChild()
 	dom_node_unref(spare);
 %}
 
-getter Node::aprop()
+getter Node::textContent()
 %{
+	dom_exception exc;
+	dom_string *content;
+
+	exc = dom_node_get_text_content(priv->node, &content);
+	if (exc != DOM_NO_ERR) {
+		return 0;
+	}
+
+	if (content != NULL) {
+		duk_push_lstring(ctx, dom_string_data(content), dom_string_length(content));
+		dom_string_unref(content);
+		return 1;
+	}
 %}
 
-setter Node::aprop()
+setter Node::textContent()
 %{
 %}

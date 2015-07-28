@@ -98,68 +98,6 @@ static char *gen_class_name(struct interface_map_entry *interfacee)
 }
 
 /**
- * find method by type on class
- */
-static struct genbind_node *
-find_class_method(struct genbind_node *node,
-                  struct genbind_node *prev,
-                  enum genbind_node_type nodetype)
-{
-        struct genbind_node *res_node;
-
-        res_node = genbind_node_find_type(
-                genbind_node_getnode(node),
-                prev, GENBIND_NODE_TYPE_METHOD);
-        while (res_node != NULL) {
-                struct genbind_node *type_node;
-                enum genbind_node_type *type;
-
-                type_node = genbind_node_find_type(
-                        genbind_node_getnode(res_node),
-                        NULL, GENBIND_NODE_TYPE_METHOD_TYPE);
-
-                type = (enum genbind_node_type *)genbind_node_getint(type_node);
-                if (*type == nodetype) {
-                        break;
-                }
-
-                res_node = genbind_node_find_type(
-                        genbind_node_getnode(node),
-                        res_node, GENBIND_NODE_TYPE_METHOD);
-        }
-
-        return res_node;
-}
-
-/**
- * find method by type on class with a specific ident
- */
-static struct genbind_node *
-find_class_method_ident(struct genbind_node *node,
-                        struct genbind_node *prev,
-                        enum genbind_node_type nodetype,
-                        char *ident)
-{
-        struct genbind_node *res_node;
-        char *method_ident;
-
-        res_node = find_class_method(node, prev, nodetype);
-        while (res_node != NULL) {
-              method_ident = genbind_node_gettext(
-                      genbind_node_find_type(
-                              genbind_node_getnode(res_node),
-                              NULL,
-                              GENBIND_NODE_TYPE_IDENT));
-              if ((method_ident != NULL) && strcmp(ident, method_ident) == 0) {
-                      break;
-              }
-
-              res_node = find_class_method(node, res_node, nodetype);
-        }
-        return res_node;
-}
-
-/**
  * output character data of node of given type.
  *
  * used for pre/pro/epi/post sections
@@ -291,14 +229,14 @@ output_interface_inherit_init(FILE* outf,
         }
 
         /* find the initialisor method on the class (if any) */
-        init_node = find_class_method(interfacee->class,
-                                      NULL,
-                                      GENBIND_METHOD_TYPE_INIT);
+        init_node = genbind_node_find_method(interfacee->class,
+                                             NULL,
+                                             GENBIND_METHOD_TYPE_INIT);
 
 
-        inh_init_node = find_class_method(inherite->class,
-                                          NULL,
-                                          GENBIND_METHOD_TYPE_INIT);
+        inh_init_node = genbind_node_find_method(inherite->class,
+                                                 NULL,
+                                                 GENBIND_METHOD_TYPE_INIT);
 
 
 
@@ -380,9 +318,9 @@ output_interface_init(FILE* outf,
         int res;
 
         /* find the initialisor method on the class (if any) */
-        init_node = find_class_method(interfacee->class,
-                                      NULL,
-                                      GENBIND_METHOD_TYPE_INIT);
+        init_node = genbind_node_find_method(interfacee->class,
+                                             NULL,
+                                             GENBIND_METHOD_TYPE_INIT);
 
         /* initialisor definition */
         fprintf(outf,
@@ -438,9 +376,9 @@ output_interface_fini(FILE* outf,
         struct genbind_node *fini_node;
 
         /* find the finaliser method on the class (if any) */
-        fini_node = find_class_method(interfacee->class,
-                                      NULL,
-                                      GENBIND_METHOD_TYPE_FINI);
+        fini_node = genbind_node_find_method(interfacee->class,
+                                             NULL,
+                                             GENBIND_METHOD_TYPE_FINI);
 
         /* finaliser definition */
         fprintf(outf,
@@ -530,7 +468,6 @@ output_set_constructor(FILE* outf, char *class_name, int idx, int argc)
 static int
 output_add_method(FILE* outf, char *class_name, char *method, int argc)
 {
-        //#define DUKKY_ADD_METHOD(klass,meth,nargs)
         fprintf(outf, "\t/* Add a method */\n");
         fprintf(outf, "\tduk_dup(ctx, 0);\n");
         fprintf(outf, "\tduk_push_string(ctx, %s);\n", method);
@@ -653,6 +590,79 @@ output_prototype_methods(FILE *outf, struct interface_map_entry *interfacee)
 
 }
 
+static int
+output_populate_rw_property(FILE* outf, const char *class_name, const char *property)
+{
+        fprintf(outf, "\t/* Add read/write property */\n");
+        fprintf(outf, "\tduk_dup(ctx, 0);\n");
+        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", property);
+        fprintf(outf,
+                "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
+                DLPFX, class_name, property);
+        fprintf(outf,
+                "\tduk_push_c_function(ctx, %s_%s_%s_setter, 1);\n",
+                DLPFX, class_name, property);
+        fprintf(outf, "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_SETTER |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\tduk_pop(ctx)\n\n");
+
+        return 0;
+}
+
+static int
+output_populate_ro_property(FILE* outf, const char *class_name, const char *property)
+{
+        fprintf(outf, "\t/* Add readonly property */\n");
+        fprintf(outf, "\tduk_dup(ctx, 0);\n");
+        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", property);
+        fprintf(outf,
+                "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
+                DLPFX, class_name, property);
+        fprintf(outf,
+                "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\tduk_pop(ctx)\n\n");
+
+        return 0;
+}
+
+static int
+output_prototype_attribute(FILE *outf,
+                        struct interface_map_entry *interfacee,
+                        struct interface_map_attribute_entry *attributee)
+{
+        if (attributee->modifier == WEBIDL_TYPE_MODIFIER_READONLY) {
+                return output_populate_ro_property(outf,
+                                                   interfacee->class_name,
+                                                   attributee->name);
+        } else {
+                return output_populate_rw_property(outf,
+                                                   interfacee->class_name,
+                                                   attributee->name);
+        }
+}
+
+/**
+ * generate prototype attribute definitions
+ */
+static int
+output_prototype_attributes(FILE *outf, struct interface_map_entry *interfacee)
+{
+        int attrc;
+
+        for (attrc = 0; attrc < interfacee->attributec; attrc++) {
+                output_prototype_attribute(outf,
+                                        interfacee,
+                                        interfacee->attributev + attrc);
+        }
+
+        return 0;
+
+}
+
 /**
  * generate the interface prototype creator
  */
@@ -677,6 +687,9 @@ output_interface_prototype(FILE* outf,
 
         /* generate setting of methods */
         output_prototype_methods(outf, interfacee);
+
+        /* generate setting of attributes */
+        output_prototype_attributes(outf, interfacee);
 
         /* generate setting of destructor */
         output_set_destructor(outf, interfacee->class_name, 0);
@@ -727,10 +740,10 @@ output_interface_operation(FILE* outf,
                         NULL,
                         WEBIDL_NODE_TYPE_IDENT));
 
-        method_node = find_class_method_ident(interfacee->class,
-                                              NULL,
-                                              GENBIND_METHOD_TYPE_METHOD,
-                                              op_name);
+        method_node = genbind_node_find_method_ident(interfacee->class,
+                                                     NULL,
+                                                     GENBIND_METHOD_TYPE_METHOD,
+                                                     op_name);
 
         /* method definition */
         fprintf(outf,
@@ -747,7 +760,6 @@ output_interface_operation(FILE* outf,
         fprintf(outf, "}\n\n");
 
         return 0;
-
 }
 
 /**
@@ -790,6 +802,68 @@ output_interface_operations(FILE* outf, struct interface_map_entry *interfacee)
                         webidl_node_getnode(interfacee->node),
                         list_node,
                         WEBIDL_NODE_TYPE_LIST);
+        }
+
+        return 0;
+}
+
+/**
+ * Generate class property getter/setter for a single attribute
+ */
+static int
+output_interface_attribute(FILE* outf,
+                           struct interface_map_entry *interfacee,
+                           struct interface_map_attribute_entry *atributee)
+{
+        /* getter definition */
+        fprintf(outf,
+                "static duk_ret_t %s_%s_%s_getter(duk_context *ctx)\n",
+                DLPFX, interfacee->class_name, atributee->name);
+        fprintf(outf,"{\n");
+
+        output_get_method_private(outf, interfacee->class_name);
+
+        output_cdata(outf, atributee->getter, GENBIND_NODE_TYPE_CDATA);
+
+        fprintf(outf,"\treturn 0;\n");
+
+        fprintf(outf, "}\n\n");
+
+        /* readonly attributes have no setter */
+        if (atributee->modifier == WEBIDL_TYPE_MODIFIER_READONLY) {
+                return 0;
+        }
+
+        /* setter definition */
+        fprintf(outf,
+                "static duk_ret_t %s_%s_%s_setter(duk_context *ctx)\n",
+                DLPFX, interfacee->class_name, atributee->name);
+        fprintf(outf,"{\n");
+
+        output_get_method_private(outf, interfacee->class_name);
+
+        output_cdata(outf, atributee->setter, GENBIND_NODE_TYPE_CDATA);
+
+        fprintf(outf,"\treturn 0;\n");
+
+        fprintf(outf, "}\n\n");
+
+        return 0;
+}
+
+/**
+ * generate class property getters and setters for each interface attribute
+ */
+static int
+output_interface_attributes(FILE* outf,
+                            struct interface_map_entry *interfacee)
+{
+        int attrc;
+
+        for (attrc = 0; attrc < interfacee->attributec; attrc++) {
+                output_interface_attribute(outf,
+                                           interfacee,
+                                           interfacee->attributev + attrc);
         }
 
         return 0;
@@ -866,6 +940,7 @@ static int output_interface(struct genbind_node *genbind,
         output_interface_operations(ifacef, interfacee);
 
         /* attributes */
+        output_interface_attributes(ifacef, interfacee);
 
         /* prototype */
         output_interface_prototype(ifacef, interfacee, inherite);

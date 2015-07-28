@@ -12,12 +12,31 @@
 struct genbind_node;
 struct webidl_node;
 
+struct interface_map_operation_entry {
+        const char *name; /** operation name */
+        struct webidl_node *node; /**< AST operation node */
+        struct genbind_node *method; /**< method from binding (if any) */
+};
+
+struct interface_map_attribute_entry {
+        const char *name; /** attribute name */
+        struct webidl_node *node; /**< AST attribute node */
+        enum webidl_type_modifier modifier;
+        struct genbind_node *getter; /**< getter from binding (if any) */
+        struct genbind_node *setter; /**< getter from binding (if any) */
+};
+
 struct interface_map_entry {
         const char *name; /** interface name */
         struct webidl_node *node; /**< AST interface node */
         const char *inherit_name; /**< Name of interface inhertited from */
-        int operations; /**< number of operations on interface */
-        int attributes; /**< number of attributes on interface */
+
+        int operationc; /**< number of operations on interface */
+        struct interface_map_operation_entry *operationv;
+
+        int attributec; /**< number of attributes on interface */
+        struct interface_map_attribute_entry *attributev;
+
         int inherit_idx; /**< index into map of inherited interface or -1 for
 			  * not in map
 			  */
