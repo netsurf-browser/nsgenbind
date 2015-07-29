@@ -664,6 +664,54 @@ output_prototype_attributes(FILE *outf, struct interface_map_entry *interfacee)
 }
 
 /**
+ * output constants on the prototype
+ *
+ * \todo This implementation assumes the constant is a literal int and should
+ * check the type node base value.
+ */
+static int
+output_prototype_constant(FILE *outf,
+                        struct interface_map_entry *interfacee,
+                        struct interface_map_constant_entry *constante)
+{
+        int *value;
+
+        value = webidl_node_getint(
+                webidl_node_find_type(
+                        webidl_node_getnode(constante->node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_LITERAL_INT));
+
+
+        fprintf(outf, "\tduk_dup(ctx, 0);\n");
+        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", constante->name);
+        fprintf(outf, "\tduk_push_int(ctx, %d);\n", *value);
+        fprintf(outf, "\tduk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_WRITABLE | DUK_DEFPROP_HAVE_ENUMERABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\tduk_pop(ctx)\n\n");
+        return 0;
+}
+
+/**
+ * generate prototype constant definitions
+ */
+static int
+output_prototype_constants(FILE *outf, struct interface_map_entry *interfacee)
+{
+        int attrc;
+
+        for (attrc = 0; attrc < interfacee->constantc; attrc++) {
+                output_prototype_constant(outf,
+                                          interfacee,
+                                          interfacee->constantv + attrc);
+        }
+
+        return 0;
+
+}
+
+/**
  * generate the interface prototype creator
  */
 static int
@@ -690,6 +738,9 @@ output_interface_prototype(FILE* outf,
 
         /* generate setting of attributes */
         output_prototype_attributes(outf, interfacee);
+
+        /* generate setting of constants */
+        output_prototype_constants(outf, interfacee);
 
         /* generate setting of destructor */
         output_set_destructor(outf, interfacee->class_name, 0);

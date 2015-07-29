@@ -12,12 +12,14 @@
 struct genbind_node;
 struct webidl_node;
 
+/** map entry for operations on an interface */
 struct interface_map_operation_entry {
         const char *name; /** operation name */
         struct webidl_node *node; /**< AST operation node */
         struct genbind_node *method; /**< method from binding (if any) */
 };
 
+/** map entry for attributes on an interface */
 struct interface_map_attribute_entry {
         const char *name; /** attribute name */
         struct webidl_node *node; /**< AST attribute node */
@@ -26,6 +28,13 @@ struct interface_map_attribute_entry {
         struct genbind_node *setter; /**< getter from binding (if any) */
 };
 
+/** map entry for constants on an interface */
+struct interface_map_constant_entry {
+        const char *name; /** attribute name */
+        struct webidl_node *node; /**< AST constant node */
+};
+
+/** map entry for an interface */
 struct interface_map_entry {
         const char *name; /** interface name */
         struct webidl_node *node; /**< AST interface node */
@@ -36,6 +45,9 @@ struct interface_map_entry {
 
         int attributec; /**< number of attributes on interface */
         struct interface_map_attribute_entry *attributev;
+
+        int constantc; /**< number of constants on interface */
+        struct interface_map_constant_entry *constantv;
 
         int inherit_idx; /**< index into map of inherited interface or -1 for
 			  * not in map
@@ -62,6 +74,7 @@ struct interface_map_entry {
                               */
 };
 
+/** WebIDL interface map */
 struct interface_map {
         int entryc; /**< count of interfaces */
         struct interface_map_entry *entries;

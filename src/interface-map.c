@@ -114,6 +114,8 @@ interface_topoligical_sort(struct interface_map_entry *srcinf, int infc)
                 dstinf[idx].operationv = srcinf[inf].operationv;
                 dstinf[idx].attributec = srcinf[inf].attributec;
                 dstinf[idx].attributev = srcinf[inf].attributev;
+                dstinf[idx].constantc = srcinf[inf].constantc;
+                dstinf[idx].constantv = srcinf[inf].constantv;
                 dstinf[idx].class = srcinf[inf].class;
 
                 /* reduce refcount on inherit index if !=-1 */
@@ -302,6 +304,78 @@ attribute_map_new(struct webidl_node *interface,
         return 0;
 }
 
+static int
+constant_map_new(struct webidl_node *interface,
+                 int *constantc_out,
+                 struct interface_map_constant_entry **constantv_out)
+{
+        struct webidl_node *list_node;
+        struct webidl_node *constant_node; /* constant node */
+        struct interface_map_constant_entry *cure; /* current entry */
+        struct interface_map_constant_entry *constantv;
+        int constantc;
+
+        /* enumerate constants */
+        constantc = enumerate_interface_type(interface,
+                                              WEBIDL_NODE_TYPE_CONST);
+
+        if (constantc < 1) {
+                *constantc_out = 0;
+                *constantv_out = NULL; /* no constants so empty map */
+                return 0;
+        }
+
+        *constantc_out = constantc;
+
+        constantv = calloc(constantc,
+                           sizeof(struct interface_map_constant_entry));
+        if (constantv == NULL) {
+                return -1;
+        };
+        cure = constantv;
+
+        /* iterate each list node within the interface */
+        list_node = webidl_node_find_type(
+                webidl_node_getnode(interface),
+                NULL,
+                WEBIDL_NODE_TYPE_LIST);
+
+        while (list_node != NULL) {
+                /* iterate through constants on list */
+                constant_node = webidl_node_find_type(
+                        webidl_node_getnode(list_node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_CONST);
+
+                while (constant_node != NULL) {
+                        cure->node = constant_node;
+
+                        cure->name = webidl_node_gettext(
+                                webidl_node_find_type(
+                                        webidl_node_getnode(constant_node),
+                                        NULL,
+                                        WEBIDL_NODE_TYPE_IDENT));
+
+                        cure++;
+
+                        /* move to next constant */
+                        constant_node = webidl_node_find_type(
+                                webidl_node_getnode(list_node),
+                                constant_node,
+                                WEBIDL_NODE_TYPE_CONST);
+                }
+
+                list_node = webidl_node_find_type(
+                        webidl_node_getnode(interface),
+                        list_node,
+                        WEBIDL_NODE_TYPE_LIST);
+        }
+
+        *constantv_out = constantv; /* resulting constants map */
+
+        return 0;
+}
+
 int interface_map_new(struct genbind_node *genbind,
                         struct webidl_node *webidl,
                         struct interface_map **index_out)
@@ -362,6 +436,11 @@ int interface_map_new(struct genbind_node *genbind,
                                   ecur->class,
                                   &ecur->attributec,
                                   &ecur->attributev);
+
+                /* enumerate and map the interface constants */
+                constant_map_new(node,
+                                 &ecur->constantc,
+                                 &ecur->constantv);
 
                 /* move to next interface */
                 node = webidl_node_find_type(webidl, node,
@@ -456,6 +535,19 @@ int interface_map_dump(struct interface_map *index)
                                 if (attrc == 0) {
                                         break;
                                 }
+                        }
+                }
+                if (ecur->constantc > 0) {
+                        int idx;
+
+                        fprintf(dumpf, "        %d constants\n",
+                                ecur->constantc);
+
+                        for (idx = 0; idx < ecur->constantc; idx++) {
+                                struct interface_map_constant_entry *cone;
+                                cone = ecur->constantv + idx;
+                                fprintf(dumpf, "                %s\n",
+                                        cone->name);
                         }
                 }
                 ecur++;
