@@ -309,20 +309,12 @@ output_interface_inherit_init(FILE* outf,
 }
 
 static int
-output_interface_init(FILE* outf,
-                      struct interface_map_entry *interfacee,
-                      struct interface_map_entry *inherite)
+output_interface_init_declaration(FILE* outf,
+                                  struct interface_map_entry *interfacee,
+                                  struct genbind_node *init_node)
 {
-        struct genbind_node *init_node;
         struct genbind_node *param_node;
-        int res;
 
-        /* find the initialisor method on the class (if any) */
-        init_node = genbind_node_find_method(interfacee->class,
-                                             NULL,
-                                             GENBIND_METHOD_TYPE_INIT);
-
-        /* initialisor definition */
         fprintf(outf,
                 "void %s_%s___init(duk_context *ctx, %s_private_t *priv",
                 DLPFX, interfacee->class_name, interfacee->class_name);
@@ -345,7 +337,28 @@ output_interface_init(FILE* outf,
                         param_node, GENBIND_NODE_TYPE_METHOD);
         }
 
-        fprintf(outf,")\n{\n");
+        fprintf(outf,")");
+
+        return 0;
+}
+
+static int
+output_interface_init(FILE* outf,
+                      struct interface_map_entry *interfacee,
+                      struct interface_map_entry *inherite)
+{
+        struct genbind_node *init_node;
+        int res;
+
+        /* find the initialisor method on the class (if any) */
+        init_node = genbind_node_find_method(interfacee->class,
+                                             NULL,
+                                             GENBIND_METHOD_TYPE_INIT);
+
+        /* initialisor definition */
+        output_interface_init_declaration(outf, interfacee, init_node);
+
+        fprintf(outf,"\n{\n");
 
         /* if this interface inherits ensure we call its initialisor */
         res = output_interface_inherit_init(outf, interfacee, inherite);
@@ -915,12 +928,22 @@ output_interface_attributes(FILE* outf,
         return 0;
 }
 
-static int output_private_include(FILE* outf)
+/**
+ * generate preface block for nsgenbind
+ */
+static int output_tool_preface(FILE* outf)
 {
         char *fpath;
-        fpath = genb_fpath("private.h");
 
-        fprintf(outf, "\n#include \"%s\"\n", fpath);
+        fprintf(outf, "\n%s\n\n", NSGENBIND_PREAMBLE);
+
+        fpath = genb_fpath("private.h");
+        fprintf(outf, "#include \"%s\"\n", fpath);
+        free(fpath);
+
+        fpath = genb_fpath("prototype.h");
+        fprintf(outf, "#include \"%s\"\n", fpath);
+        free(fpath);
 
         return 0;
 }
@@ -963,8 +986,7 @@ static int output_interface(struct genbind_node *genbind,
         output_cdata(ifacef, binding_node, GENBIND_NODE_TYPE_PREFACE);
 
         /* tool preface */
-        fprintf(ifacef, "\n%s\n", NSGENBIND_PREAMBLE);
-        output_private_include(ifacef);
+        output_tool_preface(ifacef);
 
         /* class preface */
         output_cdata(ifacef, interfacee->class, GENBIND_NODE_TYPE_PREFACE);
@@ -1021,7 +1043,9 @@ op_error:
         return res;
 }
 
-/** generate private header */
+/**
+ * generate private header
+ */
 static int
 output_private_header(struct interface_map *interface_map)
 {
@@ -1072,8 +1096,52 @@ output_private_header(struct interface_map *interface_map)
 
         }
 
-
         fclose(privf);
+
+        return 0;
+}
+
+/**
+ * generate protottype header
+ */
+static int
+output_prototype_header(struct interface_map *interface_map)
+{
+        int idx;
+        FILE *protof;
+
+        /* open output file */
+        protof = genb_fopen("prototype.h", "w");
+        if (protof == NULL) {
+                return -1;
+        }
+
+        for (idx = 0; idx < interface_map->entryc; idx++) {
+                struct interface_map_entry *interfacee;
+                struct genbind_node *init_node;
+
+                interfacee = interface_map->entries + idx;
+
+                /* prototype declaration */
+                fprintf(protof, "duk_ret_t %s_%s___proto(duk_context *ctx);\n",
+                        DLPFX, interfacee->class_name);
+
+                /* finaliser declaration */
+                fprintf(protof,
+                        "void %s_%s___fini(duk_context *ctx, %s_private_t *priv);\n",
+                        DLPFX, interfacee->class_name, interfacee->class_name);
+
+                /* find the initialisor method on the class (if any) */
+                init_node = genbind_node_find_method(interfacee->class,
+                                                     NULL,
+                                                     GENBIND_METHOD_TYPE_INIT);
+
+                /* initialisor definition */
+                output_interface_init_declaration(protof, interfacee, init_node);
+                fprintf(protof, ";\n\n");
+        }
+
+        fclose(protof);
 
         return 0;
 }
@@ -1101,9 +1169,11 @@ int duk_libdom_output(struct genbind_node *genbind,
                 goto output_err;
         }
 
-
         /* generate prototype header */
-        /** \todo implement header */
+        res = output_prototype_header(interface_map);
+        if (res != 0) {
+                goto output_err;
+        }
 
         /* generate makefile fragment */
         /** \todo implement makefile generation */
