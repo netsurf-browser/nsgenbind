@@ -9,6 +9,17 @@
 #ifndef nsgenbind_utils_h
 #define nsgenbind_utils_h
 
+/**
+ * get a pathname with the output prefix prepended
+ *
+ * \param fname leaf filename.
+ * \return full prefixed path to file caller must free
+ */
+char *genb_fpath(const char *fname);
+
+/**
+ * Open file allowing for output path prefix
+ */
 FILE *genb_fopen(const char *fname, const char *mode);
 
 #ifdef _WIN32

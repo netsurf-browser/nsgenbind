@@ -7,15 +7,26 @@
 #include "options.h"
 #include "utils.h"
 
-FILE *genb_fopen(const char *fname, const char *mode)
+/* exported function documented in utils.h */
+char *genb_fpath(const char *fname)
 {
     char *fpath;
     int fpathl;
-    FILE *filef;
 
     fpathl = strlen(options->outdirname) + strlen(fname) + 2;
     fpath = malloc(fpathl);
     snprintf(fpath, fpathl, "%s/%s", options->outdirname, fname);
+
+    return fpath;
+}
+
+/* exported function documented in utils.h */
+FILE *genb_fopen(const char *fname, const char *mode)
+{
+    char *fpath;
+    FILE *filef;
+
+    fpath = genb_fpath(fname);
 
     filef = fopen(fpath, mode);
     if (filef == NULL) {
@@ -28,6 +39,7 @@ FILE *genb_fopen(const char *fname, const char *mode)
 
     return filef;
 }
+
 
 #ifdef NEED_STRNDUP
 

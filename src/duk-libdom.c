@@ -124,7 +124,7 @@ output_cdata(FILE* outf,
  */
 static int output_duckky_create_private(FILE* outf, char *class_name)
 {
-        fprintf(outf, "\t/* create private data and attach to instance */");
+        fprintf(outf, "\t/* create private data and attach to instance */\n");
         fprintf(outf, "\t%s_private_t *priv = calloc(1, sizeof(*priv));\n",
                 class_name);
         fprintf(outf, "\tif (priv == NULL) return 0;\n");
@@ -660,7 +660,6 @@ output_prototype_attributes(FILE *outf, struct interface_map_entry *interfacee)
         }
 
         return 0;
-
 }
 
 /**
@@ -671,8 +670,7 @@ output_prototype_attributes(FILE *outf, struct interface_map_entry *interfacee)
  */
 static int
 output_prototype_constant(FILE *outf,
-                        struct interface_map_entry *interfacee,
-                        struct interface_map_constant_entry *constante)
+                          struct interface_map_constant_entry *constante)
 {
         int *value;
 
@@ -702,13 +700,10 @@ output_prototype_constants(FILE *outf, struct interface_map_entry *interfacee)
         int attrc;
 
         for (attrc = 0; attrc < interfacee->constantc; attrc++) {
-                output_prototype_constant(outf,
-                                          interfacee,
-                                          interfacee->constantv + attrc);
+                output_prototype_constant(outf, interfacee->constantv + attrc);
         }
 
         return 0;
-
 }
 
 /**
@@ -920,11 +915,20 @@ output_interface_attributes(FILE* outf,
         return 0;
 }
 
+static int output_private_include(FILE* outf)
+{
+        char *fpath;
+        fpath = genb_fpath("private.h");
+
+        fprintf(outf, "\n#include \"%s\"\n", fpath);
+
+        return 0;
+}
+
 /**
  * generate a source file to implement an interface using duk and libdom.
  */
 static int output_interface(struct genbind_node *genbind,
-                            struct webidl_node *webidl,
                             struct interface_map *interface_map,
                             struct interface_map_entry *interfacee)
 {
@@ -958,8 +962,9 @@ static int output_interface(struct genbind_node *genbind,
         /* binding preface */
         output_cdata(ifacef, binding_node, GENBIND_NODE_TYPE_PREFACE);
 
-        /* nsgenbind preamble */
+        /* tool preface */
         fprintf(ifacef, "\n%s\n", NSGENBIND_PREAMBLE);
+        output_private_include(ifacef);
 
         /* class preface */
         output_cdata(ifacef, interfacee->class, GENBIND_NODE_TYPE_PREFACE);
@@ -1016,6 +1021,63 @@ op_error:
         return res;
 }
 
+/** generate private header */
+static int
+output_private_header(struct interface_map *interface_map)
+{
+        int idx;
+        FILE *privf;
+
+        /* open output file */
+        privf = genb_fopen("private.h", "w");
+        if (privf == NULL) {
+                return -1;
+        }
+
+        for (idx = 0; idx < interface_map->entryc; idx++) {
+                struct interface_map_entry *interfacee;
+                struct interface_map_entry *inherite;
+                struct genbind_node *priv_node;
+
+                interfacee = interface_map->entries + idx;
+
+                /* find parent interface entry */
+                inherite = interface_map_inherit_entry(interface_map,
+                                                       interfacee);
+
+                fprintf(privf, "typedef struct {\n");
+                if (inherite != NULL) {
+                        fprintf(privf, "\t%s_private_t parent;\n",
+                                inherite->class_name);
+                }
+
+                /* for each private variable on the class output it here. */
+                priv_node = genbind_node_find_type(
+                        genbind_node_getnode(interfacee->class),
+                        NULL,
+                        GENBIND_NODE_TYPE_PRIVATE);
+                while (priv_node != NULL) {
+                        fprintf(privf, "\t");
+                        output_cdata(privf, priv_node, GENBIND_NODE_TYPE_TYPE);
+                        output_cdata(privf, priv_node, GENBIND_NODE_TYPE_IDENT);
+                        fprintf(privf, ";\n");
+
+                        priv_node = genbind_node_find_type(
+                                genbind_node_getnode(interfacee->class),
+                                priv_node,
+                                GENBIND_NODE_TYPE_PRIVATE);
+                }
+
+                fprintf(privf, "} %s_private_t;\n\n", interfacee->class_name);
+
+        }
+
+
+        fclose(privf);
+
+        return 0;
+}
+
 int duk_libdom_output(struct genbind_node *genbind,
                       struct webidl_node *webidl,
                       struct interface_map *interface_map)
@@ -1025,18 +1087,27 @@ int duk_libdom_output(struct genbind_node *genbind,
 
         /* generate interfaces */
         for (idx = 0; idx < interface_map->entryc; idx++) {
-                res = output_interface(genbind, webidl, interface_map,
-                                       &interface_map->entries[idx]);
+                res = output_interface(genbind,
+                                       interface_map,
+                                       interface_map->entries + idx);
                 if (res != 0) {
-                        break;
+                        goto output_err;
                 }
         }
 
-        /* generate header */
+        /* generate private header */
+        res = output_private_header(interface_map);
+        if (res != 0) {
+                goto output_err;
+        }
+
+
+        /* generate prototype header */
         /** \todo implement header */
 
         /* generate makefile fragment */
         /** \todo implement makefile generation */
+output_err:
 
         return res;
 }
