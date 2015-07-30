@@ -34,6 +34,207 @@
 " */"
 
 /**
+ * Output code to create a private structure
+ *
+ */
+static int output_create_private(FILE* outf, char *class_name)
+{
+        fprintf(outf, "\t/* create private data and attach to instance */\n");
+        fprintf(outf, "\t%s_private_t *priv = calloc(1, sizeof(*priv));\n",
+                class_name);
+        fprintf(outf, "\tif (priv == NULL) return 0;\n");
+        fprintf(outf, "\tduk_push_pointer(ctx, priv);\n");
+        fprintf(outf, "\tduk_put_prop_string(ctx, 0, PRIVATE_MAGIC)\n\n");
+
+        return 0;
+}
+
+/**
+ * generate code that gets a private pointer
+ */
+static int output_safe_get_private(FILE* outf, char *class_name, int idx)
+{
+        fprintf(outf, "\t%s_private_t *priv;\n", class_name);
+        fprintf(outf, "\tduk_get_prop_string(ctx, %d, PRIVATE_MAGIC);\n",idx);
+        fprintf(outf, "\tpriv = duk_get_pointer(ctx, -1);\n");
+        fprintf(outf, "\tduk_pop(ctx);\n");
+        fprintf(outf, "\tif (priv == NULL) return 0;\n\n");
+        return 0;
+}
+
+/**
+ * generate code that gets a prototype by name
+ */
+static int output_get_prototype(FILE* outf, const char *interface_name)
+{
+        char *proto_name;
+        int pnamelen;
+
+        /* duplicate the interface name in upper case */
+        pnamelen = strlen(interface_name) + 1; /* allow for null byte */
+        proto_name = malloc(pnamelen);
+        for ( ; pnamelen >= 0; pnamelen--) {
+                proto_name[pnamelen] = toupper(interface_name[pnamelen]);
+        }
+        fprintf(outf, "\t/* get prototype */\n");
+        fprintf(outf, "\tduk_get_global_string(ctx, PROTO_MAGIC);\n");
+        fprintf(outf, "\tduk_get_prop_string(ctx, -1, PROTO_NAME(%s));\n",
+                proto_name);
+        fprintf(outf, "\tduk_replace(ctx, -2);\n");
+
+        free(proto_name);
+
+        return 0;
+}
+
+/**
+ * generate code that sets a destructor in a prototype
+ */
+static int output_set_destructor(FILE* outf, char *class_name, int idx)
+{
+        fprintf(outf, "\t/* Set the destructor */\n");
+        fprintf(outf, "\tduk_dup(ctx, %d);\n", idx);
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s___destructor, 1);\n",
+                DLPFX, class_name);
+        fprintf(outf, "\tduk_set_finalizer(ctx, -2);\n");
+        fprintf(outf, "\tduk_pop(ctx);\n\n");
+
+        return 0;
+}
+
+/**
+ * generate code that sets a constructor in a prototype
+ */
+static int
+output_set_constructor(FILE* outf, char *class_name, int idx, int argc)
+{
+        fprintf(outf, "\t/* Set the constructor */\n");
+        fprintf(outf, "\tduk_dup(ctx, %d);\n", idx);
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s___constructor, %d);\n",
+                DLPFX, class_name, 1 + argc);
+        fprintf(outf, "\tduk_put_prop_string(ctx, -2, INIT_MAGIC);\n");
+        fprintf(outf, "\tduk_pop(ctx);\n\n");
+
+        return 0;
+}
+
+static int
+output_dump_stack(FILE* outf)
+{
+        if (options->dbglog) {
+                /* dump stack */
+                fprintf(outf, "\tduk_push_context_dump(ctx);\n");
+                fprintf(outf, "\tLOG(\"Stack: %%s\", duk_to_string(ctx, -1));\n");
+                fprintf(outf, "\tduk_pop(ctx);\n");
+        }
+        return 0;
+}
+
+/**
+ * generate code that adds a method in a prototype
+ */
+static int
+output_add_method(FILE* outf, char *class_name, char *method, int argc)
+{
+        fprintf(outf, "\t/* Add a method */\n");
+        fprintf(outf, "\tduk_dup(ctx, 0);\n");
+        fprintf(outf, "\tduk_push_string(ctx, %s);\n", method);
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s, ",
+                DLPFX, class_name, method);
+        if (argc == -1) {
+                fprintf(outf, "DUK_VARARGS);\n");
+        } else {
+                fprintf(outf, "%d);\n", argc);
+        }
+        output_dump_stack(outf);
+        fprintf(outf, "\tduk_def_prop(ctx, -3,\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_VALUE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_WRITABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\tduk_pop(ctx)\n\n");
+
+        return 0;
+}
+
+/**
+ * Generate source to populate a read/write property on a prototype
+ */
+static int
+output_populate_rw_property(FILE* outf, const char *class_name, const char *property)
+{
+        fprintf(outf, "\t/* Add read/write property */\n");
+        fprintf(outf, "\tduk_dup(ctx, 0);\n");
+        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", property);
+        fprintf(outf,
+                "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
+                DLPFX, class_name, property);
+        fprintf(outf,
+                "\tduk_push_c_function(ctx, %s_%s_%s_setter, 1);\n",
+                DLPFX, class_name, property);
+        fprintf(outf, "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_SETTER |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\tduk_pop(ctx)\n\n");
+
+        return 0;
+}
+
+/**
+ * Generate source to populate a readonly property on a prototype
+ */
+static int
+output_populate_ro_property(FILE* outf, const char *class_name, const char *property)
+{
+        fprintf(outf, "\t/* Add readonly property */\n");
+        fprintf(outf, "\tduk_dup(ctx, 0);\n");
+        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", property);
+        fprintf(outf,
+                "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
+                DLPFX, class_name, property);
+        fprintf(outf,
+                "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\tduk_pop(ctx)\n\n");
+
+        return 0;
+}
+
+/**
+ * Generate source to add a constant int value on a prototype
+ */
+static int
+output_prototype_constant_int(FILE *outf, const char *constant_name, int value)
+{
+        fprintf(outf, "\tduk_dup(ctx, 0);\n");
+        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", constant_name);
+        fprintf(outf, "\tduk_push_int(ctx, %d);\n", value);
+        fprintf(outf, "\tduk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_HAVE_WRITABLE | DUK_DEFPROP_HAVE_ENUMERABLE |\n");
+        fprintf(outf, "\t             DUK_DEFPROP_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\tduk_pop(ctx)\n\n");
+        return 0;
+}
+
+/**
+ * generate code that gets a private pointer for a method
+ */
+static int
+output_get_method_private(FILE* outf, char *class_name)
+{
+        fprintf(outf, "\t/* Get private data for method */\n");
+        fprintf(outf, "\t%s_private_t *priv = NULL;\n", class_name);
+        fprintf(outf, "\tduk_push_this(ctx);\n");
+        fprintf(outf, "\tduk_get_prop_string(ctx, -1, PRIVATE_MAGIC);\n");
+        fprintf(outf, "\tpriv = duk_get_pointer(ctx, -1);\n");
+        fprintf(outf, "\tduk_pop_2(ctx);\n");
+        fprintf(outf, "\tif (priv == NULL) return 0; /* can do? No can do. */\n\n");
+        return 0;
+}
+
+/**
  * Generate a C class name for the interface.
  *
  * The IDL interface names are camelcase and not similar to libdom naming so it
@@ -119,35 +320,6 @@ output_cdata(FILE* outf,
 }
 
 /**
- * Output code to create a private structure
- *
- */
-static int output_duckky_create_private(FILE* outf, char *class_name)
-{
-        fprintf(outf, "\t/* create private data and attach to instance */\n");
-        fprintf(outf, "\t%s_private_t *priv = calloc(1, sizeof(*priv));\n",
-                class_name);
-        fprintf(outf, "\tif (priv == NULL) return 0;\n");
-        fprintf(outf, "\tduk_push_pointer(ctx, priv);\n");
-        fprintf(outf, "\tduk_put_prop_string(ctx, 0, PRIVATE_MAGIC)\n\n");
-
-        return 0;
-}
-
-/**
- * generate code that gets a private pointer
- */
-static int output_ducky_safe_get_private(FILE* outf, char *class_name, int idx)
-{
-        fprintf(outf,
-                "\t%s_private_t *priv = dukky_get_private(ctx, %d);\n",
-                class_name, idx);
-        fprintf(outf, "\tif (priv == NULL) return 0;\n\n");
-        return 0;
-}
-
-
-/**
  * generate the interface constructor
  */
 static int
@@ -161,7 +333,7 @@ output_interface_constructor(FILE* outf, struct interface_map_entry *interfacee)
                 DLPFX, interfacee->class_name);
         fprintf(outf,"{\n");
 
-        output_duckky_create_private(outf, interfacee->class_name);
+        output_create_private(outf, interfacee->class_name);
 
         /* generate call to initialisor */
         fprintf(outf,
@@ -195,7 +367,7 @@ output_interface_destructor(FILE* outf, struct interface_map_entry *interfacee)
                 DLPFX, interfacee->class_name);
         fprintf(outf,"{\n");
 
-        output_ducky_safe_get_private(outf, interfacee->class_name, 0);
+        output_safe_get_private(outf, interfacee->class_name, 0);
 
         /* generate call to finaliser */
         fprintf(outf,
@@ -419,89 +591,6 @@ output_interface_fini(FILE* outf,
         return 0;
 }
 
-/**
- * generate code that gets a prototype by name
- */
-static int output_get_prototype(FILE* outf, const char *interface_name)
-{
-        char *proto_name;
-        int pnamelen;
-
-        /* duplicate the interface name in upper case */
-        pnamelen = strlen(interface_name) + 1; /* allow for null byte */
-        proto_name = malloc(pnamelen);
-        for ( ; pnamelen >= 0; pnamelen--) {
-                proto_name[pnamelen] = toupper(interface_name[pnamelen]);
-        }
-        fprintf(outf, "\t/* get prototype */\n");
-        fprintf(outf, "\tduk_get_global_string(ctx, PROTO_MAGIC);\n");
-        fprintf(outf, "\tduk_get_prop_string(ctx, -1, PROTO_NAME(%s));\n",
-                proto_name);
-        fprintf(outf, "\tduk_replace(ctx, -2);\n");
-
-        free(proto_name);
-
-        return 0;
-}
-
-/**
- * generate code that sets a destructor in a prototype
- */
-static int output_set_destructor(FILE* outf, char *class_name, int idx)
-{
-        fprintf(outf, "\t/* Set the destructor */\n");
-        fprintf(outf, "\tduk_dup(ctx, %d);\n", idx);
-        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s___destructor, 1);\n",
-                DLPFX, class_name);
-        fprintf(outf, "\tduk_set_finalizer(ctx, -2);\n");
-        fprintf(outf, "\tduk_pop(ctx);\n\n");
-
-        return 0;
-}
-
-/**
- * generate code that sets a constructor in a prototype
- */
-static int
-output_set_constructor(FILE* outf, char *class_name, int idx, int argc)
-{
-        fprintf(outf, "\t/* Set the constructor */\n");
-        fprintf(outf, "\tduk_dup(ctx, %d);\n", idx);
-        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s___constructor, %d);\n",
-                DLPFX, class_name, 1 + argc);
-        fprintf(outf, "\tduk_put_prop_string(ctx, -2, INIT_MAGIC);\n");
-        fprintf(outf, "\tduk_pop(ctx);\n\n");
-
-        return 0;
-}
-
-/**
- * generate code that adds a method in a prototype
- */
-static int
-output_add_method(FILE* outf, char *class_name, char *method, int argc)
-{
-        fprintf(outf, "\t/* Add a method */\n");
-        fprintf(outf, "\tduk_dup(ctx, 0);\n");
-        fprintf(outf, "\tduk_push_string(ctx, %s);\n", method);
-        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s, ",
-                DLPFX, class_name, method);
-        if (argc == -1) {
-                fprintf(outf, "DUK_VARARGS);\n");
-
-        } else {
-                fprintf(outf, "%d);\n", argc);
-        }
-        fprintf(outf, "\tDUKKY_DUMP_STACK(ctx);\n");
-        fprintf(outf, "\tduk_def_prop(ctx, -3,\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_VALUE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_WRITABLE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
-        fprintf(outf, "\tduk_pop(ctx)\n\n");
-
-        return 0;
-}
 
 /**
  * count the number of arguments to an operation
@@ -554,7 +643,6 @@ output_prototype_method(FILE* outf,
         output_add_method(outf, interfacee->class_name, op_name, op_argc);
 
         return 0;
-
 }
 
 /**
@@ -600,47 +688,8 @@ output_prototype_methods(FILE *outf, struct interface_map_entry *interfacee)
         }
 
         return 0;
-
 }
 
-static int
-output_populate_rw_property(FILE* outf, const char *class_name, const char *property)
-{
-        fprintf(outf, "\t/* Add read/write property */\n");
-        fprintf(outf, "\tduk_dup(ctx, 0);\n");
-        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", property);
-        fprintf(outf,
-                "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
-                DLPFX, class_name, property);
-        fprintf(outf,
-                "\tduk_push_c_function(ctx, %s_%s_%s_setter, 1);\n",
-                DLPFX, class_name, property);
-        fprintf(outf, "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_SETTER |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
-        fprintf(outf, "\tduk_pop(ctx)\n\n");
-
-        return 0;
-}
-
-static int
-output_populate_ro_property(FILE* outf, const char *class_name, const char *property)
-{
-        fprintf(outf, "\t/* Add readonly property */\n");
-        fprintf(outf, "\tduk_dup(ctx, 0);\n");
-        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", property);
-        fprintf(outf,
-                "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
-                DLPFX, class_name, property);
-        fprintf(outf,
-                "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
-        fprintf(outf, "\tduk_pop(ctx)\n\n");
-
-        return 0;
-}
 
 static int
 output_prototype_attribute(FILE *outf,
@@ -651,11 +700,10 @@ output_prototype_attribute(FILE *outf,
                 return output_populate_ro_property(outf,
                                                    interfacee->class_name,
                                                    attributee->name);
-        } else {
-                return output_populate_rw_property(outf,
-                                                   interfacee->class_name,
-                                                   attributee->name);
         }
+        return output_populate_rw_property(outf,
+                                           interfacee->class_name,
+                                           attributee->name);
 }
 
 /**
@@ -665,14 +713,17 @@ static int
 output_prototype_attributes(FILE *outf, struct interface_map_entry *interfacee)
 {
         int attrc;
+        int res = 0;
 
         for (attrc = 0; attrc < interfacee->attributec; attrc++) {
-                output_prototype_attribute(outf,
-                                        interfacee,
-                                        interfacee->attributev + attrc);
+                res = output_prototype_attribute(outf,interfacee,
+                              interfacee->attributev + attrc);
+                if (res != 0) {
+                        break;
+                }
         }
 
-        return 0;
+        return res;
 }
 
 /**
@@ -693,14 +744,8 @@ output_prototype_constant(FILE *outf,
                         NULL,
                         WEBIDL_NODE_TYPE_LITERAL_INT));
 
+        output_prototype_constant_int(outf, constante->name, *value);
 
-        fprintf(outf, "\tduk_dup(ctx, 0);\n");
-        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", constante->name);
-        fprintf(outf, "\tduk_push_int(ctx, %d);\n", *value);
-        fprintf(outf, "\tduk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_WRITABLE | DUK_DEFPROP_HAVE_ENUMERABLE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
-        fprintf(outf, "\tduk_pop(ctx)\n\n");
         return 0;
 }
 
@@ -711,12 +756,17 @@ static int
 output_prototype_constants(FILE *outf, struct interface_map_entry *interfacee)
 {
         int attrc;
+        int res = 0;
 
         for (attrc = 0; attrc < interfacee->constantc; attrc++) {
-                output_prototype_constant(outf, interfacee->constantv + attrc);
+                res = output_prototype_constant(outf,
+                                                interfacee->constantv + attrc);
+                if (res != 0) {
+                        break;
+                }
         }
 
-        return 0;
+        return res;
 }
 
 /**
@@ -766,21 +816,6 @@ output_interface_prototype(FILE* outf,
         return 0;
 }
 
-/**
- * generate code that gets a private pointer for a method
- */
-static int
-output_get_method_private(FILE* outf, char *class_name)
-{
-        fprintf(outf, "\t/* Get private data for method */\n");
-        fprintf(outf, "\t%s_private_t *priv = NULL;\n", class_name);
-        fprintf(outf, "\tduk_push_this(ctx);\n");
-        fprintf(outf, "\tduk_get_prop_string(ctx, -1, PRIVATE_MAGIC);\n");
-        fprintf(outf, "\tpriv = duk_get_pointer(ctx, -1);\n");
-        fprintf(outf, "\tduk_pop_2(ctx);\n");
-        fprintf(outf, "\tif (priv == NULL) return 0; /* can do? No can do. */\n\n");
-        return 0;
-}
 
 /**
  * generate a single class method for an interface operation
