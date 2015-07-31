@@ -207,7 +207,7 @@ int main(int argc, char **argv)
 	/* debug dump of web idl AST */
         webidl_dump_ast(webidl_root);
 
-        /* generate index of interfaces in idl sorted by inheritance */
+        /* generate map of WebIDL interfaces sorted by inheritance */
         res = interface_map_new(genbind_root, webidl_root, &interface_map);
         if (res != 0) {
                 return 5;
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
         /* generate binding */
         switch (bindingtype) {
         case BINDINGTYPE_DUK_LIBDOM:
-                res = duk_libdom_output(genbind_root, webidl_root, interface_map);
+                res = duk_libdom_output(interface_map);
                 break;
 
         default:

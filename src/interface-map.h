@@ -77,12 +77,21 @@ struct interface_map_entry {
 /** WebIDL interface map */
 struct interface_map {
         int entryc; /**< count of interfaces */
-        struct interface_map_entry *entries;
+        struct interface_map_entry *entries; /**< interface entries */
+
+        /** The AST node of the binding information */
+        struct genbind_node *binding_node;
+
+        /** Root AST node of the webIDL */
+        struct webidl_node *webidl;
 };
 
+/**
+ * Create a new interface map
+ */
 int interface_map_new(struct genbind_node *genbind,
                       struct webidl_node *webidl,
-                      struct interface_map **index_out);
+                      struct interface_map **map_out);
 
 int interface_map_dump(struct interface_map *map);
 

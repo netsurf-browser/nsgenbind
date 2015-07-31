@@ -968,12 +968,20 @@ output_interface_attributes(FILE* outf,
  */
 static int output_tool_preface(FILE* outf)
 {
+        fprintf(outf, "\n%s\n", NSGENBIND_PREAMBLE);
+
+        return 0;
+}
+
+/**
+ * generate preface block for nsgenbind
+ */
+static int output_tool_prologue(FILE* outf)
+{
         char *fpath;
 
-        fprintf(outf, "\n%s\n\n", NSGENBIND_PREAMBLE);
-
         fpath = genb_fpath("private.h");
-        fprintf(outf, "#include \"%s\"\n", fpath);
+        fprintf(outf, "\n#include \"%s\"\n", fpath);
         free(fpath);
 
         fpath = genb_fpath("prototype.h");
@@ -986,13 +994,11 @@ static int output_tool_preface(FILE* outf)
 /**
  * generate a source file to implement an interface using duk and libdom.
  */
-static int output_interface(struct genbind_node *genbind,
-                            struct interface_map *interface_map,
+static int output_interface(struct interface_map *interface_map,
                             struct interface_map_entry *interfacee)
 {
         FILE *ifacef;
         int ifacenamelen;
-        struct genbind_node *binding_node;
         struct interface_map_entry *inherite;
         int res = 0;
 
@@ -1014,11 +1020,10 @@ static int output_interface(struct genbind_node *genbind,
         /* find parent interface entry */
         inherite = interface_map_inherit_entry(interface_map, interfacee);
 
-        binding_node = genbind_node_find_type(genbind, NULL,
-                                              GENBIND_NODE_TYPE_BINDING);
-
         /* binding preface */
-        output_cdata(ifacef, binding_node, GENBIND_NODE_TYPE_PREFACE);
+        output_cdata(ifacef,
+                     interface_map->binding_node,
+                     GENBIND_NODE_TYPE_PREFACE);
 
         /* tool preface */
         output_tool_preface(ifacef);
@@ -1027,7 +1032,11 @@ static int output_interface(struct genbind_node *genbind,
         output_cdata(ifacef, interfacee->class, GENBIND_NODE_TYPE_PREFACE);
 
         /* binding prologue */
-        output_cdata(ifacef, binding_node, GENBIND_NODE_TYPE_PROLOGUE);
+        output_cdata(ifacef,
+                     interface_map->binding_node,
+                     GENBIND_NODE_TYPE_PROLOGUE);
+
+        output_tool_prologue(ifacef);
 
         /* class prologue */
         output_cdata(ifacef, interfacee->class, GENBIND_NODE_TYPE_PROLOGUE);
@@ -1064,13 +1073,17 @@ static int output_interface(struct genbind_node *genbind,
         output_cdata(ifacef, interfacee->class, GENBIND_NODE_TYPE_EPILOGUE);
 
         /* binding epilogue */
-        output_cdata(ifacef, binding_node, GENBIND_NODE_TYPE_EPILOGUE);
+        output_cdata(ifacef,
+                     interface_map->binding_node,
+                     GENBIND_NODE_TYPE_EPILOGUE);
 
         /* class postface */
         output_cdata(ifacef, interfacee->class, GENBIND_NODE_TYPE_POSTFACE);
 
         /* binding postface */
-        output_cdata(ifacef, binding_node, GENBIND_NODE_TYPE_POSTFACE);
+        output_cdata(ifacef,
+                     interface_map->binding_node,
+                     GENBIND_NODE_TYPE_POSTFACE);
 
 op_error:
         fclose(ifacef);
@@ -1092,6 +1105,18 @@ output_private_header(struct interface_map *interface_map)
         if (privf == NULL) {
                 return -1;
         }
+
+        /* binding preface */
+        output_cdata(privf,
+                     interface_map->binding_node,
+                     GENBIND_NODE_TYPE_PREFACE);
+
+        /* tool preface */
+        output_tool_preface(privf);
+
+        /* header guard */
+        fprintf(privf, "\n#ifndef duk_libdom_private_h\n");
+        fprintf(privf, "#define duk_libdom_private_h\n\n");
 
         for (idx = 0; idx < interface_map->entryc; idx++) {
                 struct interface_map_entry *interfacee;
@@ -1131,6 +1156,13 @@ output_private_header(struct interface_map *interface_map)
 
         }
 
+        /* binding postface */
+        output_cdata(privf,
+                     interface_map->binding_node,
+                     GENBIND_NODE_TYPE_POSTFACE);
+
+        fprintf(privf, "\n#endif\n");
+
         fclose(privf);
 
         return 0;
@@ -1150,6 +1182,18 @@ output_prototype_header(struct interface_map *interface_map)
         if (protof == NULL) {
                 return -1;
         }
+
+        /* binding preface */
+        output_cdata(protof,
+                     interface_map->binding_node,
+                     GENBIND_NODE_TYPE_PREFACE);
+
+        /* tool preface */
+        output_tool_preface(protof);
+
+        /* header guard */
+        fprintf(protof, "\n#ifndef duk_libdom_prototype_h\n");
+        fprintf(protof, "#define duk_libdom_prototype_h\n\n");
 
         for (idx = 0; idx < interface_map->entryc; idx++) {
                 struct interface_map_entry *interfacee;
@@ -1176,22 +1220,58 @@ output_prototype_header(struct interface_map *interface_map)
                 fprintf(protof, ";\n\n");
         }
 
+        /* binding postface */
+        output_cdata(protof,
+                     interface_map->binding_node,
+                     GENBIND_NODE_TYPE_POSTFACE);
+
+        fprintf(protof, "\n#endif\n");
+
         fclose(protof);
 
         return 0;
 }
 
-int duk_libdom_output(struct genbind_node *genbind,
-                      struct webidl_node *webidl,
-                      struct interface_map *interface_map)
+/**
+ * generate protottype header
+ */
+static int
+output_makefile(struct interface_map *interface_map)
+{
+        int idx;
+        FILE *makef;
+
+        /* open output file */
+        makef = genb_fopen("Makefile", "w");
+        if (makef == NULL) {
+                return -1;
+        }
+
+        fprintf(makef, "# duk libdom makefile fragment\n\n");
+
+        fprintf(makef, "NSGENBIND_SOURCES:=");
+        for (idx = 0; idx < interface_map->entryc; idx++) {
+                struct interface_map_entry *interfacee;
+
+                interfacee = interface_map->entries + idx;
+
+                fprintf(makef, "%s ", interfacee->filename);
+        }
+        fprintf(makef, "\nNSGENBIND_PREFIX:=%s\n", options->outdirname);
+
+        fclose(makef);
+
+        return 0;
+}
+
+int duk_libdom_output(struct interface_map *interface_map)
 {
         int idx;
         int res = 0;
 
         /* generate interfaces */
         for (idx = 0; idx < interface_map->entryc; idx++) {
-                res = output_interface(genbind,
-                                       interface_map,
+                res = output_interface(interface_map,
                                        interface_map->entries + idx);
                 if (res != 0) {
                         goto output_err;
@@ -1211,7 +1291,8 @@ int duk_libdom_output(struct genbind_node *genbind,
         }
 
         /* generate makefile fragment */
-        /** \todo implement makefile generation */
+        res = output_makefile(interface_map);
+
 output_err:
 
         return res;

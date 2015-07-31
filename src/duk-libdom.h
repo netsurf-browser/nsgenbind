@@ -9,8 +9,6 @@
 #ifndef nsgenbind_duk_libdom_h
 #define nsgenbind_duk_libdom_h
 
-int duk_libdom_output(struct genbind_node *genbind,
-                      struct webidl_node *webidl,
-                      struct interface_map *interface_map);
+int duk_libdom_output(struct interface_map *interface_map);
 
 #endif

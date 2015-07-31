@@ -378,20 +378,20 @@ constant_map_new(struct webidl_node *interface,
 
 int interface_map_new(struct genbind_node *genbind,
                         struct webidl_node *webidl,
-                        struct interface_map **index_out)
+                        struct interface_map **map_out)
 {
         int interfacec;
         struct interface_map_entry *entries;
         struct interface_map_entry *sorted_entries;
         struct interface_map_entry *ecur;
         struct webidl_node *node;
-        struct interface_map *index;
+        struct interface_map *map;
 
         interfacec = webidl_node_enumerate_type(webidl,
                                                 WEBIDL_NODE_TYPE_INTERFACE);
 
         if (options->verbose) {
-                printf("Indexing %d interfaces\n", interfacec);
+                printf("Maping %d interfaces\n", interfacec);
         }
 
         entries = calloc(interfacec, sizeof(struct interface_map_entry));
@@ -399,12 +399,12 @@ int interface_map_new(struct genbind_node *genbind,
                 return -1;
         }
 
-        /* for each interface populate an entry in the index */
+        /* for each interface populate an entry in the map */
         ecur = entries;
         node = webidl_node_find_type(webidl, NULL, WEBIDL_NODE_TYPE_INTERFACE);
         while (node != NULL) {
 
-                /* fill index entry */
+                /* fill map entry */
                 ecur->node = node;
 
                 /* name of interface */
@@ -461,11 +461,14 @@ int interface_map_new(struct genbind_node *genbind,
         /* compute inheritance and refcounts on sorted map */
         compute_inherit_refcount(sorted_entries, interfacec);
 
-        index = malloc(sizeof(struct interface_map));
-        index->entryc = interfacec;
-        index->entries = sorted_entries;
+        map = malloc(sizeof(struct interface_map));
+        map->entryc = interfacec;
+        map->entries = sorted_entries;
+        map->webidl = webidl;
+        map->binding_node = genbind_node_find_type(genbind, NULL,
+                                                   GENBIND_NODE_TYPE_BINDING);
 
-        *index_out = index;
+        *map_out = map;
 
         return 0;
 }
