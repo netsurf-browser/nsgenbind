@@ -1002,7 +1002,12 @@ static int output_interface(struct interface_map *interface_map,
         struct interface_map_entry *inherite;
         int res = 0;
 
-        /* compute clas name */
+        /* do not generate class for interfaces marked no output */
+        if (interfacee->noobject) {
+                return 0;
+        }
+
+        /* compute class name */
         interfacee->class_name = gen_class_name(interfacee);
 
         /* generate source filename */
@@ -1125,6 +1130,13 @@ output_private_header(struct interface_map *interface_map)
 
                 interfacee = interface_map->entries + idx;
 
+                /* do not generate private structs for interfaces marked no
+                 * output
+                 */
+                if (interfacee->noobject) {
+                        continue;
+                }
+
                 /* find parent interface entry */
                 inherite = interface_map_inherit_entry(interface_map,
                                                        interfacee);
@@ -1201,6 +1213,13 @@ output_prototype_header(struct interface_map *interface_map)
 
                 interfacee = interface_map->entries + idx;
 
+                /* do not generate prototype declarations for interfaces marked
+                 * no output
+                 */
+                if (interfacee->noobject) {
+                        continue;
+                }
+
                 /* prototype declaration */
                 fprintf(protof, "duk_ret_t %s_%s___proto(duk_context *ctx);\n",
                         DLPFX, interfacee->class_name);
@@ -1254,6 +1273,11 @@ output_makefile(struct interface_map *interface_map)
                 struct interface_map_entry *interfacee;
 
                 interfacee = interface_map->entries + idx;
+
+                /* no source for interfaces marked no output */
+                if (interfacee->noobject) {
+                        continue;
+                }
 
                 fprintf(makef, "%s ", interfacee->filename);
         }

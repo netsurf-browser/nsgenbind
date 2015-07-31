@@ -110,6 +110,7 @@ interface_topoligical_sort(struct interface_map_entry *srcinf, int infc)
                 dstinf[idx].name = srcinf[inf].name;
                 dstinf[idx].node = srcinf[inf].node;
                 dstinf[idx].inherit_name = srcinf[inf].inherit_name;
+                dstinf[idx].noobject = srcinf[inf].noobject;
                 dstinf[idx].operationc = srcinf[inf].operationc;
                 dstinf[idx].operationv = srcinf[inf].operationv;
                 dstinf[idx].attributec = srcinf[inf].attributec;
@@ -391,7 +392,7 @@ int interface_map_new(struct genbind_node *genbind,
                                                 WEBIDL_NODE_TYPE_INTERFACE);
 
         if (options->verbose) {
-                printf("Maping %d interfaces\n", interfacec);
+                printf("Mapping %d interfaces\n", interfacec);
         }
 
         entries = calloc(interfacec, sizeof(struct interface_map_entry));
@@ -420,6 +421,17 @@ int interface_map_new(struct genbind_node *genbind,
                         webidl_node_getnode(node),
                         NULL,
                         WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE));
+
+                if (webidl_node_find_type_ident(
+                            webidl_node_getnode(node),
+                            WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+                            "NoInterfaceObject") != NULL) {
+                        /** \todo we should ensure inherit is unset as this
+                         * cannot form part of an inheritance chain if it is
+                         * not generating an output class
+                         */
+                        ecur->noobject = true;
+                }
 
                 /* matching class from binding  */
                 ecur->class = genbind_node_find_type_ident(genbind,
@@ -579,16 +591,20 @@ int interface_map_dumpdot(struct interface_map *index)
 
         fprintf(dumpf, "digraph interfaces {\n");
 
+        fprintf(dumpf, "node [shape=box]\n");
+
         ecur = index->entries;
         for (eidx = 0; eidx < index->entryc; eidx++) {
-            if (ecur->class != NULL) {
-                /* interfaces bound to a class are shown in blue */
-                fprintf(dumpf, "%04d [label=\"%s\" fontcolor=\"blue\"];\n",
-                        eidx, ecur->name);
-            } else {
-                fprintf(dumpf, "%04d [label=\"%s\"];\n", eidx, ecur->name);
-            }
-            ecur++;
+                fprintf(dumpf, "%04d [label=\"%s\"", eidx, ecur->name);
+                if (ecur->noobject == true) {
+                        /* noobject interfaces in red */
+                        fprintf(dumpf, "fontcolor=\"red\"");
+                } else if (ecur->class != NULL) {
+                        /* interfaces bound to a class are shown in blue */
+                        fprintf(dumpf, "fontcolor=\"blue\"");
+                }
+                fprintf(dumpf, "];\n");
+                ecur++;
         }
 
         ecur = index->entries;

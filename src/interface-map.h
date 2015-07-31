@@ -39,6 +39,16 @@ struct interface_map_entry {
         const char *name; /** interface name */
         struct webidl_node *node; /**< AST interface node */
         const char *inherit_name; /**< Name of interface inhertited from */
+        int inherit_idx; /**< index into map of inherited interface or -1 for
+			  * not in map
+			  */
+	int refcount; /**< number of interfacess in map that refer to this
+		       * interface
+		       */
+        bool noobject; /**< flag indicating if no interface object should eb
+                        * generated. This allows for interfaces which do not
+                        * generate code. For implements (mixin) interfaces
+                        */
 
         int operationc; /**< number of operations on interface */
         struct interface_map_operation_entry *operationv;
@@ -49,12 +59,7 @@ struct interface_map_entry {
         int constantc; /**< number of constants on interface */
         struct interface_map_constant_entry *constantv;
 
-        int inherit_idx; /**< index into map of inherited interface or -1 for
-			  * not in map
-			  */
-	int refcount; /**< number of interfacess in map that refer to this
-		       * interface
-		       */
+
         struct genbind_node *class; /**< class from binding (if any) */
 
         /* The variables are created and used by the output generation but
