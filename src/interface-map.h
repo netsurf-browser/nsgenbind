@@ -49,6 +49,9 @@ struct interface_map_entry {
                         * generated. This allows for interfaces which do not
                         * generate code. For implements (mixin) interfaces
                         */
+        bool primary_global; /**< flag indicating the interface is the primary
+                             * global javascript object.
+                             */
 
         int operationc; /**< number of operations on interface */
         struct interface_map_operation_entry *operationv;

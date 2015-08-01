@@ -111,6 +111,7 @@ interface_topoligical_sort(struct interface_map_entry *srcinf, int infc)
                 dstinf[idx].node = srcinf[inf].node;
                 dstinf[idx].inherit_name = srcinf[inf].inherit_name;
                 dstinf[idx].noobject = srcinf[inf].noobject;
+                dstinf[idx].primary_global = srcinf[inf].primary_global;
                 dstinf[idx].operationc = srcinf[inf].operationc;
                 dstinf[idx].operationv = srcinf[inf].operationv;
                 dstinf[idx].attributec = srcinf[inf].attributec;
@@ -422,6 +423,7 @@ int interface_map_new(struct genbind_node *genbind,
                         NULL,
                         WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE));
 
+                /* is the interface marked as not generating an object */
                 if (webidl_node_find_type_ident(
                             webidl_node_getnode(node),
                             WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
@@ -431,6 +433,18 @@ int interface_map_new(struct genbind_node *genbind,
                          * not generating an output class
                          */
                         ecur->noobject = true;
+                }
+
+                /* is the interface marked as the primary global */
+                if (webidl_node_find_type_ident(
+                            webidl_node_getnode(node),
+                            WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+                            "PrimaryGlobal") != NULL) {
+                        /** \todo we should ensure nothing inherits *from* this
+                         * class or all hell will break loose having two
+                         * primary globals.
+                         */
+                        ecur->primary_global = true;
                 }
 
                 /* matching class from binding  */
