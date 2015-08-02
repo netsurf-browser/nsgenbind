@@ -366,7 +366,7 @@ static FILE *open_header(struct interface_map *interface_map, const char *name)
         snprintf(fname, fnamel, "%s.h", name);
 
         /* open output file */
-        hdrf = genb_fopen(fname, "w");
+        hdrf = genb_fopen_tmp(fname);
         free(fname);
         if (hdrf == NULL) {
                 return NULL;
@@ -387,8 +387,17 @@ static FILE *open_header(struct interface_map *interface_map, const char *name)
         return hdrf;
 }
 
-static int close_header(struct interface_map *interface_map, FILE *hdrf)
+static int close_header(struct interface_map *interface_map,
+                        FILE *hdrf,
+                        const char *name)
 {
+        char *fname;
+        int fnamel;
+
+        fnamel = strlen(name) + 4;
+        fname = malloc(fnamel);
+        snprintf(fname, fnamel, "%s.h", name);
+
         fprintf(hdrf, "\n#endif\n");
 
         /* binding postface */
@@ -396,7 +405,8 @@ static int close_header(struct interface_map *interface_map, FILE *hdrf)
                      interface_map->binding_node,
                      GENBIND_NODE_TYPE_POSTFACE);
 
-        fclose(hdrf);
+        genb_fclose_tmp(hdrf, fname);
+        free(fname);
 
         return 0;
 }
@@ -1056,7 +1066,7 @@ static int output_interface(struct interface_map *interface_map,
                  "%s.c", interfacee->class_name);
 
         /* open output file */
-        ifacef = genb_fopen(interfacee->filename, "w");
+        ifacef = genb_fopen_tmp(interfacee->filename);
         if (ifacef == NULL) {
                 return -1;
         }
@@ -1131,7 +1141,7 @@ static int output_interface(struct interface_map *interface_map,
                      GENBIND_NODE_TYPE_POSTFACE);
 
 op_error:
-        fclose(ifacef);
+        genb_fclose_tmp(ifacef, interfacee->filename);
 
         return res;
 }
@@ -1193,7 +1203,7 @@ output_private_header(struct interface_map *interface_map)
 
         }
 
-        close_header(interface_map, privf);
+        close_header(interface_map, privf, "private");
 
         return 0;
 }
@@ -1249,7 +1259,7 @@ output_prototype_header(struct interface_map *interface_map)
                 fprintf(protof, ";\n\n");
         }
 
-        close_header(interface_map, protof);
+        close_header(interface_map, protof, "prototype");
 
         return 0;
 }
@@ -1264,7 +1274,7 @@ output_makefile(struct interface_map *interface_map)
         FILE *makef;
 
         /* open output file */
-        makef = genb_fopen("Makefile", "w");
+        makef = genb_fopen_tmp("Makefile");
         if (makef == NULL) {
                 return -1;
         }
@@ -1286,7 +1296,7 @@ output_makefile(struct interface_map *interface_map)
         }
         fprintf(makef, "\nNSGENBIND_PREFIX:=%s\n", options->outdirname);
 
-        fclose(makef);
+        genb_fclose_tmp(makef, "Makefile");
 
         return 0;
 }
@@ -1331,7 +1341,7 @@ output_binding_header(struct interface_map *interface_map)
         fprintf(bindf,
                 "duk_ret_t %s_create_prototypes(duk_context *ctx);\n", DLPFX);
 
-        close_header(interface_map, bindf);
+        close_header(interface_map, bindf, "binding");
 
         return 0;
 }
@@ -1352,7 +1362,7 @@ output_binding_src(struct interface_map *interface_map)
         char *proto_name;
 
         /* open output file */
-        bindf = genb_fopen("binding.c", "w");
+        bindf = genb_fopen_tmp("binding.c");
         if (bindf == NULL) {
                 return -1;
         }
@@ -1523,7 +1533,8 @@ output_binding_src(struct interface_map *interface_map)
                      interface_map->binding_node,
                      GENBIND_NODE_TYPE_POSTFACE);
 
-        fclose(bindf);
+        genb_fclose_tmp(bindf, "binding.c");
+
         return 0;
 }
 

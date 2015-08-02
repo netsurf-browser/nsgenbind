@@ -22,6 +22,20 @@ char *genb_fpath(const char *fname);
  */
 FILE *genb_fopen(const char *fname, const char *mode);
 
+/**
+ * Open file allowing for output path prefix
+ *
+ * file is opened for reading/writing with a temporary suffix allowing for the
+ * matching close call to check the output is different before touching the
+ * target file.
+ */
+FILE *genb_fopen_tmp(const char *fname);
+
+/**
+ * Close file opened with genb_fopen
+ */
+int genb_fclose_tmp(FILE *filef, const char *fname);
+
 #ifdef _WIN32
 #define NEED_STRNDUP 1
 char *strndup(const char *s, size_t n);
