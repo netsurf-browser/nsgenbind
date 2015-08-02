@@ -135,7 +135,8 @@ output_set_constructor(FILE* outf, char *class_name, int idx, int argc)
         fprintf(outf, "\tduk_dup(ctx, %d);\n", idx);
         fprintf(outf, "\tduk_push_c_function(ctx, %s_%s___constructor, %d);\n",
                 DLPFX, class_name, 1 + argc);
-        fprintf(outf, "\tduk_put_prop_string(ctx, -2, INIT_MAGIC);\n");
+        fprintf(outf, "\tduk_put_prop_string(ctx, -2, \"%sINIT\");\n",
+                MAGICPFX);
         fprintf(outf, "\tduk_pop(ctx);\n\n");
 
         return 0;
@@ -253,7 +254,8 @@ output_get_method_private(FILE* outf, char *class_name)
         fprintf(outf, "\t/* Get private data for method */\n");
         fprintf(outf, "\t%s_private_t *priv = NULL;\n", class_name);
         fprintf(outf, "\tduk_push_this(ctx);\n");
-        fprintf(outf, "\tduk_get_prop_string(ctx, -1, PRIVATE_MAGIC);\n");
+        fprintf(outf, "\tduk_get_prop_string(ctx, -1, \"%sPRIVATE\");\n",
+                MAGICPFX);
         fprintf(outf, "\tpriv = duk_get_pointer(ctx, -1);\n");
         fprintf(outf, "\tduk_pop_2(ctx);\n");
         fprintf(outf, "\tif (priv == NULL) return 0; /* can do? No can do. */\n\n");
@@ -599,7 +601,7 @@ output_interface_init_declaration(FILE* outf,
 
                 param_node = genbind_node_find_type(
                         genbind_node_getnode(init_node),
-                        param_node, GENBIND_NODE_TYPE_METHOD);
+                        param_node, GENBIND_NODE_TYPE_PARAMETER);
         }
 
         fprintf(outf,")");

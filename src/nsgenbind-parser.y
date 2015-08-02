@@ -350,7 +350,11 @@ ParameterList
         |
         ParameterList ',' TypeIdent
         {
-                $$ = genbind_node_link($3, $1);
+                $$ = genbind_node_prepend($1,
+                                          genbind_new_node(
+                                                  GENBIND_NODE_TYPE_PARAMETER,
+                                                  NULL,
+                                                  $3));
         }
         ;
 
