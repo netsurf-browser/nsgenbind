@@ -339,7 +339,9 @@ genbind_node_find_method_ident(struct genbind_node *node,
                               genbind_node_getnode(res_node),
                               NULL,
                               GENBIND_NODE_TYPE_IDENT));
-              if ((method_ident != NULL) &&
+
+              if ((ident != NULL) &&
+                  (method_ident != NULL) &&
                   strcmp(ident, method_ident) == 0) {
                       break;
               }
