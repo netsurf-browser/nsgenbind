@@ -23,7 +23,7 @@
 #include "duk-libdom.h"
 
 /** prefix for all generated functions */
-#define DLPFX "duckky"
+#define DLPFX "dukky"
 
 #define MAGICPFX "\\xFF\\xFFNETSURF_DUKTAPE_"
 
@@ -46,7 +46,9 @@ static int output_create_private(FILE* outf, char *class_name)
                 class_name);
         fprintf(outf, "\tif (priv == NULL) return 0;\n");
         fprintf(outf, "\tduk_push_pointer(ctx, priv);\n");
-        fprintf(outf, "\tduk_put_prop_string(ctx, 0, PRIVATE_MAGIC)\n\n");
+        fprintf(outf,
+                "\tduk_put_prop_string(ctx, 0, \"%sPRIVATE\");\n\n",
+                MAGICPFX);
 
         return 0;
 }
@@ -57,7 +59,8 @@ static int output_create_private(FILE* outf, char *class_name)
 static int output_safe_get_private(FILE* outf, char *class_name, int idx)
 {
         fprintf(outf, "\t%s_private_t *priv;\n", class_name);
-        fprintf(outf, "\tduk_get_prop_string(ctx, %d, PRIVATE_MAGIC);\n",idx);
+        fprintf(outf, "\tduk_get_prop_string(ctx, %d, \"%sPRIVATE\");\n",
+                idx, MAGICPFX);
         fprintf(outf, "\tpriv = duk_get_pointer(ctx, -1);\n");
         fprintf(outf, "\tduk_pop(ctx);\n");
         fprintf(outf, "\tif (priv == NULL) return 0;\n\n");
@@ -154,11 +157,14 @@ output_dump_stack(FILE* outf)
  * generate code that adds a method in a prototype
  */
 static int
-output_add_method(FILE* outf, char *class_name, char *method, int argc)
+output_add_method(FILE* outf,
+                  const char *class_name,
+                  const char *method,
+                  int argc)
 {
         fprintf(outf, "\t/* Add a method */\n");
         fprintf(outf, "\tduk_dup(ctx, 0);\n");
-        fprintf(outf, "\tduk_push_string(ctx, %s);\n", method);
+        fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", method);
         fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s, ",
                 DLPFX, class_name, method);
         if (argc == -1) {
@@ -172,7 +178,7 @@ output_add_method(FILE* outf, char *class_name, char *method, int argc)
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_WRITABLE |\n");
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
-        fprintf(outf, "\tduk_pop(ctx)\n\n");
+        fprintf(outf, "\tduk_pop(ctx);\n\n");
 
         return 0;
 }
@@ -196,7 +202,7 @@ output_populate_rw_property(FILE* outf, const char *class_name, const char *prop
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_SETTER |\n");
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
-        fprintf(outf, "\tduk_pop(ctx)\n\n");
+        fprintf(outf, "\tduk_pop(ctx);\n\n");
 
         return 0;
 }
@@ -217,7 +223,7 @@ output_populate_ro_property(FILE* outf, const char *class_name, const char *prop
                 "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
-        fprintf(outf, "\tduk_pop(ctx)\n\n");
+        fprintf(outf, "\tduk_pop(ctx);\n\n");
 
         return 0;
 }
@@ -234,7 +240,7 @@ output_prototype_constant_int(FILE *outf, const char *constant_name, int value)
         fprintf(outf, "\tduk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_VALUE |\n");
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_WRITABLE | DUK_DEFPROP_HAVE_ENUMERABLE |\n");
         fprintf(outf, "\t             DUK_DEFPROP_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
-        fprintf(outf, "\tduk_pop(ctx)\n\n");
+        fprintf(outf, "\tduk_pop(ctx);\n\n");
         return 0;
 }
 
@@ -259,7 +265,7 @@ output_get_method_private(FILE* outf, char *class_name)
  */
 static int output_tool_preface(FILE* outf)
 {
-        fprintf(outf, "\n%s\n", NSGENBIND_PREAMBLE);
+        fprintf(outf, "%s\n", NSGENBIND_PREAMBLE);
 
         return 0;
 }
@@ -704,20 +710,30 @@ static int count_operation_arguments(struct webidl_node *node)
 static int
 output_prototype_method(FILE* outf,
                         struct interface_map_entry *interfacee,
-                        struct webidl_node *op_node)
+                        struct interface_map_operation_entry *operatione)
 {
-        char *op_name;
         int op_argc;
 
-        op_name = webidl_node_gettext(
-                webidl_node_find_type(
-                        webidl_node_getnode(op_node),
-                        NULL,
-                        WEBIDL_NODE_TYPE_IDENT));
+        if (operatione->overloadc > 1) {
+                /* only generate a method for the first occourance of an
+                 * overloaded method
+                 */
+                return 0;
+        }
 
-        op_argc = count_operation_arguments(op_node);
+        if (operatione->name != NULL) {
+                /* normal method of prototype */
+                op_argc = count_operation_arguments(operatione->node);
 
-        output_add_method(outf, interfacee->class_name, op_name, op_argc);
+                output_add_method(outf,
+                                  interfacee->class_name,
+                                  operatione->name,
+                                  op_argc);
+        } else {
+                /* special method on prototype */
+                fprintf(outf,
+                     "\t/* Special method on prototype - UNIMPLEMENTED */\n\n");
+        }
 
         return 0;
 }
@@ -728,43 +744,19 @@ output_prototype_method(FILE* outf,
 static int
 output_prototype_methods(FILE *outf, struct interface_map_entry *interfacee)
 {
-        int res;
-        struct webidl_node *list_node;
-        struct webidl_node *op_node; /* operation on list node */
+        int opc;
+        int res = 0;
 
-        /* iterate each list node within the interface */
-        list_node = webidl_node_find_type(
-                webidl_node_getnode(interfacee->node),
-                NULL,
-                WEBIDL_NODE_TYPE_LIST);
-
-        while (list_node != NULL) {
-                /* iterate through operations in a list */
-                op_node = webidl_node_find_type(
-                        webidl_node_getnode(list_node),
-                        NULL,
-                        WEBIDL_NODE_TYPE_OPERATION);
-
-                while (op_node != NULL) {
-                        res = output_prototype_method(outf, interfacee, op_node);
-                        if (res != 0) {
-                                return res;
-                        }
-
-                        op_node = webidl_node_find_type(
-                                webidl_node_getnode(list_node),
-                                op_node,
-                                WEBIDL_NODE_TYPE_OPERATION);
+        for (opc = 0; opc < interfacee->operationc; opc++) {
+                res = output_prototype_method(outf,
+                                              interfacee,
+                                              interfacee->operationv + opc);
+                if (res != 0) {
+                        break;
                 }
-
-
-                list_node = webidl_node_find_type(
-                        webidl_node_getnode(interfacee->node),
-                        list_node,
-                        WEBIDL_NODE_TYPE_LIST);
         }
 
-        return 0;
+        return res;
 }
 
 
@@ -900,35 +892,34 @@ output_interface_prototype(FILE* outf,
 static int
 output_interface_operation(FILE* outf,
                            struct interface_map_entry *interfacee,
-                           struct webidl_node *op_node)
+                           struct interface_map_operation_entry *operatione)
 {
-        char *op_name;
-        struct genbind_node *method_node;
+        if (operatione->overloadc > 1) {
+                /* only generate a method for the first occourance of an
+                 * overloaded method
+                 */
+                return 0;
+        }
 
-        op_name = webidl_node_gettext(
-                webidl_node_find_type(
-                        webidl_node_getnode(op_node),
-                        NULL,
-                        WEBIDL_NODE_TYPE_IDENT));
+        if (operatione->name != NULL) {
+                /* normal method definition */
+                fprintf(outf,
+                        "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
+                        DLPFX, interfacee->class_name, operatione->name);
+                fprintf(outf,"{\n");
 
-        method_node = genbind_node_find_method_ident(interfacee->class,
-                                                     NULL,
-                                                     GENBIND_METHOD_TYPE_METHOD,
-                                                     op_name);
+                output_get_method_private(outf, interfacee->class_name);
 
-        /* method definition */
-        fprintf(outf,
-                "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
-                DLPFX, interfacee->class_name, op_name);
-        fprintf(outf,"{\n");
+                output_cdata(outf, operatione->method, GENBIND_NODE_TYPE_CDATA);
 
-        output_get_method_private(outf, interfacee->class_name);
+                fprintf(outf,"\treturn 0;\n");
 
-        output_cdata(outf, method_node, GENBIND_NODE_TYPE_CDATA);
-
-        fprintf(outf,"\treturn 0;\n");
-
-        fprintf(outf, "}\n\n");
+                fprintf(outf, "}\n\n");
+        } else {
+                /* special method definition */
+                fprintf(outf,
+                        "/* Special method definition - UNIMPLEMENTED */\n\n");
+        }
 
         return 0;
 }
@@ -939,43 +930,19 @@ output_interface_operation(FILE* outf,
 static int
 output_interface_operations(FILE* outf, struct interface_map_entry *interfacee)
 {
-        int res;
-        struct webidl_node *list_node;
-        struct webidl_node *op_node; /* operation on list node */
+        int opc;
+        int res = 0;
 
-        /* iterate each list node within the interface */
-        list_node = webidl_node_find_type(
-                webidl_node_getnode(interfacee->node),
-                NULL,
-                WEBIDL_NODE_TYPE_LIST);
-
-        while (list_node != NULL) {
-                /* iterate through operations in a list */
-                op_node = webidl_node_find_type(
-                        webidl_node_getnode(list_node),
-                        NULL,
-                        WEBIDL_NODE_TYPE_OPERATION);
-
-                while (op_node != NULL) {
-                        res = output_interface_operation(outf, interfacee, op_node);
-                        if (res != 0) {
-                                return res;
-                        }
-
-                        op_node = webidl_node_find_type(
-                                webidl_node_getnode(list_node),
-                                op_node,
-                                WEBIDL_NODE_TYPE_OPERATION);
+        for (opc = 0; opc < interfacee->operationc; opc++) {
+                res = output_interface_operation(outf,
+                                                 interfacee,
+                                                 interfacee->operationv + opc);
+                if (res != 0) {
+                        break;
                 }
-
-
-                list_node = webidl_node_find_type(
-                        webidl_node_getnode(interfacee->node),
-                        list_node,
-                        WEBIDL_NODE_TYPE_LIST);
         }
 
-        return 0;
+        return res;
 }
 
 /**
@@ -1097,23 +1064,24 @@ static int output_interface(struct interface_map *interface_map,
         /* find parent interface entry */
         inherite = interface_map_inherit_entry(interface_map, interfacee);
 
+        /* tool preface */
+        output_tool_preface(ifacef);
+
         /* binding preface */
         output_cdata(ifacef,
                      interface_map->binding_node,
                      GENBIND_NODE_TYPE_PREFACE);
 
-        /* tool preface */
-        output_tool_preface(ifacef);
-
         /* class preface */
         output_cdata(ifacef, interfacee->class, GENBIND_NODE_TYPE_PREFACE);
+
+        /* tool prologue */
+        output_tool_prologue(ifacef);
 
         /* binding prologue */
         output_cdata(ifacef,
                      interface_map->binding_node,
                      GENBIND_NODE_TYPE_PROLOGUE);
-
-        output_tool_prologue(ifacef);
 
         /* class prologue */
         output_cdata(ifacef, interfacee->class, GENBIND_NODE_TYPE_PROLOGUE);
@@ -1389,20 +1357,21 @@ output_binding_src(struct interface_map *interface_map)
                 return -1;
         }
 
+        /* tool preface */
+        output_tool_preface(bindf);
+
         /* binding preface */
         output_cdata(bindf,
                      interface_map->binding_node,
                      GENBIND_NODE_TYPE_PREFACE);
 
-        /* tool preface */
-        output_tool_preface(bindf);
+        output_tool_prologue(bindf);
 
         /* binding prologue */
         output_cdata(bindf,
                      interface_map->binding_node,
                      GENBIND_NODE_TYPE_PROLOGUE);
 
-        output_tool_prologue(bindf);
 
         fprintf(bindf, "\n");
 

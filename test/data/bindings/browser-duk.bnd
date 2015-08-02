@@ -14,7 +14,8 @@ binding duk_libdom {
 	webidl "uievents.idl";
 	webidl "console.idl";
 
-	preface %{
+	preface
+%{
 /* DukTape JavaScript bindings for NetSurf browser
  *
  * Copyright 2015 Vincent Sanders <vince@netsurf-browser.org>
@@ -22,7 +23,7 @@ binding duk_libdom {
  * Released under the terms of the MIT License,
  *        http://www.opensource.org/licenses/mit-license
  */
-		%};
+%};
 
 	prologue %{
 /* binding prologue */

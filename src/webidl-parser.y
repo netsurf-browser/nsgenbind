@@ -155,6 +155,9 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> Const
 
 %type <node> Operation
+%type <node> SpecialOperation
+%type <node> Specials
+%type <node> Special
 %type <node> OperationRest
 %type <node> OptionalIdentifier
 
@@ -723,55 +726,94 @@ ReadOnly:
         }
         ;
 
- /* [35] */
+ /* SE[47] */
 Operation:
-        Qualifiers OperationRest
+        ReturnType OperationRest
         {
-            /* @todo fix qualifiers */
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $2);
+                /* put return type on the operation */
+                $2 = webidl_node_prepend($1, $2);
+
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $2);
+        }
+        |
+        SpecialOperation
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $1);
         }
         ;
 
- /* [36] */
-Qualifiers:
-        TOK_STATIC
-        |
-        Specials
+ /* SE[48] */
+SpecialOperation:
+        Special Specials ReturnType OperationRest
+        {
+                /* put return type on the operation */
+                $$ = webidl_node_prepend($4, $3);
+
+                /* specials */
+                $$ = webidl_node_prepend($$, $2);
+
+                /* special */
+                $$ = webidl_node_prepend($$, $1);
+        }
         ;
 
- /* [37] */
+ /* SE[49] */
 Specials:
         /* empty */
+        {
+                $$ = NULL;
+        }
         |
         Special Specials
+        {
+                $$ = webidl_node_prepend($2, $1);
+        }
         ;
 
- /* [38] */
+ /* SE[50] */
 Special:
         TOK_GETTER
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_GETTER);
+        }
         |
         TOK_SETTER
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_SETTER);
+        }
         |
         TOK_CREATOR
+        {
+                /* second edition removed this special but teh
+                   specifications still use it!
+                */
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_CREATOR);
+        }
         |
         TOK_DELETER
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_DELETER);
+        }
         |
         TOK_LEGACYCALLER
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                NULL, (void *)WEBIDL_TYPE_SPECIAL_LEGACYCALLER);
+        }
         ;
 
- /* [39] */
+ /* SE[51] */
 OperationRest:
-        ReturnType OptionalIdentifier '(' ArgumentList ')' ';'
+        OptionalIdentifier '(' ArgumentList ')' ';'
         {
-            struct webidl_node *arglist;
-
-            /* put return type in argument list */
-            arglist = webidl_node_prepend($4, $1);
-
             /* argument list */
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, arglist);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, $3);
 
-            $$ = webidl_node_prepend($$, $2); /* identifier */
+            $$ = webidl_node_prepend($1, $$); /* identifier */
         }
         ;
 

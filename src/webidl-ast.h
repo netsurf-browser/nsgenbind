@@ -27,7 +27,8 @@ enum webidl_node_type {
 	WEBIDL_NODE_TYPE_OPERATION,
 	WEBIDL_NODE_TYPE_CONST,
 
-	WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT,
+	WEBIDL_NODE_TYPE_SPECIAL,
+        WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT,
 	WEBIDL_NODE_TYPE_ARGUMENT,
 	WEBIDL_NODE_TYPE_ELLIPSIS,
 	WEBIDL_NODE_TYPE_TYPE,
@@ -66,6 +67,15 @@ enum webidl_type_modifier {
 	WEBIDL_TYPE_MODIFIER_UNSIGNED,
 	WEBIDL_TYPE_MODIFIER_UNRESTRICTED,
 	WEBIDL_TYPE_MODIFIER_READONLY,
+};
+
+/* the type of special node */
+enum webidl_type_special {
+        WEBIDL_TYPE_SPECIAL_GETTER,
+        WEBIDL_TYPE_SPECIAL_SETTER,
+        WEBIDL_TYPE_SPECIAL_CREATOR,
+        WEBIDL_TYPE_SPECIAL_DELETER,
+        WEBIDL_TYPE_SPECIAL_LEGACYCALLER,
 };
 
 struct webidl_node;
@@ -114,7 +124,7 @@ webidl_node_find(struct webidl_node *node,
 
 struct webidl_node *
 webidl_node_find_type(struct webidl_node *node,
-		  struct webidl_node *prev,
+                      struct webidl_node *prev,
 		      enum webidl_node_type type);
 
 struct webidl_node *

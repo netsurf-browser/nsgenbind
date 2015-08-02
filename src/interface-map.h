@@ -17,6 +17,7 @@ struct interface_map_operation_entry {
         const char *name; /** operation name */
         struct webidl_node *node; /**< AST operation node */
         struct genbind_node *method; /**< method from binding (if any) */
+        int overloadc; /**< Number of previous overloads of this operation */
 };
 
 /** map entry for attributes on an interface */

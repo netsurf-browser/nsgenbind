@@ -285,6 +285,7 @@ webidl_node_getint(struct webidl_node *node)
 		case WEBIDL_NODE_TYPE_MODIFIER:
 		case WEBIDL_NODE_TYPE_TYPE_BASE:
 		case WEBIDL_NODE_TYPE_LITERAL_INT:
+                case WEBIDL_NODE_TYPE_SPECIAL:
 			return &node->r.number;
 
 		default:
@@ -386,6 +387,9 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
 		return "Extended Attribute";
 
+	case WEBIDL_NODE_TYPE_SPECIAL:
+		return "Special";
+
 	default:
 		return "Unknown";
 	}
@@ -414,10 +418,13 @@ static int webidl_ast_dump(FILE *dumpf, struct webidl_node *node, int indent)
 				fprintf(dumpf, "\n");
 				webidl_ast_dump(dumpf, next, indent + 2);
 			} else {
-				/* not txt or node has to be an int */
+				/* not txt or node try an int */
                                 value = webidl_node_getint(node);
                                 if (value != NULL) {
                                         fprintf(dumpf, ": %d\n", *value);
+                                } else {
+                                        /* no value */
+                                        fprintf(dumpf, "\n");
                                 }
 			}
 		} else {

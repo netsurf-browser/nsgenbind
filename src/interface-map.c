@@ -133,6 +133,33 @@ interface_topoligical_sort(struct interface_map_entry *srcinf, int infc)
 }
 
 static int
+count_operation_name(struct interface_map_operation_entry *operationv,
+                     int operationc,
+                     const char *name)
+{
+        struct interface_map_operation_entry *cure;
+        int opc;
+        int res = 0;
+
+        for (opc = 0; opc < operationc; opc++) {
+                cure = operationv + opc;
+
+                if (cure->name == name) {
+                        /* check pointers for equivalence */
+                        res++;
+                } else {
+                        if ((cure->name != NULL) &&
+                            (name != NULL) &&
+                            (strcmp(cure->name, name) == 0)) {
+                                res++;
+                        }
+                }
+        }
+
+        return res;
+}
+
+static int
 operation_map_new(struct webidl_node *interface,
                   struct genbind_node *class,
                   int *operationc_out,
@@ -143,14 +170,16 @@ operation_map_new(struct webidl_node *interface,
         struct interface_map_operation_entry *cure; /* current entry */
         struct interface_map_operation_entry *operationv;
         int operationc;
+        int opc;
 
         /* enumerate operationss */
         operationc = enumerate_interface_type(interface,
                                               WEBIDL_NODE_TYPE_OPERATION);
-        *operationc_out = operationc;
 
         if (operationc < 1) {
-                *operationv_out = NULL; /* no operations so empty map */
+                /* no operations so empty map */
+                *operationc_out = 0;
+                *operationv_out = NULL;
                 return 0;
         }
 
@@ -189,6 +218,10 @@ operation_map_new(struct webidl_node *interface,
                                                GENBIND_METHOD_TYPE_METHOD,
                                                cure->name);
 
+                        cure->overloadc = count_operation_name(operationv,
+                                                               operationc,
+                                                               cure->name);
+
                         cure++;
 
                         /* move to next operation */
@@ -204,6 +237,21 @@ operation_map_new(struct webidl_node *interface,
                         WEBIDL_NODE_TYPE_LIST);
         }
 
+        /* finally take a pass over the table to correct the overload count */
+        for (opc = 0; opc < operationc; opc++) {
+                cure = operationv + opc;
+                if ((cure->overloadc == 1) &&
+                    (count_operation_name(operationv,
+                                          operationc,
+                                          cure->name) == 1)) {
+                        /* if the "overloaded" member is itself it is not
+                         * overloaded.
+                         */
+                        cure->overloadc = 0;
+                }
+        }
+
+        *operationc_out = operationc;
         *operationv_out = operationv; /* resulting operations map */
 
         return 0;
@@ -533,8 +581,15 @@ int interface_map_dump(struct interface_map *index)
 
                         ope = ecur->operationv;
                         while (ope != NULL) {
-                                fprintf(dumpf, "                %s %p\n",
-                                        ope->name, ope->method);
+                                fprintf(dumpf,
+                                        "                %s\n",
+                                        ope->name);
+                                fprintf(dumpf,
+                                        "                        method:%p\n",
+                                        ope->method);
+                                fprintf(dumpf,
+                                        "                        overload:%d\n",
+                                        ope->overloadc);
                                 ope++;
                                 opc--;
                                 if (opc == 0) {
