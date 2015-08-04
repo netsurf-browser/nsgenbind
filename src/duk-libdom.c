@@ -193,16 +193,15 @@ output_populate_rw_property(FILE* outf, const char *class_name, const char *prop
         fprintf(outf, "\t/* Add read/write property */\n");
         fprintf(outf, "\tduk_dup(ctx, 0);\n");
         fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", property);
-        fprintf(outf,
-                "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
                 DLPFX, class_name, property);
-        fprintf(outf,
-                "\tduk_push_c_function(ctx, %s_%s_%s_setter, 1);\n",
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s_setter, 1);\n",
                 DLPFX, class_name, property);
+        output_dump_stack(outf);
         fprintf(outf, "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_SETTER |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        fprintf(outf, "\t\tDUK_DEFPROP_HAVE_SETTER |\n");
+        fprintf(outf, "\t\tDUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
+        fprintf(outf, "\t\tDUK_DEFPROP_HAVE_CONFIGURABLE);\n");
         fprintf(outf, "\tduk_pop(ctx);\n\n");
 
         return 0;
@@ -217,13 +216,12 @@ output_populate_ro_property(FILE* outf, const char *class_name, const char *prop
         fprintf(outf, "\t/* Add readonly property */\n");
         fprintf(outf, "\tduk_dup(ctx, 0);\n");
         fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", property);
-        fprintf(outf,
-                "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s_getter, 0);\n",
                 DLPFX, class_name, property);
-        fprintf(outf,
-                "\tduk_def_prop(ctx, -4, DUK_DEFPROP_HAVE_GETTER |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
-        fprintf(outf, "\t             DUK_DEFPROP_HAVE_CONFIGURABLE);\n");
+        output_dump_stack(outf);
+        fprintf(outf, "\tduk_def_prop(ctx, -3, DUK_DEFPROP_HAVE_GETTER |\n");
+        fprintf(outf, "\t\tDUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_ENUMERABLE |\n");
+        fprintf(outf, "\t\tDUK_DEFPROP_HAVE_CONFIGURABLE);\n");
         fprintf(outf, "\tduk_pop(ctx);\n\n");
 
         return 0;
@@ -258,7 +256,13 @@ output_get_method_private(FILE* outf, char *class_name)
                 MAGICPFX);
         fprintf(outf, "\tpriv = duk_get_pointer(ctx, -1);\n");
         fprintf(outf, "\tduk_pop_2(ctx);\n");
-        fprintf(outf, "\tif (priv == NULL) return 0; /* can do? No can do. */\n\n");
+        fprintf(outf, "\tif (priv == NULL) {\n");
+        if (options->dbglog) {
+                fprintf(outf, "\t\tLOG(\"priv failed\");\n");
+        }
+        fprintf(outf, "\t\treturn 0; /* can do? No can do. */\n");
+        fprintf(outf, "\t}\n\n");
+
         return 0;
 }
 
