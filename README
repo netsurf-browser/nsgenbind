@@ -288,6 +288,62 @@ The binding file consists of three types of element:
           The cdata block is output.
 
 
+Generated source
+----------------
+
+duk_libdom
+
+  This binding type generates several files as output:
+    - binding.c
+          support function source
+
+    - binding.h
+          header to declare the support functions and magic constant
+
+    - prototype.h
+          header which declares all the prototype builder, initialiser
+            and finalizer functions.
+
+    - private.h
+          Which defines all the private structures for all classes
+
+    - C source file per class
+          These are the main output of the tool and are structured to
+            give the binding author control of the output while
+            automatically generating as much code as possible.
+
+          The files are generated in sections:
+              tool preface
+              binding preface
+              class preface
+              tool prologue
+              binding prologue
+              class prologue
+              initialiser
+              finalizer
+              constructor
+              destructor
+              methods
+              getters and setters
+              prototype
+              class epilogue
+              binding epilogue
+	      tool epilogue
+	      class postface
+	      binding postface
+	      tool postface
+
+          The preface, prologue, epilogue and postface are all
+            verbaitum output from the binding and class elements in the
+            binding. All the other sections are generated code augmented
+            and controlled by the binding.
+
+	  Method generation produces a method with appropriate
+	    signature added to the prototype. Any verbatum cdata from
+	    the binding is added after the code that automatically
+	    populates a private pointer of the appropriate type
+	    (named priv).
+
 References
 ----------
 
