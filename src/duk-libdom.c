@@ -343,7 +343,12 @@ static char *gen_class_name(struct interface_map_entry *interfacee)
 /**
  * output character data of node of given type.
  *
- * used for pre/pro/epi/post sections
+ * used for any cdata including pre/pro/epi/post sections
+ *
+ * \param outf The file handle to write output.
+ * \param node The node to search.
+ * \param nodetype the type of child node to search for.
+ * \return The number of nodes written or 0 for none.
  */
 static int
 output_cdata(FILE* outf,
@@ -351,14 +356,17 @@ output_cdata(FILE* outf,
              enum genbind_node_type nodetype)
 {
         char *cdata;
+        int res = 0;
+
         cdata = genbind_node_gettext(
                 genbind_node_find_type(
                         genbind_node_getnode(node),
                         NULL, nodetype));
         if (cdata != NULL) {
                 fprintf(outf, "%s", cdata);
+                res = 1;
         }
-        return 0;
+        return res;
 }
 
 static FILE *open_header(struct interface_map *interface_map, const char *name)
@@ -919,6 +927,9 @@ output_interface_operation(FILE* outf,
 
         if (operatione->name != NULL) {
                 /* normal method definition */
+
+                int cdatac; /* cdata blocks output */
+
                 fprintf(outf,
                         "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
                         DLPFX, interfacee->class_name, operatione->name);
@@ -926,9 +937,14 @@ output_interface_operation(FILE* outf,
 
                 output_get_method_private(outf, interfacee->class_name);
 
-                output_cdata(outf, operatione->method, GENBIND_NODE_TYPE_CDATA);
+                cdatac = output_cdata(outf,
+                                      operatione->method,
+                                      GENBIND_NODE_TYPE_CDATA);
 
-                fprintf(outf,"\treturn 0;\n");
+                if (cdatac == 0) {
+                        /* no implementation so generate default */
+                        fprintf(outf,"\treturn 0;\n");
+                }
 
                 fprintf(outf, "}\n\n");
         } else {
@@ -969,6 +985,8 @@ output_interface_attribute(FILE* outf,
                            struct interface_map_entry *interfacee,
                            struct interface_map_attribute_entry *atributee)
 {
+        int cdatac;
+
         /* getter definition */
         fprintf(outf,
                 "static duk_ret_t %s_%s_%s_getter(duk_context *ctx)\n",
@@ -977,9 +995,12 @@ output_interface_attribute(FILE* outf,
 
         output_get_method_private(outf, interfacee->class_name);
 
-        output_cdata(outf, atributee->getter, GENBIND_NODE_TYPE_CDATA);
+        cdatac = output_cdata(outf, atributee->getter, GENBIND_NODE_TYPE_CDATA);
 
-        fprintf(outf,"\treturn 0;\n");
+        if (cdatac == 0) {
+                /* no implementation so generate default */
+                fprintf(outf,"\treturn 0;\n");
+        }
 
         fprintf(outf, "}\n\n");
 
@@ -996,9 +1017,13 @@ output_interface_attribute(FILE* outf,
 
         output_get_method_private(outf, interfacee->class_name);
 
-        output_cdata(outf, atributee->setter, GENBIND_NODE_TYPE_CDATA);
+        cdatac = output_cdata(outf, atributee->setter, GENBIND_NODE_TYPE_CDATA);
 
-        fprintf(outf,"\treturn 0;\n");
+        if (cdatac == 0) {
+                /* no implementation so generate default */
+                fprintf(outf,"\treturn 0;\n");
+        }
+
 
         fprintf(outf, "}\n\n");
 
