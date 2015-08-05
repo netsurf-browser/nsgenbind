@@ -45,11 +45,12 @@ enum genbind_type_modifier {
 
 /* binding method types */
 enum genbind_method_type {
-        GENBIND_METHOD_TYPE_INIT = 0,
-        GENBIND_METHOD_TYPE_FINI = 1, /**<  */
-        GENBIND_METHOD_TYPE_METHOD = 2, /**<  */
-        GENBIND_METHOD_TYPE_GETTER = 3, /**<  */
-        GENBIND_METHOD_TYPE_SETTER = 4, /**<  */
+        GENBIND_METHOD_TYPE_INIT = 0, /**< binding method is initialiser */
+        GENBIND_METHOD_TYPE_FINI, /**< binding method is finalizer */
+        GENBIND_METHOD_TYPE_METHOD, /**< binding method is a method */
+        GENBIND_METHOD_TYPE_GETTER, /**< binding method is a getter */
+        GENBIND_METHOD_TYPE_SETTER, /**< binding method is a setter */
+        GENBIND_METHOD_TYPE_PROTOTYPE, /**< binding method is a prototype */
 };
 
 struct genbind_node;

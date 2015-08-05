@@ -870,11 +870,22 @@ output_interface_prototype(FILE* outf,
                            struct interface_map_entry *interfacee,
                            struct interface_map_entry *inherite)
 {
+        struct genbind_node *proto_node;
+
+        /* find the prototype method on the class */
+        proto_node = genbind_node_find_method(interfacee->class,
+                                             NULL,
+                                             GENBIND_METHOD_TYPE_PROTOTYPE);
+
         /* prototype definition */
-        fprintf(outf,
-                "duk_ret_t %s_%s___proto(duk_context *ctx)\n",
+        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx)\n",
                 DLPFX, interfacee->class_name);
         fprintf(outf,"{\n");
+
+        /* Output any binding data first */
+        if (output_cdata(outf, proto_node, GENBIND_NODE_TYPE_CDATA) != 0) {
+                fprintf(outf,"\n");
+        }
 
         /* generate prototype chaining if interface has a parent */
         if (inherite != NULL) {

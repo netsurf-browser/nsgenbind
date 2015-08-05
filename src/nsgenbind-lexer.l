@@ -135,6 +135,8 @@ getter                  return TOK_GETTER;
 
 setter                  return TOK_SETTER;
 
+prototype               return TOK_PROTOTYPE;
+
  /* other terminals */
 
 {dblcolon}              return TOK_DBLCOLON;
