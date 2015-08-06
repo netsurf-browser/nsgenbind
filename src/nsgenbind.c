@@ -58,7 +58,22 @@ static struct options* process_cmdline(int argc, char **argv)
                         break;
 
                 case 'W':
-                        options->warnings = 1; /* warning flags */
+                        if ((optarg == NULL) ||
+                            (strcmp(optarg, "all") == 0)) {
+                                /* all warnings */
+                                options->warnings |= WARNING_ALL;
+                        } else if (strcmp(optarg, "unimplemented") == 0) {
+                                options->warnings |= WARNING_UNIMPLEMENTED;
+                        } else if (strcmp(optarg, "duplicated") == 0) {
+                                options->warnings |= WARNING_DUPLICATED;
+                        } else {
+                                fprintf(stderr,
+                                        "Unknown warning option \"%s\" valid options are: all, unimplemented\n",
+                                        optarg);
+                                free(options);
+                                return NULL;
+
+                        }
                         break;
 
                 default: /* '?' */
@@ -67,7 +82,6 @@ static struct options* process_cmdline(int argc, char **argv)
                                 argv[0]);
                         free(options);
                         return NULL;
-
                 }
         }
 

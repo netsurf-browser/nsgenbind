@@ -954,6 +954,9 @@ output_interface_operation(FILE* outf,
 
                 if (cdatac == 0) {
                         /* no implementation so generate default */
+                        WARN(WARNING_UNIMPLEMENTED,
+                             "Unimplemented: method %s::%s();",
+                             interfacee->name, operatione->name);
                         fprintf(outf,"\treturn 0;\n");
                 }
 
@@ -1009,6 +1012,10 @@ output_interface_attribute(FILE* outf,
         cdatac = output_cdata(outf, atributee->getter, GENBIND_NODE_TYPE_CDATA);
 
         if (cdatac == 0) {
+                WARN(WARNING_UNIMPLEMENTED,
+                     "Unimplemented: getter %s::%s();",
+                     interfacee->name, atributee->name);
+
                 /* no implementation so generate default */
                 fprintf(outf,"\treturn 0;\n");
         }
@@ -1031,6 +1038,10 @@ output_interface_attribute(FILE* outf,
         cdatac = output_cdata(outf, atributee->setter, GENBIND_NODE_TYPE_CDATA);
 
         if (cdatac == 0) {
+                WARN(WARNING_UNIMPLEMENTED,
+                     "Unimplemented: setter %s::%s();",
+                     interfacee->name, atributee->name);
+
                 /* no implementation so generate default */
                 fprintf(outf,"\treturn 0;\n");
         }

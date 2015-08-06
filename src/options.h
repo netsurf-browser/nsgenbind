@@ -32,7 +32,7 @@ enum opt_warnings {
 
 #define WARN(flags, msg, args...) do {			\
 		if ((options->warnings & flags) != 0) {			\
-			fprintf(stderr, "%s: warning:"msg"\n", __func__, ## args); \
+			fprintf(stderr, "%s: warning: "msg"\n", __func__, ## args); \
 		}							\
 	} while(0)
 
