@@ -868,11 +868,13 @@ output_interface_prototype(FILE* outf,
 			struct interface_map_entry *interfacep;
 
 			interfacep = interface_map->entries + idx;
-			if (interfacep == interfacee) continue;
 			if (interfacep->noobject) continue;
-			output_get_prototype(outf, interfacep->name);
+			if (interfacep == interfacee)
+				fprintf(outf, "\tduk_dup(ctx, 0);\n");
+			else
+				output_get_prototype(outf, interfacep->name);
 			fprintf(outf,
-				"\tduk_put_prop_string(ctx, 0, \"%s\");\n",
+				"\tdukky_inject_not_ctr(ctx, 0, \"%s\");\n",
 				interfacep->name);
 		}
 	}
