@@ -822,7 +822,8 @@ output_prototype_constants(FILE *outf, struct interface_map_entry *interfacee)
 static int
 output_interface_prototype(FILE* outf,
                            struct interface_map_entry *interfacee,
-                           struct interface_map_entry *inherite)
+                           struct interface_map_entry *inherite,
+                           struct interface_map *interface_map)
 {
         struct genbind_node *proto_node;
 
@@ -857,6 +858,24 @@ output_interface_prototype(FILE* outf,
 
         /* generate setting of constants */
         output_prototype_constants(outf, interfacee);
+
+	/* if this is the global object, output all interfaces which do not
+	 * prevent us from doing so
+	 */
+	if (interfacee->primary_global) {
+		fprintf(outf, "\t/* Create interface objects */\n");
+		for (int idx = 0; idx < interface_map->entryc; idx++) {
+			struct interface_map_entry *interfacep;
+
+			interfacep = interface_map->entries + idx;
+			if (interfacep == interfacee) continue;
+			if (interfacep->noobject) continue;
+			output_get_prototype(outf, interfacep->name);
+			fprintf(outf,
+				"\tduk_put_prop_string(ctx, 0, \"%s\");\n",
+				interfacep->name);
+		}
+	}
 
         /* generate setting of destructor */
         output_set_destructor(outf, interfacee->class_name, 0);
@@ -1121,7 +1140,7 @@ static int output_interface(struct interface_map *interface_map,
         output_interface_attributes(ifacef, interfacee);
 
         /* prototype */
-        output_interface_prototype(ifacef, interfacee, inherite);
+        output_interface_prototype(ifacef, interfacee, inherite, interface_map);
 
         fprintf(ifacef, "\n");
 
