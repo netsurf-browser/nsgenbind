@@ -25,11 +25,6 @@
 	" * nsgenbind is similar to a compiler is a purely transformative tool which\n" \
 	" * explicitly makes no copyright claim on this generated output"
 
-#define HDROUTF(bndg, fmt, args...) do {			\
-		if (bndg->hdrfile != NULL) {			\
-			fprintf(bndg->hdrfile, fmt, ##args);	\
-		}						\
-	} while(0)
 
 
 static int webidl_file_cb(struct genbind_node *node, void *ctx)
@@ -47,10 +42,14 @@ read_webidl(struct genbind_node *genbind_ast, struct webidl_node **webidl_ast)
 {
 	int res;
 
-	res = genbind_node_for_each_type(genbind_ast,
+	res = genbind_node_foreach_type(genbind_ast,
 					 GENBIND_NODE_TYPE_WEBIDLFILE,
 					 webidl_file_cb,
 					 webidl_ast);
+
+	if (res == 0) {
+		res = webidl_intercalate_implements(*webidl_ast);
+	}
 
 	/* debug dump of web idl AST */
 	if (options->verbose) {
@@ -101,7 +100,7 @@ static int webidl_hdrcomments_cb(struct genbind_node *node, void *ctx)
 
 static int webidl_hdrcomment_cb(struct genbind_node *node, void *ctx)
 {
-	genbind_node_for_each_type(genbind_node_getnode(node),
+	genbind_node_foreach_type(genbind_node_getnode(node),
 				   GENBIND_NODE_TYPE_STRING,
 				   webidl_hdrcomments_cb,
 				   ctx);
@@ -135,51 +134,7 @@ static int webidl_private_cb(struct genbind_node *node, void *ctx)
 	return 0;
 }
 
-static int webidl_private_param_cb(struct genbind_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-	struct genbind_node *ident_node;
-	struct genbind_node *type_node;
 
-
-	ident_node = genbind_node_find_type(genbind_node_getnode(node),
-					    NULL,
-					    GENBIND_NODE_TYPE_IDENT);
-	if (ident_node == NULL)
-		return -1; /* bad AST */
-
-	type_node = genbind_node_find_type(genbind_node_getnode(node),
-					    NULL,
-					    GENBIND_NODE_TYPE_STRING);
-	if (type_node == NULL)
-		return -1; /* bad AST */
-
-	fprintf(binding->outfile,
-		",\n\t\t%s%s",
-		genbind_node_gettext(type_node),
-		genbind_node_gettext(ident_node));
-
-	return 0;
-}
-
-static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-	struct genbind_node *ident_node;
-	const char *ident;
-
-	ident_node = genbind_node_find_type(genbind_node_getnode(node),
-					    NULL,
-					    GENBIND_NODE_TYPE_IDENT);
-	if (ident_node == NULL)
-		return -1; /* bad AST */
-
-	ident = genbind_node_gettext(ident_node);
-
-	fprintf(binding->outfile, "\tprivate->%s = %s;\n", ident, ident);
-
-	return 0;
-}
 
 /* section output generators */
 
@@ -187,7 +142,7 @@ static int webidl_private_assign_cb(struct genbind_node *node, void *ctx)
 static int
 output_epilogue(struct binding *binding)
 {
-	genbind_node_for_each_type(binding->gb_ast,
+	genbind_node_foreach_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_EPILOGUE,
 				   webidl_epilogue_cb,
 				   binding);
@@ -211,7 +166,11 @@ output_epilogue(struct binding *binding)
 static int
 output_prologue(struct binding *binding)
 {
-	genbind_node_for_each_type(binding->gb_ast,
+	/* forward declare property list */
+	fprintf(binding->outfile,
+		"static JSPropertySpec jsclass_properties[];\n\n");
+
+	genbind_node_foreach_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_PROLOGUE,
 				   webidl_prologue_cb,
 				   binding);
@@ -285,7 +244,7 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
-		
+
 			if (options->dbglog) {
 				fprintf(binding->outfile,
 					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
@@ -320,7 +279,7 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
-		
+
 			if (options->dbglog) {
 				fprintf(binding->outfile,
 					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
@@ -355,7 +314,7 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
-		
+
 			if (options->dbglog) {
 				fprintf(binding->outfile,
 					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
@@ -390,7 +349,7 @@ output_api_operations(struct binding *binding)
 				"\n"
 				"\tprivate = JS_GetInstancePrivate(cx, obj, &JSClass_%s, NULL);\n",
 				binding->interface);
-		
+
 			if (options->dbglog) {
 				fprintf(binding->outfile,
 					"\tJSLOG(\"jscontext:%%p jsobject:%%p private:%%p\", cx, obj, private);\n");
@@ -527,208 +486,10 @@ output_code_block(struct binding *binding, struct genbind_node *codelist)
 	}
 }
 
-/** generate class initialiser which create the javascript class prototype */
-static int
-output_class_init(struct binding *binding)
-{
-	int res = 0;
-	struct genbind_node *api_node;
 
-	/* class Initialisor declaration */
-	if (binding->hdrfile) {
-		binding->outfile = binding->hdrfile;
-
-	fprintf(binding->outfile,
-		"JSObject *jsapi_InitClass_%s(JSContext *cx, JSObject *parent);\n",
-		binding->interface);
-
-		binding->outfile = binding->srcfile;
-	}
-
-	/* class Initialisor definition */
-	fprintf(binding->outfile,
-		"JSObject *jsapi_InitClass_%s(JSContext *cx, JSObject *parent)\n"
-		"{\n"
-		"\tJSObject *prototype;\n",
-		binding->interface);
-
-	api_node = genbind_node_find_type_ident(binding->gb_ast,
-						      NULL,
-						      GENBIND_NODE_TYPE_API,
-						      "init");
-
-	if (api_node != NULL) {
-		output_code_block(binding, genbind_node_getnode(api_node));
-	} else {
-		fprintf(binding->outfile,
-			"\n"
-			"\tprototype = JS_InitClass(cx,\n"
-			"\t\tparent,\n"
-			"\t\tNULL,\n"
-			"\t\t&JSClass_%s,\n"
-			"\t\tNULL,\n"
-			"\t\t0,\n"
-			"\t\tNULL,\n"
-			"\t\tNULL, \n"
-			"\t\tNULL, \n"
-			"\t\tNULL);\n",
-			binding->interface);
-	}
-
-	output_const_defines(binding, binding->interface);
-
-	fprintf(binding->outfile,
-		"\treturn prototype;\n"
-		"}\n\n");
-
-	return res;
-}
 
 static int
-output_class_new(struct binding *binding)
-{
-	int res = 0;
-	struct genbind_node *api_node;
-
-	/* constructor declaration */
-	if (binding->hdrfile) {
-		binding->outfile = binding->hdrfile;
-
-		fprintf(binding->outfile,
-			"JSObject *jsapi_new_%s(JSContext *cx,\n"
-			"\t\tJSObject *prototype,\n"
-			"\t\tJSObject *parent",
-			binding->interface);
-
-		genbind_node_for_each_type(binding->binding_list,
-					   GENBIND_NODE_TYPE_BINDING_PRIVATE,
-					   webidl_private_param_cb,
-					   binding);
-
-		fprintf(binding->outfile, ");");
-
-		binding->outfile = binding->srcfile;
-	}
-
-	/* constructor definition */
-	fprintf(binding->outfile,
-		"JSObject *jsapi_new_%s(JSContext *cx,\n"
-		"\t\tJSObject *prototype,\n"
-		"\t\tJSObject *parent",
-		binding->interface);
-
-	genbind_node_for_each_type(binding->binding_list,
-				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
-				   webidl_private_param_cb,
-				   binding);
-
-	fprintf(binding->outfile,
-		")\n"
-		"{\n"
-		"\tJSObject *newobject;\n");
-
-	/* create private data */
-	if (binding->has_private) {
-		fprintf(binding->outfile,
-			"\tstruct jsclass_private *private;\n"
-			"\n"
-			"\tprivate = malloc(sizeof(struct jsclass_private));\n"
-			"\tif (private == NULL) {\n"
-			"\t\treturn NULL;\n"
-			"\t}\n");
-
-		genbind_node_for_each_type(binding->binding_list,
-					   GENBIND_NODE_TYPE_BINDING_PRIVATE,
-					   webidl_private_assign_cb,
-					   binding);
-	}
-
-	api_node = genbind_node_find_type_ident(binding->gb_ast,
-						NULL,
-						GENBIND_NODE_TYPE_API,
-						"new");
-
-	if (api_node != NULL) {
-		output_code_block(binding, genbind_node_getnode(api_node));
-	} else {
-		fprintf(binding->outfile,
-			"\n"
-			"\tnewobject = JS_NewObject(cx, &JSClass_%s, prototype, parent);\n",
-			binding->interface);
-	}
-
-	if (binding->has_private) {
-		fprintf(binding->outfile,
-			"\tif (newobject == NULL) {\n"
-			"\t\tfree(private);\n"
-			"\t\treturn NULL;\n"
-			"\t}\n\n");
-
-		/* root object to stop it being garbage collected */
-		fprintf(binding->outfile,
-			"\tif (JSAPI_ADD_OBJECT_ROOT(cx, &newobject) != JS_TRUE) {\n"
-			"\t\tfree(private);\n"
-			"\t\treturn NULL;\n"
-			"\t}\n\n");
-
-		fprintf(binding->outfile,
-			"\n"
-			"\t/* attach private pointer */\n"
-			"\tif (JS_SetPrivate(cx, newobject, private) != JS_TRUE) {\n"
-			"\t\tfree(private);\n"
-			"\t\treturn NULL;\n"
-			"\t}\n\n");
-
-
-		/* attach operations and attributes (functions and properties) */
-		fprintf(binding->outfile,
-			"\tif (JS_DefineFunctions(cx, newobject, jsclass_functions) != JS_TRUE) {\n"
-			"\t\tfree(private);\n"
-			"\t\treturn NULL;\n"
-			"\t}\n\n");
-
-		fprintf(binding->outfile,
-			"\tif (JS_DefineProperties(cx, newobject, jsclass_properties) != JS_TRUE) {\n"
-			"\t\tfree(private);\n"
-			"\t\treturn NULL;\n"
-			"\t}\n\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tif (newobject == NULL) {\n"
-			"\t\treturn NULL;\n"
-			"\t}\n");
-
-		/* root object to stop it being garbage collected */
-		fprintf(binding->outfile,
-			"\tif (JSAPI_ADD_OBJECT_ROOT(cx, &newobject) != JS_TRUE) {\n"
-			"\t\treturn NULL;\n"
-			"\t}\n\n");
-
-		/* attach operations and attributes (functions and properties) */
-		fprintf(binding->outfile,
-			"\tif (JS_DefineFunctions(cx, newobject, jsclass_functions) != JS_TRUE) {\n"
-			"\t\treturn NULL;\n"
-			"\t}\n\n");
-
-		fprintf(binding->outfile,
-			"\tif (JS_DefineProperties(cx, newobject, jsclass_properties) != JS_TRUE) {\n"
-			"\t\treturn NULL;\n"
-			"\t}\n\n");
-	}
-
-	/* unroot object and return it */
-	fprintf(binding->outfile,
-		"\tJSAPI_REMOVE_OBJECT_ROOT(cx, &newobject);\n"
-		"\n"
-		"\treturn newobject;\n"
-		"}\n");
-
-
-	return res;
-}
-
-static int
-output_jsclass(struct binding *binding)
+output_forward_declarations(struct binding *binding)
 {
 	/* forward declare add property */
 	if (binding->addproperty != NULL) {
@@ -778,147 +539,40 @@ output_jsclass(struct binding *binding)
 			"static void jsclass_finalize(JSContext *cx, JSObject *obj);\n\n");
 	}
 
-	/* forward declare property list */
-	fprintf(binding->outfile,
-		"static JSPropertySpec jsclass_properties[];\n\n");
-
-	/* output the class declaration */
-	HDROUTF(binding, "JSClass JSClass_%s;\n", binding->interface);
-
-	/* output the class definition */
-	fprintf(binding->outfile,
-		"JSClass JSClass_%s = {\n"
-		"\t\"%s\",\n",
-		binding->interface,
-		binding->interface);
-
-	/* generate class flags */
-	if (binding->has_global) {
-		fprintf(binding->outfile, "\tJSCLASS_GLOBAL_FLAGS");
-	} else {
-		fprintf(binding->outfile, "\t0");
-	}
-
-	if (binding->resolve != NULL) {
-		fprintf(binding->outfile, " | JSCLASS_NEW_RESOLVE");
-	}
-
-	if (binding->mark != NULL) {
-		fprintf(binding->outfile, " | JSAPI_JSCLASS_MARK_IS_TRACE");
-	}
-
-	if (binding->has_private) {
-		fprintf(binding->outfile, " | JSCLASS_HAS_PRIVATE");
-	}
-
-	fprintf(binding->outfile, ",\n");
-
-	/* add property */
-	if (binding->addproperty != NULL) {
-		fprintf(binding->outfile,
-			"\tjsapi_property_add,\t/* addProperty */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_PropertyStub,\t/* addProperty */\n");
-	}
-
-	/* del property */
-	if (binding->delproperty != NULL) {
-		fprintf(binding->outfile,
-			"\tjsapi_property_del,\t/* delProperty */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_PropertyStub,\t/* delProperty */\n");
-	}
-
-	/* get property */
-	if (binding->getproperty != NULL) {
-		fprintf(binding->outfile,
-			"\tjsapi_property_get,\t/* getProperty */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_PropertyStub,\t/* getProperty */\n");
-	}
-
-	/* set property */
-	if (binding->setproperty != NULL) {
-		fprintf(binding->outfile,
-			"\tjsapi_property_set,\t/* setProperty */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_StrictPropertyStub,\t/* setProperty */\n");
-	}
-
-	/* enumerate */
-	if (binding->enumerate != NULL) {
-		fprintf(binding->outfile,
-			"\tjsclass_enumerate,\t/* enumerate */\n");
-	} else {
-		fprintf(binding->outfile,
-			"\tJS_EnumerateStub,\t/* enumerate */\n");
-	}
-
-	/* resolver */
-	if (binding->resolve != NULL) {
-		fprintf(binding->outfile, "\t(JSResolveOp)jsclass_resolve,\n");
-	} else {
-		fprintf(binding->outfile, "\tJS_ResolveStub,\n");
-	}
-
-	fprintf(binding->outfile, "\tJS_ConvertStub,\t/* convert */\n");
-
-	if (binding->has_private || (binding->finalise != NULL)) {
-		fprintf(binding->outfile, "\tjsclass_finalize,\n");
-	} else {
-		fprintf(binding->outfile, "\tJS_FinalizeStub,\n");
-	}
-	fprintf(binding->outfile,
-		"\t0,\t/* reserved */\n"
-		"\tNULL,\t/* checkAccess */\n"
-		"\tNULL,\t/* call */\n"
-		"\tNULL,\t/* construct */\n"
-		"\tNULL,\t/* xdr Object */\n"
-		"\tNULL,\t/* hasInstance */\n");
-
-	/* trace/mark */
-	if (binding->mark != NULL) {
-		fprintf(binding->outfile, "\tJSAPI_JSCLASS_MARKOP(jsclass_mark),\n");
-	} else {
-		fprintf(binding->outfile, "\tNULL, /* trace/mark */\n");
-	}
-
-	fprintf(binding->outfile,
-		"\tJSAPI_CLASS_NO_INTERNAL_MEMBERS\n"
-		"};\n\n");
 	return 0;
 }
 
+
+
+/** generate structure definition for internal class data
+ *
+ * Every javascript object instance has an internal context to keep
+ * track of its state in object terms this would be considered the
+ * "this" pointer giving access to the classes members.
+ *
+ * Member access can be considered protected as all interfaces
+ * (classes) and subclasses generated within this binding have access
+ * to members.
+ *
+ * @param binding the binding to generate the structure for.
+ * @return 0 on success with output written and -1 on error.
+ */
 static int
 output_private_declaration(struct binding *binding)
 {
-	struct genbind_node *type_node;
 
 	if (!binding->has_private) {
 		return 0;
 	}
 
-	type_node = genbind_node_find(binding->binding_list,
-				      NULL,
-				      genbind_cmp_node_type,
-				      (void *)GENBIND_NODE_TYPE_TYPE);
-
-	if (type_node == NULL) {
-		return -1;
-	}
-
 	fprintf(binding->outfile, "struct jsclass_private {\n");
 
-	genbind_node_for_each_type(binding->binding_list,
+	genbind_node_foreach_type(binding->binding_list,
 				   GENBIND_NODE_TYPE_BINDING_PRIVATE,
 				   webidl_private_cb,
 				   binding);
 
-	genbind_node_for_each_type(binding->binding_list,
+	genbind_node_foreach_type(binding->binding_list,
 				   GENBIND_NODE_TYPE_BINDING_INTERNAL,
 				   webidl_private_cb,
 				   binding);
@@ -932,7 +586,7 @@ output_private_declaration(struct binding *binding)
 static int
 output_preamble(struct binding *binding)
 {
-	genbind_node_for_each_type(binding->gb_ast,
+	genbind_node_foreach_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_PREAMBLE,
 				   webidl_preamble_cb,
 				   binding);
@@ -962,7 +616,7 @@ output_header_comments(struct binding *binding)
 	const char *preamble = HDR_COMMENT_PREAMBLE;
 	fprintf(binding->outfile, preamble, options->infilename);
 
-	genbind_node_for_each_type(binding->gb_ast,
+	genbind_node_foreach_type(binding->gb_ast,
 				   GENBIND_NODE_TYPE_HDRCOMMENT,
 				   webidl_hdrcomment_cb,
 				   binding);
@@ -974,7 +628,7 @@ output_header_comments(struct binding *binding)
 
 		fprintf(binding->outfile, preamble, options->infilename);
 
-		genbind_node_for_each_type(binding->gb_ast,
+		genbind_node_foreach_type(binding->gb_ast,
 					   GENBIND_NODE_TYPE_HDRCOMMENT,
 					   webidl_hdrcomment_cb,
 					   binding);
@@ -1008,42 +662,72 @@ binding_has_private(struct genbind_node *binding_list)
 	return false;
 }
 
-static bool
-binding_has_global(struct binding *binding)
-{
-	struct genbind_node *api_node;
 
-	api_node = genbind_node_find_type_ident(binding->gb_ast,
-						NULL,
-						GENBIND_NODE_TYPE_API,
-						"global");
-	if (api_node != NULL) {
-		return true;
-	}
-	return false;
+
+/** obtain the name to use for the binding.
+ *
+ * @todo it should be possible to specify the binding name instead of
+ * just using the name of the first interface.
+ */
+static const char *get_binding_name(struct genbind_node *binding_node)
+{
+	return genbind_node_gettext(
+		genbind_node_find_type(
+			genbind_node_getnode(
+				genbind_node_find_type(
+					genbind_node_getnode(binding_node),
+					NULL,
+					GENBIND_NODE_TYPE_BINDING_INTERFACE)),
+			NULL,
+			GENBIND_NODE_TYPE_IDENT));
 }
 
 static struct binding *
-binding_new(char *outfilename,
-	    char *hdrfilename,
-	    struct genbind_node *genbind_ast)
+binding_new(struct options *options,
+	    struct genbind_node *genbind_ast,
+	    struct genbind_node *binding_node)
 {
 	struct binding *nb;
-	struct genbind_node *binding_node;
+
+	int interfacec; /* numer of interfaces in the interface map */
+	struct binding_interface *interfaces; /* binding interface map */
+
 	struct genbind_node *binding_list;
-	struct genbind_node *ident_node;
-	struct genbind_node *interface_node;
-	FILE *outfile = NULL; /* output source file */
-	FILE *hdrfile = NULL; /* output header file */
 	char *hdrguard = NULL;
 	struct webidl_node *webidl_ast = NULL;
 	int res;
 
-	binding_node = genbind_node_find_type(genbind_ast,
-					 NULL,
-					 GENBIND_NODE_TYPE_BINDING);
-	if (binding_node == NULL) {
+	/* walk AST and load any web IDL files required */
+	res = read_webidl(genbind_ast, &webidl_ast);
+	if (res != 0) {
+		fprintf(stderr, "Error: failed reading Web IDL\n");
 		return NULL;
+	}
+
+	/* build the bindings interface (class) name map */
+	if (build_interface_map(binding_node,
+				webidl_ast,
+				&interfacec,
+				&interfaces) != 0) {
+		/* the binding must have at least one interface */
+		fprintf(stderr, "Error: Binding must have a valid interface\n");
+		return NULL;
+	}
+
+	/* header guard */
+	if (options->hdrfilename != NULL) {
+		int guardlen;
+		int pos;
+
+		guardlen = strlen(options->hdrfilename);
+		hdrguard = calloc(1, guardlen + 1);
+		for (pos = 0; pos < guardlen; pos++) {
+			if (isalpha(options->hdrfilename[pos])) {
+				hdrguard[pos] = toupper(options->hdrfilename[pos]);
+			} else {
+				hdrguard[pos] = '_';
+			}
+		}
 	}
 
 	binding_list = genbind_node_getnode(binding_node);
@@ -1051,77 +735,27 @@ binding_new(char *outfilename,
 		return NULL;
 	}
 
-	ident_node = genbind_node_find_type(binding_list,
-					    NULL,
-					    GENBIND_NODE_TYPE_IDENT);
-	if (ident_node == NULL) {
-		return NULL;
-	}
-
-	interface_node = genbind_node_find_type(binding_list,
-					   NULL,
-					   GENBIND_NODE_TYPE_BINDING_INTERFACE);
-	if (interface_node == NULL) {
-		return NULL;
-	}
-
-	/* walk ast and load any web IDL files required */
-	res = read_webidl(genbind_ast, &webidl_ast);
-	if (res != 0) {
-		fprintf(stderr, "Error reading Web IDL files\n");
-		return NULL;
-	}
-
-	/* open output file */
-	if (outfilename == NULL) {
-		outfile = stdout;
-	} else {
-		outfile = fopen(outfilename, "w");
-	}
-	if (outfile == NULL) {
-		fprintf(stderr, "Error opening source output %s: %s\n",
-			outfilename,
-			strerror(errno));
-		return NULL;
-	}
-
-	/* output header file if required */
-	if (hdrfilename != NULL) {
-		int guardlen;
-		int pos;
-
-		hdrfile = fopen(hdrfilename, "w");
-		if (hdrfile == NULL) {
-			fprintf(stderr, "Error opening header output %s: %s\n",
-				hdrfilename,
-				strerror(errno));
-			fclose(outfile);
-			return NULL;
-		}
-		guardlen = strlen(hdrfilename);
-		hdrguard = calloc(1, guardlen + 1);
-		for (pos = 0; pos < guardlen; pos++) {
-			if (isalpha(hdrfilename[pos])) {
-				hdrguard[pos] = toupper(hdrfilename[pos]);
-			} else {
-				hdrguard[pos] = '_';
-			}
-		}
-	}
-
 	nb = calloc(1, sizeof(struct binding));
 
 	nb->gb_ast = genbind_ast;
 	nb->wi_ast = webidl_ast;
-	nb->name = genbind_node_gettext(ident_node);
-	nb->interface = genbind_node_gettext(interface_node);
-	nb->outfile = outfile;
-	nb->srcfile = outfile;
-	nb->hdrfile = hdrfile;
+
+	/* keep the binding list node */
+	nb->binding_list = binding_list;
+
+	/* store the interface mapping */
+	nb->interfaces = interfaces;
+	nb->interfacec = interfacec;
+
+	/* @todo get rid of the interface element out of the binding
+	 * struct and use the interface map instead.
+	 */
+	nb->name = nb->interface = get_binding_name(binding_node);
+	nb->outfile = options->outfilehandle;
+	nb->srcfile = options->outfilehandle;
+	nb->hdrfile = options->hdrfilehandle;
 	nb->hdrguard = hdrguard;
 	nb->has_private = binding_has_private(binding_list);
-	nb->has_global = binding_has_global(nb);
-	nb->binding_list = binding_list;
 
 	/* class API */
 	nb->addproperty = genbind_node_find_type_ident(genbind_ast,
@@ -1145,14 +779,14 @@ binding_new(char *outfilename,
 						      "setproperty");
 
 	nb->enumerate = genbind_node_find_type_ident(genbind_ast,
-						      NULL,
-						      GENBIND_NODE_TYPE_API,
-						      "enumerate");
+						     NULL,
+						     GENBIND_NODE_TYPE_API,
+						     "enumerate");
 
 	nb->resolve = genbind_node_find_type_ident(genbind_ast,
-						      NULL,
-						      GENBIND_NODE_TYPE_API,
-						      "resolve");
+						   NULL,
+						   GENBIND_NODE_TYPE_API,
+						   "resolve");
 
 	nb->finalise = genbind_node_find_type_ident(genbind_ast,
 						    NULL,
@@ -1160,23 +794,23 @@ binding_new(char *outfilename,
 						    "finalise");
 
 	nb->mark = genbind_node_find_type_ident(genbind_ast,
-						    NULL,
-						    GENBIND_NODE_TYPE_API,
-						    "mark");
+						NULL,
+						GENBIND_NODE_TYPE_API,
+						"mark");
 	return nb;
 }
 
 
 int
-jsapi_libdom_output(char *outfilename,
-		    char *hdrfilename,
-		    struct genbind_node *genbind_ast)
+jsapi_libdom_output(struct options *options,
+		    struct genbind_node *genbind_ast,
+		    struct genbind_node *binding_node)
 {
 	int res;
 	struct binding *binding;
 
 	/* get general binding information used in output */
-	binding = binding_new(outfilename, hdrfilename, genbind_ast);
+	binding = binding_new(options, genbind_ast, binding_node);
 	if (binding == NULL) {
 		return 40;
 	}
@@ -1197,7 +831,12 @@ jsapi_libdom_output(char *outfilename,
 		return 70;
 	}
 
-	res = output_jsclass(binding);
+	res = output_forward_declarations(binding);
+	if (res) {
+		return 75;
+	}
+
+	res = output_jsclasses(binding);
 	if (res) {
 		return 80;
 	}
@@ -1207,15 +846,15 @@ jsapi_libdom_output(char *outfilename,
 		return 85;
 	}
 
-	/* user code outout just before function bodies emitted */
+	/* user code output just before interface code bodies emitted */
 	res = output_prologue(binding);
 	if (res) {
 		return 89;
 	}
 
-	/* operator and atrtribute body generation */
+	/* method (function) and property body generation */
 
-	res = output_operator_body(binding, binding->interface);
+	res = output_function_bodies(binding);
 	if (res) {
 		return 90;
 	}
@@ -1225,7 +864,7 @@ jsapi_libdom_output(char *outfilename,
 		return 100;
 	}
 
-	/* operator and atrtribute specifier generation */
+	/* method (function) and property specifier generation */
 
 	res = output_function_spec(binding);
 	if (res) {

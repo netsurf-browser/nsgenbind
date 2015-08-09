@@ -53,19 +53,34 @@ epilogue %{
 #include "dom.bnd"
 
 
-/* this block describes the binding to be generated
+/* This block describes the binding to be generated
  *
  * Depending on the type of binding being generated multiple blocks
  * may be allowed.
  *
- * Note: the js_libdom (javascript to libdom) binding as currently
- * implemented only allows for a single binding per file, this may
- * be improved in future.
+ * Note: the jsapi_libdom (spidermonkey javascript to libdom) binding
+ * is the only type currently implemented
  */
-binding example {
-    type js_libdom; /* the binding type */
+binding jsapi_libdom {
 
-    interface Navigator; /* The WebIDL interface to generate a binding for */
+
+    /* Interface with specified flags
+     *
+     * global - the generated interface will be a global object
+     * jsapi_constructor - a c function will be generated to
+     *                     instansiate the interface (class)
+     * js_constructor - the interface (class) can be instnsiated from
+     *                  javascript
+     *
+     */
+    interface Example {
+	    flags global, jsapi_constructor, js_constructor;
+    }
+
+    /* The WebIDL interface to generate a binding for. With no flags
+     * the default of jsapi_constructor is used
+     */
+    interface Navigator;
 
     /* private members:
      *  - stored in private context structure.
@@ -248,14 +263,7 @@ api finalise %{
  * By default returns JS_TRUE implying that *objp has been updated
  *
  * The minimal implementation would be "*objp = NULL;" but is
- *   equivalent to simply omitting this directive and using the defaul stub.
+ *   equivalent to simply omitting this directive and using the default stub.
  */
 api resolve %{
-%}
-
-/* mark the generated interface as a a global object
- *
- * The body is discarded.
- */
-api global %{
 %}

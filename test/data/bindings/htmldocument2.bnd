@@ -26,9 +26,7 @@ operation write %{
 	}
 %}
 
-binding document {
-    type js_libdom; /* the binding type */
-
+binding jsapi_libdom {
     /* parameters to constructor value stored in private
      * context structure.
      */

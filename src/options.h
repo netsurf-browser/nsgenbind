@@ -12,12 +12,7 @@
 /** global options */
 struct options {
 	char *infilename; /**< binding source */
-
-	char *outfilename; /**< output source file */
-	char *hdrfilename; /**< output header file */
-
-	char *depfilename; /**< dependancy output*/
-	FILE *depfilehandle; /**< dependancy file handle */
+	char *outdirname; /**< output directory */
 	char *idlpath; /**< path to IDL files */
 
 	bool verbose; /**< verbose processing */
@@ -30,13 +25,14 @@ extern struct options *options;
 
 enum opt_warnings {
 	WARNING_UNIMPLEMENTED = 1,
+	WARNING_DUPLICATED = 2,
 };
 
-#define WARNING_ALL (WARNING_UNIMPLEMENTED)
+#define WARNING_ALL (WARNING_UNIMPLEMENTED | WARNING_DUPLICATED)
 
 #define WARN(flags, msg, args...) do {			\
 		if ((options->warnings & flags) != 0) {			\
-			fprintf(stderr, "%s: warning:"msg"\n", __func__, ## args); \
+			fprintf(stderr, "%s: warning: "msg"\n", __func__, ## args); \
 		}							\
 	} while(0)
 

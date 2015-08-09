@@ -9,6 +9,9 @@
  *
  * Derived from the the grammar in apendix A of W3C WEB IDL
  *   http://www.w3.org/TR/WebIDL/
+ *
+ * WebIDL now has a second edition draft (mid 2015) that the dom and
+ *   html specs are using. https://heycam.github.io/webidl
  */
 
 #include <stdio.h>
@@ -17,10 +20,16 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "webidl-ast.h"
+#define YYFPRINTF webidl_fprintf
+#define YY_LOCATION_PRINT(File, Loc)                            \
+  webidl_fprintf(File, "%d.%d-%d.%d",                           \
+                 (Loc).first_line, (Loc).first_column,          \
+                 (Loc).last_line,  (Loc).last_column)
 
 #include "webidl-parser.h"
 #include "webidl-lexer.h"
+
+#include "webidl-ast.h"
 
 char *errtxt;
 
@@ -77,6 +86,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_INFINITY
 %token TOK_INHERIT
 %token TOK_INTERFACE
+%token TOK_ITERABLE
+%token TOK_LEGACYITERABLE
 %token TOK_LONG
 %token TOK_MODULE
 %token TOK_NAN
@@ -88,6 +99,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_OPTIONAL
 %token TOK_OR
 %token TOK_PARTIAL
+%token TOK_PROMISE
 %token TOK_RAISES
 %token TOK_READONLY
 %token TOK_SETRAISES
@@ -105,12 +117,12 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %token TOK_POUND_SIGN
 
-%token <text>       TOK_IDENTIFIER
-%token <value>      TOK_INT_LITERAL
-%token <text>       TOK_FLOAT_LITERAL
-%token <text>       TOK_STRING_LITERAL
-%token <text>       TOK_OTHER_LITERAL
-%token <text>       TOK_JAVADOC
+%token <text>  TOK_IDENTIFIER
+%token <value> TOK_INT_LITERAL
+%token <text>  TOK_FLOAT_LITERAL
+%token <text>  TOK_STRING_LITERAL
+%token <text>  TOK_OTHER_LITERAL
+%token <text>  TOK_JAVADOC
 
 %type <text> Inheritance
 
@@ -143,6 +155,9 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> Const
 
 %type <node> Operation
+%type <node> SpecialOperation
+%type <node> Specials
+%type <node> Special
 %type <node> OperationRest
 %type <node> OptionalIdentifier
 
@@ -153,6 +168,10 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <text> ArgumentName
 %type <text> ArgumentNameKeyword
 %type <node> Ellipsis
+%type <node> Iterable
+%type <node> OptionalType
+%type <node> Default
+%type <node> DefaultValue
 
 %type <node> Type
 %type <node> ReturnType
@@ -165,6 +184,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> FloatType
 %type <node> UnsignedIntegerType
 %type <node> IntegerType
+%type <node> PromiseType
 
 %type <node> TypeSuffix
 %type <node> TypeSuffixStartingWithArray
@@ -356,7 +376,7 @@ InterfaceMembers:
 
             if (ident_node == NULL) {
                 /* something with no ident - possibly constructors? */
-                /* @todo understand this abtter */
+                /* @todo understand this better */
 
                 $$ = webidl_node_prepend($1, $3);
 
@@ -389,11 +409,17 @@ InterfaceMembers:
         }
         ;
 
- /* [10] */
+ /* [10]
+  * SE[10]
+  * Second edition actually splits up AttributeOrOperation completely
+  * here we "just" add Iterable as thats what the specs use
+  */
 InterfaceMember:
         Const
         |
         AttributeOrOperation
+        |
+        Iterable
         ;
 
  /* [11] */
@@ -426,8 +452,14 @@ PartialDictionary:
  /* [15] */
 Default:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         '=' DefaultValue
+        {
+            $$ = $2;
+        }
         ;
 
 
@@ -436,6 +468,9 @@ DefaultValue:
         ConstValue
         |
         TOK_STRING_LITERAL
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_STRING, NULL, $1);
+        }
         ;
 
  /* [17] */
@@ -474,17 +509,27 @@ Enum:
         }
         ;
 
-/* [21] */
+ /* Second edition changes enumeration rules to allow trailing comma */
+
+  /* SE[20] */
 EnumValueList:
-        TOK_STRING_LITERAL EnumValues
+        TOK_STRING_LITERAL EnumValueListComma
         ;
 
-/* [22] */
-EnumValues:
-        /* empty */
+ /* SE[21] */
+EnumValueListComma:
+        ',' EnumValueListString
         |
-        ',' TOK_STRING_LITERAL EnumValues
+        /* empty */
         ;
+
+ /* SE[22] */
+EnumValueListString:
+        TOK_STRING_LITERAL EnumValueListComma
+        |
+        /* empty */
+        ;
+
 
  /* [23] - bug in w3c grammar? it doesnt list the equals as a terminal  */
 CallbackRest:
@@ -658,7 +703,7 @@ Attribute:
 
             /* deal with readonly modifier */
             if ($2) {
-                attribute = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER, attribute, (void *)WEBIDL_TYPE_READONLY);
+                attribute = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER, attribute, (void *)WEBIDL_TYPE_MODIFIER_READONLY);
             }
 
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_ATTRIBUTE, NULL, attribute);
@@ -692,55 +737,94 @@ ReadOnly:
         }
         ;
 
- /* [35] */
+ /* SE[47] */
 Operation:
-        Qualifiers OperationRest
+        ReturnType OperationRest
         {
-            /* @todo fix qualifiers */
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $2);
+                /* put return type on the operation */
+                $2 = webidl_node_prepend($1, $2);
+
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $2);
+        }
+        |
+        SpecialOperation
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $1);
         }
         ;
 
- /* [36] */
-Qualifiers:
-        TOK_STATIC
-        |
-        Specials
+ /* SE[48] */
+SpecialOperation:
+        Special Specials ReturnType OperationRest
+        {
+                /* put return type on the operation */
+                $$ = webidl_node_prepend($4, $3);
+
+                /* specials */
+                $$ = webidl_node_prepend($$, $2);
+
+                /* special */
+                $$ = webidl_node_prepend($$, $1);
+        }
         ;
 
- /* [37] */
+ /* SE[49] */
 Specials:
         /* empty */
+        {
+                $$ = NULL;
+        }
         |
         Special Specials
+        {
+                $$ = webidl_node_prepend($2, $1);
+        }
         ;
 
- /* [38] */
+ /* SE[50] */
 Special:
         TOK_GETTER
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_GETTER);
+        }
         |
         TOK_SETTER
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_SETTER);
+        }
         |
         TOK_CREATOR
+        {
+                /* second edition removed this special but teh
+                   specifications still use it!
+                */
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_CREATOR);
+        }
         |
         TOK_DELETER
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_DELETER);
+        }
         |
         TOK_LEGACYCALLER
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
+                                NULL, (void *)WEBIDL_TYPE_SPECIAL_LEGACYCALLER);
+        }
         ;
 
- /* [39] */
+ /* SE[51] */
 OperationRest:
-        ReturnType OptionalIdentifier '(' ArgumentList ')' ';'
+        OptionalIdentifier '(' ArgumentList ')' ';'
         {
-            struct webidl_node *arglist;
-
-            /* put return type in argument list */
-            arglist = webidl_node_prepend($4, $1);
-
             /* argument list */
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, arglist);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, $3);
 
-            $$ = webidl_node_prepend($$, $2); /* identifier */
+            $$ = webidl_node_prepend($1, $$); /* identifier */
         }
         ;
 
@@ -801,8 +885,9 @@ OptionalOrRequiredArgument:
         {
             struct webidl_node *argument;
             argument = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $3);
+            argument = webidl_node_new(WEBIDL_NODE_TYPE_OPTIONAL, argument, $4);
             argument = webidl_node_prepend(argument, $2); /* add type node */
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT, NULL, argument);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ARGUMENT, NULL, argument);
         }
         |
         Type Ellipsis ArgumentName
@@ -832,6 +917,32 @@ Ellipsis:
         TOK_ELLIPSIS
         {
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_ELLIPSIS, NULL, NULL);
+        }
+        ;
+
+ /* SE[59] */
+Iterable:
+        TOK_ITERABLE '<' Type OptionalType '>' ';'
+        {
+            $$ = NULL;
+        }
+        |
+        TOK_LEGACYITERABLE '<' Type '>' ';'
+        {
+            $$ = NULL;
+        }
+        ;
+
+ /* SE[60] */
+OptionalType:
+        /* empty */
+        {
+            $$ = NULL;
+        }
+        |
+        ',' Type
+        {
+            $$ = NULL;
         }
         ;
 
@@ -1301,10 +1412,19 @@ UnionMemberTypes:
         TOK_OR UnionMemberType UnionMemberTypes
         ;
 
- /* [62] */
+ /* [62]
+  * SE[78]
+  * Second edition adds several types
+  */
 NonAnyType:
         PrimitiveType TypeSuffix
         {
+            $$ = webidl_node_prepend($1, $2);
+        }
+        |
+        PromiseType TypeSuffix
+        {
+            /* second edition adds promise types */
             $$ = webidl_node_prepend($1, $2);
         }
         |
@@ -1439,6 +1559,14 @@ OptionalLong:
         TOK_LONG
         {
             $$ = true;
+        }
+        ;
+
+/* SE[87] */
+PromiseType:
+        TOK_PROMISE '<' ReturnType '>'
+        {
+            $$ = NULL;
         }
         ;
 

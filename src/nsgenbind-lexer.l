@@ -72,7 +72,9 @@ cblockopen              \%\{
 cblockclose             \%\}
 
 /* used for #include directive */
-poundsign           ^{whitespace}*#
+poundsign               ^{whitespace}*#
+
+dblcolon                \:\:
 
 %x                      cblock
 
@@ -88,27 +90,32 @@ poundsign           ^{whitespace}*#
                             yylloc->last_column = 0;
                         }
 
- /* terminals */
+ /* binding terminals */
 
-webidlfile              return TOK_IDLFILE;
+binding                 return TOK_BINDING;
 
-hdrcomment              return TOK_HDR_COMMENT;
+webidl                  return TOK_WEBIDL;
 
-preamble                return TOK_PREAMBLE;
+preface                 return TOK_PREFACE;
 
 prologue                return TOK_PROLOGUE;
 
 epilogue                return TOK_EPILOGUE;
 
-binding                 return TOK_BINDING;
+postface                return TOK_POSTFACE;
 
-interface               return TOK_INTERFACE;
 
-type                    return TOK_TYPE;
+ /* class member terminals */
+
+class                   return TOK_CLASS;
 
 private                 return TOK_PRIVATE;
 
 internal                return TOK_INTERNAL;
+
+flags                   return TOK_FLAGS;
+
+type                    return TOK_TYPE;
 
 unshared                return TOK_UNSHARED;
 
@@ -116,13 +123,23 @@ shared                  return TOK_SHARED;
 
 property                return TOK_PROPERTY;
 
-operation               return TOK_OPERATION;
+ /* implementation terminals */
 
-api                     return TOK_API;
+init                    return TOK_INIT;
+
+fini                    return TOK_FINI;
+
+method                  return TOK_METHOD;
 
 getter                  return TOK_GETTER;
 
 setter                  return TOK_SETTER;
+
+prototype               return TOK_PROTOTYPE;
+
+ /* other terminals */
+
+{dblcolon}              return TOK_DBLCOLON;
 
 {cblockopen}            BEGIN(cblock);
 
@@ -138,7 +155,7 @@ setter                  return TOK_SETTER;
 
 {multicomment}          /* nothing */
 
-{poundsign}include  BEGIN(incl);
+{poundsign}include      BEGIN(incl);
 
 {other}                 return (int) yytext[0];
 
@@ -149,7 +166,7 @@ setter                  return TOK_SETTER;
 <cblock>\%              yylval->text = strdup(yytext); return TOK_CCODE_LITERAL;
 
 
-<incl>[ \t]*\"      /* eat the whitespace and open quotes */
+<incl>[ \t]*\"          /* eat the whitespace and open quotes */
 
 <incl>[^\t\n\"]+    { 
                         /* got the include file name */

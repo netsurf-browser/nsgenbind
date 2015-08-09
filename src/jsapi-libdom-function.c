@@ -1,4 +1,4 @@
-/* function/operator generation
+/* jsapi function generation for webidl bodies
  *
  * This file is part of nsgenbind.
  * Licensed under the MIT License,
@@ -17,113 +17,85 @@
 #include "webidl-ast.h"
 #include "jsapi-libdom.h"
 
-static int webidl_func_spec_cb(struct webidl_node *node, void *ctx)
+static int webidl_operator_spec(struct binding *binding,
+				struct binding_interface *inf,
+				struct webidl_node *node)
 {
-	struct binding *binding = ctx;
 	struct webidl_node *ident_node;
 
-	ident_node = webidl_node_find(webidl_node_getnode(node),
-				      NULL,
-				      webidl_cmp_node_type,
-				      (void *)WEBIDL_NODE_TYPE_IDENT);
-
+	ident_node = webidl_node_find_type(webidl_node_getnode(node),
+					   NULL,
+					   WEBIDL_NODE_TYPE_IDENT);
 	if (ident_node == NULL) {
 		/* operation without identifier - must have special keyword
 		 * http://www.w3.org/TR/WebIDL/#idl-operations
 		 */
 	} else {
 		fprintf(binding->outfile,
-			"\tJSAPI_FS(%s, 0, JSPROP_ENUMERATE ),\n",
+			"\tJSAPI_FS(%s, %s, 0, JSPROP_ENUMERATE ),\n",
+			inf->name,
 			webidl_node_gettext(ident_node));
 		/* @todo number of args to that FN_FS() call should be correct */
 	}
 	return 0;
 }
 
-
-static int generate_function_spec(struct binding *binding, const char *interface);
-
-/* callback to emit implements operator spec */
-static int webidl_function_spec_implements_cb(struct webidl_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-
-	return generate_function_spec(binding, webidl_node_gettext(node));
-}
-
-static int
-generate_function_spec(struct binding *binding, const char *interface)
-{
-	struct webidl_node *interface_node;
-	struct webidl_node *members_node;
-	struct webidl_node *inherit_node;
-	int res = 0;
-
-	/* find interface in webidl with correct ident attached */
-	interface_node = webidl_node_find_type_ident(binding->wi_ast,
-						     WEBIDL_NODE_TYPE_INTERFACE,
-						     interface);
-
-	if (interface_node == NULL) {
-		fprintf(stderr,
-			"Unable to find interface %s in loaded WebIDL\n",
-			interface);
-		return -1;
-	}
-
-	members_node = webidl_node_find(webidl_node_getnode(interface_node),
-					NULL,
-					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_LIST);
-	while (members_node != NULL) {
-
-		fprintf(binding->outfile,"\t/**** %s ****/\n", interface);
-
-		/* for each function emit a JSAPI_FS()*/
-		webidl_node_for_each_type(webidl_node_getnode(members_node),
-					  WEBIDL_NODE_TYPE_OPERATION,
-					  webidl_func_spec_cb,
-					  binding);
-
-		members_node = webidl_node_find(webidl_node_getnode(interface_node),
-						members_node,
-						webidl_cmp_node_type,
-						(void *)WEBIDL_NODE_TYPE_LIST);
-	}
-
-	/* check for inherited nodes and insert them too */
-	inherit_node = webidl_node_find(webidl_node_getnode(interface_node),
-					NULL,
-					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
-
-	if (inherit_node != NULL) {
-		res = generate_function_spec(binding,
-					      webidl_node_gettext(inherit_node));
-	}
-
-	if (res == 0) {
-		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
-					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
-					webidl_function_spec_implements_cb,
-					binding);
-	}
-
-	return res;
-}
-
 int output_function_spec(struct binding *binding)
 {
+	int inf;
 	int res;
+	struct webidl_node *list_node;
+	struct webidl_node *op_node; /* operation on list node */
 
-	fprintf(binding->outfile,
-		"static JSFunctionSpec jsclass_functions[] = {\n");
+	/* generate functions for each interface in the map */
+	for (inf = 0; inf < binding->interfacec; inf++) {
+		if (binding->interfaces[inf].own_functions == 0) {
+			continue;
+		}
 
-	res = generate_function_spec(binding, binding->interface);
+		fprintf(binding->outfile,
+			"static JSFunctionSpec JSClass_%s_functions[] = {\n",
+			binding->interfaces[inf].name);
 
-	fprintf(binding->outfile, "\tJSAPI_FS_END\n};\n\n");
+		/* iterate each list within an interface */
+		list_node = webidl_node_find_type(
+			webidl_node_getnode(binding->interfaces[inf].widl_node),
+			NULL,
+			WEBIDL_NODE_TYPE_LIST);
 
-	return res;
+		while (list_node != NULL) {
+			/* iterate through operations in a list */
+			op_node = webidl_node_find_type(
+				webidl_node_getnode(list_node),
+				NULL,
+				WEBIDL_NODE_TYPE_OPERATION);
+
+			while (op_node != NULL) {
+				res = webidl_operator_spec(
+					binding,
+					&binding->interfaces[inf],
+					op_node);
+				if (res != 0) {
+					return res;
+				}
+
+				op_node = webidl_node_find_type(
+					webidl_node_getnode(list_node),
+					op_node,
+					WEBIDL_NODE_TYPE_OPERATION);
+			}
+
+
+			list_node = webidl_node_find_type(
+				webidl_node_getnode(binding->interfaces[inf].widl_node),
+				list_node,
+				WEBIDL_NODE_TYPE_LIST);
+		}
+
+		fprintf(binding->outfile, "\tJSAPI_FS_END\n};\n\n");
+
+	}
+	return 0;
 }
 
 static int output_return(struct binding *binding,
@@ -307,7 +279,7 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_LONGLONG:
-		WARN(WARNING_UNIMPLEMENTED, 
+		WARN(WARNING_UNIMPLEMENTED,
 		     "Unhandled type WEBIDL_TYPE_LONGLONG");
 		break;
 
@@ -316,7 +288,7 @@ static int output_return_declaration(struct binding *binding,
 		type_mod = webidl_node_find_type(webidl_node_getnode(type_node),
 					      NULL,
 					      WEBIDL_NODE_TYPE_MODIFIER);
-		if ((type_mod != NULL) && 
+		if ((type_mod != NULL) &&
 		    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
 			fprintf(binding->outfile, "\tuint32_t %s = 0;\n", ident);
 		} else {
@@ -332,7 +304,7 @@ static int output_return_declaration(struct binding *binding,
 		break;
 
 	case WEBIDL_TYPE_SEQUENCE:
-		WARN(WARNING_UNIMPLEMENTED, 
+		WARN(WARNING_UNIMPLEMENTED,
 		     "Unhandled type WEBIDL_TYPE_SEQUENCE");
 		break;
 
@@ -474,14 +446,14 @@ output_variable_definitions(struct binding *binding,
 			type_mod = webidl_node_find_type(webidl_node_getnode(arg_type),
 							 NULL,
 							 WEBIDL_NODE_TYPE_MODIFIER);
-			if ((type_mod != NULL) && 
+			if ((type_mod != NULL) &&
 			    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
-				fprintf(binding->outfile, 
-					"\tuint32_t %s = 0;\n", 
+				fprintf(binding->outfile,
+					"\tuint32_t %s = 0;\n",
 					webidl_node_gettext(arg_ident));
 			} else {
-				fprintf(binding->outfile, 
-					"\tint32_t %s = 0;\n", 
+				fprintf(binding->outfile,
+					"\tint32_t %s = 0;\n",
 					webidl_node_gettext(arg_ident));
 			}
 
@@ -624,15 +596,15 @@ output_operation_input(struct binding *binding,
 			type_mod = webidl_node_find_type(webidl_node_getnode(arg_type),
 							 NULL,
 							 WEBIDL_NODE_TYPE_MODIFIER);
-			if ((type_mod != NULL) && 
+			if ((type_mod != NULL) &&
 			    (webidl_node_getint(type_mod) == WEBIDL_TYPE_MODIFIER_UNSIGNED)) {
-				fprintf(binding->outfile, 
-					"\tJS_ValueToECMAUint32(cx, argv[%d], &%s);\n", 
+				fprintf(binding->outfile,
+					"\tJS_ValueToECMAUint32(cx, argv[%d], &%s);\n",
 					arg_cur,
 					webidl_node_gettext(arg_ident));
 			} else {
-				fprintf(binding->outfile, 
-					"\tJS_ValueToECMAInt32(cx, argv[%d], &%s);\n", 
+				fprintf(binding->outfile,
+					"\tJS_ValueToECMAInt32(cx, argv[%d], &%s);\n",
 					arg_cur,
 					webidl_node_gettext(arg_ident));
 			}
@@ -690,14 +662,14 @@ output_operation_input(struct binding *binding,
 
 }
 
-static int 
-output_operator_placeholder(struct binding *binding, 
-			    struct webidl_node *oplist, 
+static int
+output_operator_placeholder(struct binding *binding,
+			    struct webidl_node *oplist,
 			    struct webidl_node *ident_node)
 {
 	oplist = oplist;
 
-	WARN(WARNING_UNIMPLEMENTED, 
+	WARN(WARNING_UNIMPLEMENTED,
 	     "operation %s.%s has no implementation\n",
 	     binding->interface,
 	     webidl_node_gettext(ident_node));
@@ -748,131 +720,118 @@ output_private_get(struct binding *binding, const char *argname)
 	return ret;
 }
 
-static int webidl_operator_body_cb(struct webidl_node *node, void *ctx)
+/**
+ * Generate operator (function) body
+ *
+ *
+ */
+static int webidl_operator_body(struct binding *binding,
+				struct binding_interface *inf,
+				struct webidl_node *node)
 {
-	struct binding *binding = ctx;
 	struct webidl_node *ident_node;
 	struct genbind_node *operation_node;
 
-	ident_node = webidl_node_find(webidl_node_getnode(node),
-				      NULL,
-				      webidl_cmp_node_type,
-				      (void *)WEBIDL_NODE_TYPE_IDENT);
+	ident_node = webidl_node_find_type(webidl_node_getnode(node),
+					   NULL,
+					   WEBIDL_NODE_TYPE_IDENT);
 
 	if (ident_node == NULL) {
 		/* operation without identifier - must have special keyword
 		 * http://www.w3.org/TR/WebIDL/#idl-operations
 		 */
 		WARN(WARNING_UNIMPLEMENTED,
-			"Unhandled operation with no name on %s\n",
-			binding->interface);
+		     "Unhandled operation with no name on %s\n",
+		     binding->interface);
+
+		return 0;
+	}
+
+	/* normal operation with identifier */
+
+	fprintf(binding->outfile,
+		"static JSBool JSAPI_FUNC(%s, %s, JSContext *cx, uintN argc, jsval *vp)\n"
+		"{\n",
+		inf->name,
+		webidl_node_gettext(ident_node));
+
+	/* return value declaration */
+	output_return_declaration(binding, "jsret", webidl_node_getnode(node));
+
+	output_variable_definitions(binding, webidl_node_getnode(node));
+
+	output_private_get(binding, "private");
+
+	output_operation_input(binding, webidl_node_getnode(node));
+
+	operation_node = genbind_node_find_type_ident(binding->gb_ast,
+						      NULL,
+						      GENBIND_NODE_TYPE_OPERATION,
+						      webidl_node_gettext(ident_node));
+
+	if (operation_node != NULL) {
+		output_code_block(binding,
+				  genbind_node_getnode(operation_node));
 
 	} else {
-		/* normal operation with identifier */
-
-		fprintf(binding->outfile,
-			"static JSBool JSAPI_FUNC(%s, JSContext *cx, uintN argc, jsval *vp)\n",
-			webidl_node_gettext(ident_node));
-		fprintf(binding->outfile,
-			"{\n");
-
-		/* return value declaration */
-		output_return_declaration(binding, "jsret", webidl_node_getnode(node));
-
-		output_variable_definitions(binding, webidl_node_getnode(node));
-
-		output_private_get(binding, "private");
-
-		output_operation_input(binding, webidl_node_getnode(node));
-
-		operation_node = genbind_node_find_type_ident(binding->gb_ast,
-					      NULL,
-					      GENBIND_NODE_TYPE_OPERATION,
-					      webidl_node_gettext(ident_node));
-
-		if (operation_node != NULL) {
-			output_code_block(binding,
-					  genbind_node_getnode(operation_node));
-
-		} else {
-			output_operator_placeholder(binding, webidl_node_getnode(node), ident_node);
-		}
-
-		output_return(binding, "jsret", webidl_node_getnode(node));
-
-		/* set return value an return true */
-		fprintf(binding->outfile,
-			"\treturn JS_TRUE;\n"
-			"}\n\n");
+		output_operator_placeholder(binding, webidl_node_getnode(node), ident_node);
 	}
+
+	output_return(binding, "jsret", webidl_node_getnode(node));
+
+	/* set return value an return true */
+	fprintf(binding->outfile,
+		"\treturn JS_TRUE;\n"
+		"}\n\n");
+
 	return 0;
 }
 
-/* callback to emit implements operator bodys */
-static int webidl_implements_cb(struct webidl_node *node, void *ctx)
-{
-	struct binding *binding = ctx;
-
-	return output_operator_body(binding, webidl_node_gettext(node));
-}
 
 /* exported interface documented in jsapi-libdom.h */
-int
-output_operator_body(struct binding *binding, const char *interface)
+int output_function_bodies(struct binding *binding)
 {
-	struct webidl_node *interface_node;
-	struct webidl_node *members_node;
-	struct webidl_node *inherit_node;
-	int res = 0;
+	int inf;
+	int res;
+	struct webidl_node *list_node;
+	struct webidl_node *op_node; /* operation on list node */
 
-	/* find interface in webidl with correct ident attached */
-	interface_node = webidl_node_find_type_ident(binding->wi_ast,
-						     WEBIDL_NODE_TYPE_INTERFACE,
-						     interface);
+	/* generate functions for each interface in the map */
+	for (inf = 0; inf < binding->interfacec; inf++) {
+		/* iterate each list within an interface */
+		list_node = webidl_node_find_type(
+			webidl_node_getnode(binding->interfaces[inf].widl_node),
+			NULL,
+			WEBIDL_NODE_TYPE_LIST);
 
-	if (interface_node == NULL) {
-		fprintf(stderr,
-			"Unable to find interface %s in loaded WebIDL\n",
-			interface);
-		return -1;
+		while (list_node != NULL) {
+			/* iterate through operations in a list */
+			op_node = webidl_node_find_type(
+				webidl_node_getnode(list_node),
+				NULL,
+				WEBIDL_NODE_TYPE_OPERATION);
+
+			while (op_node != NULL) {
+				res = webidl_operator_body(
+					binding,
+					&binding->interfaces[inf],
+					op_node);
+				if (res != 0) {
+					return res;
+				}
+
+				op_node = webidl_node_find_type(
+					webidl_node_getnode(list_node),
+					op_node,
+					WEBIDL_NODE_TYPE_OPERATION);
+			}
+
+
+			list_node = webidl_node_find_type(
+				webidl_node_getnode(binding->interfaces[inf].widl_node),
+				list_node,
+				WEBIDL_NODE_TYPE_LIST);
+		}
 	}
-
-	members_node = webidl_node_find(webidl_node_getnode(interface_node),
-					NULL,
-					webidl_cmp_node_type,
-					(void *)WEBIDL_NODE_TYPE_LIST);
-	while (members_node != NULL) {
-
-		fprintf(binding->outfile,"/**** %s ****/\n", interface);
-
-		/* for each function emit a JSAPI_FS()*/
-		webidl_node_for_each_type(webidl_node_getnode(members_node),
-					  WEBIDL_NODE_TYPE_OPERATION,
-					  webidl_operator_body_cb,
-					  binding);
-
-		members_node = webidl_node_find(webidl_node_getnode(interface_node),
-						members_node,
-						webidl_cmp_node_type,
-						(void *)WEBIDL_NODE_TYPE_LIST);
-	}
-
-	/* check for inherited nodes and insert them too */
-	inherit_node = webidl_node_find_type(webidl_node_getnode(interface_node),
-					NULL,
-					WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE);
-
-	if (inherit_node != NULL) {
-		res = output_operator_body(binding,
-					   webidl_node_gettext(inherit_node));
-	}
-
-	if (res == 0) {
-		res = webidl_node_for_each_type(webidl_node_getnode(interface_node),
-					WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS,
-					webidl_implements_cb,
-					binding);
-	}
-
-	return res;
+	return 0;
 }

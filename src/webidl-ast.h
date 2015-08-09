@@ -27,8 +27,9 @@ enum webidl_node_type {
 	WEBIDL_NODE_TYPE_OPERATION,
 	WEBIDL_NODE_TYPE_CONST,
 
-	WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT,
+	WEBIDL_NODE_TYPE_SPECIAL,
 	WEBIDL_NODE_TYPE_ARGUMENT,
+        WEBIDL_NODE_TYPE_OPTIONAL,
 	WEBIDL_NODE_TYPE_ELLIPSIS,
 	WEBIDL_NODE_TYPE_TYPE,
 	WEBIDL_NODE_TYPE_TYPE_BASE,
@@ -39,6 +40,7 @@ enum webidl_node_type {
 	WEBIDL_NODE_TYPE_LITERAL_INT,
 	WEBIDL_NODE_TYPE_LITERAL_BOOL,
 	WEBIDL_NODE_TYPE_LITERAL_FLOAT,
+	WEBIDL_NODE_TYPE_LITERAL_STRING,
 
 	WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
 
@@ -62,9 +64,19 @@ enum webidl_type {
 };
 
 enum webidl_type_modifier {
+        WEBIDL_TYPE_MODIFIER_NONE,
 	WEBIDL_TYPE_MODIFIER_UNSIGNED,
 	WEBIDL_TYPE_MODIFIER_UNRESTRICTED,
-	WEBIDL_TYPE_READONLY,
+	WEBIDL_TYPE_MODIFIER_READONLY,
+};
+
+/* the type of special node */
+enum webidl_type_special {
+        WEBIDL_TYPE_SPECIAL_GETTER,
+        WEBIDL_TYPE_SPECIAL_SETTER,
+        WEBIDL_TYPE_SPECIAL_CREATOR,
+        WEBIDL_TYPE_SPECIAL_DELETER,
+        WEBIDL_TYPE_SPECIAL_LEGACYCALLER,
 };
 
 struct webidl_node;
@@ -86,24 +98,34 @@ struct webidl_node *webidl_node_add(struct webidl_node *node, struct webidl_node
 /* node contents acessors */
 char *webidl_node_gettext(struct webidl_node *node);
 struct webidl_node *webidl_node_getnode(struct webidl_node *node);
-int webidl_node_getint(struct webidl_node *node);
+int *webidl_node_getint(struct webidl_node *node);
 enum webidl_node_type webidl_node_gettype(struct webidl_node *node);
 
 /* node searches */
+
+/**
+ * Iterate nodes children matching their type.
+ *
+ * For each child node where the type is matched the callback function is
+ * called with a context value.
+ */
 int webidl_node_for_each_type(struct webidl_node *node,
-			   enum webidl_node_type type,
-			   webidl_callback_t *cb,
+                              enum webidl_node_type type,
+                              webidl_callback_t *cb,
 			      void *ctx);
+
+int webidl_node_enumerate_type(struct webidl_node *node,
+                               enum webidl_node_type type);
 
 struct webidl_node *
 webidl_node_find(struct webidl_node *node,
-		  struct webidl_node *prev,
-		  webidl_callback_t *cb,
+                 struct webidl_node *prev,
+                 webidl_callback_t *cb,
 		 void *ctx);
 
 struct webidl_node *
 webidl_node_find_type(struct webidl_node *node,
-		  struct webidl_node *prev,
+                      struct webidl_node *prev,
 		      enum webidl_node_type type);
 
 struct webidl_node *
@@ -112,10 +134,26 @@ webidl_node_find_type_ident(struct webidl_node *root_node,
 			    const char *ident);
 
 
-/* debug dump */
-int webidl_ast_dump(struct webidl_node *node, int indent);
 
-/** parse web idl file */
+/**
+ * parse web idl file into Abstract Syntax Tree
+ */
 int webidl_parsefile(char *filename, struct webidl_node **webidl_ast);
+
+/**
+ * dump AST to file
+ */
+int webidl_dump_ast(struct webidl_node *node);
+
+/**
+ * perform replacement of implements elements with copies of ast data
+ */
+int webidl_intercalate_implements(struct webidl_node *node);
+
+/**
+ * formatted printf to allow webidl trace data to be written to file.
+ */
+int webidl_fprintf(FILE *stream, const char *format, ...);
+
 
 #endif
