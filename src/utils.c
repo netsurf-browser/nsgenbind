@@ -11,6 +11,8 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "options.h"
 #include "utils.h"
@@ -35,7 +37,7 @@ static char *genb_fpath_tmp(const char *fname)
 
         fpathl = strlen(options->outdirname) + strlen(fname) + 3;
         fpath = malloc(fpathl);
-        snprintf(fpath, fpathl, "%s/%s~", options->outdirname, fname);
+        snprintf(fpath, fpathl, "%s/%s.%d", options->outdirname, fname, getpid());
 
         return fpath;
 }
@@ -111,6 +113,7 @@ int genb_fclose_tmp(FILE *filef_tmp, const char *fname)
                             (memcmp(tbuf, fbuf, trd) != 0)) {
                                 /* file doesnt match */
                                 fclose(filef_tmp);
+                                fclose(filef);
 
                                 remove(fpath);
                                 rename(tpath, fpath);
