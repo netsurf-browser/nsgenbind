@@ -100,7 +100,7 @@ webidl_node_add(struct webidl_node *node, struct webidl_node *list)
 	case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
 	case WEBIDL_NODE_TYPE_ATTRIBUTE:
 	case WEBIDL_NODE_TYPE_OPERATION:
-	case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
+	case WEBIDL_NODE_TYPE_OPTIONAL:
 	case WEBIDL_NODE_TYPE_ARGUMENT:
 	case WEBIDL_NODE_TYPE_TYPE:
 	case WEBIDL_NODE_TYPE_CONST:
@@ -267,6 +267,7 @@ char *webidl_node_gettext(struct webidl_node *node)
 		case WEBIDL_NODE_TYPE_IDENT:
 		case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
 		case WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS:
+                case WEBIDL_NODE_TYPE_LITERAL_STRING:
 			return node->r.text;
 
 		default:
@@ -286,6 +287,7 @@ webidl_node_getint(struct webidl_node *node)
 		case WEBIDL_NODE_TYPE_TYPE_BASE:
 		case WEBIDL_NODE_TYPE_LITERAL_INT:
                 case WEBIDL_NODE_TYPE_SPECIAL:
+                case WEBIDL_NODE_TYPE_LITERAL_BOOL:
 			return &node->r.number;
 
 		default:
@@ -313,7 +315,7 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 		case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
 		case WEBIDL_NODE_TYPE_ATTRIBUTE:
 		case WEBIDL_NODE_TYPE_OPERATION:
-		case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
+		case WEBIDL_NODE_TYPE_OPTIONAL:
 		case WEBIDL_NODE_TYPE_ARGUMENT:
 		case WEBIDL_NODE_TYPE_TYPE:
 		case WEBIDL_NODE_TYPE_CONST:
@@ -354,8 +356,8 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_OPERATION:
 		return "Operation";
 
-	case WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT:
-		return "Argument(opt)";
+	case WEBIDL_NODE_TYPE_OPTIONAL:
+		return "Optional";
 
 	case WEBIDL_NODE_TYPE_ARGUMENT:
 		return "Argument";
@@ -381,8 +383,20 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_CONST:
 		return "Const";
 
+	case WEBIDL_NODE_TYPE_LITERAL_NULL:
+		return "Literal (null)";
+
 	case WEBIDL_NODE_TYPE_LITERAL_INT:
 		return "Literal (int)";
+
+	case WEBIDL_NODE_TYPE_LITERAL_BOOL:
+		return "Literal (bool)";
+
+	case WEBIDL_NODE_TYPE_LITERAL_FLOAT:
+		return "Literal (string)";
+
+	case WEBIDL_NODE_TYPE_LITERAL_STRING:
+		return "Literal (string)";
 
 	case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
 		return "Extended Attribute";

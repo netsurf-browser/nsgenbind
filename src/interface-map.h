@@ -12,12 +12,37 @@
 struct genbind_node;
 struct webidl_node;
 
+/**
+ *map entry for each argument of an overload on an operation
+ */
+struct interface_map_operation_argument_entry {
+        const char *name;
+
+        int optionalc; /**< Number of parameters that are optional */
+        int elipsisc; /**< Number of elipsis parameters */
+
+        struct webidl_node *node;
+};
+
+/** map entry for each overload of an operation */
+struct interface_map_operation_overload_entry {
+        struct webidl_node *type; /**< The return type of this overload */
+
+        int optionalc; /**< Number of parameters that are optional */
+        int elipsisc; /**< Number of elipsis parameters */
+
+        int argumentc; /**< the number of parameters */
+        struct interface_map_operation_argument_entry *argumentv;
+};
+
 /** map entry for operations on an interface */
 struct interface_map_operation_entry {
         const char *name; /** operation name */
         struct webidl_node *node; /**< AST operation node */
-        struct genbind_node *method; /**< method from binding (if any) */
-        int overloadc; /**< Number of previous overloads of this operation */
+        struct genbind_node *method; /**< method from binding */
+
+        int overloadc; /**< Number of overloads of this operation */
+        struct interface_map_operation_overload_entry *overloadv;
 };
 
 /** map entry for attributes on an interface */
@@ -25,8 +50,8 @@ struct interface_map_attribute_entry {
         const char *name; /** attribute name */
         struct webidl_node *node; /**< AST attribute node */
         enum webidl_type_modifier modifier;
-        struct genbind_node *getter; /**< getter from binding (if any) */
-        struct genbind_node *setter; /**< getter from binding (if any) */
+        struct genbind_node *getter; /**< getter from binding */
+        struct genbind_node *setter; /**< getter from binding */
 };
 
 /** map entry for constants on an interface */

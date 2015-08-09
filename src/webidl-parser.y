@@ -170,6 +170,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> Ellipsis
 %type <node> Iterable
 %type <node> OptionalType
+%type <node> Default
+%type <node> DefaultValue
 
 %type <node> Type
 %type <node> ReturnType
@@ -450,8 +452,14 @@ PartialDictionary:
  /* [15] */
 Default:
         /* empty */
+        {
+            $$ = NULL;
+        }
         |
         '=' DefaultValue
+        {
+            $$ = $2;
+        }
         ;
 
 
@@ -460,6 +468,9 @@ DefaultValue:
         ConstValue
         |
         TOK_STRING_LITERAL
+        {
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_STRING, NULL, $1);
+        }
         ;
 
  /* [17] */
@@ -874,8 +885,9 @@ OptionalOrRequiredArgument:
         {
             struct webidl_node *argument;
             argument = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $3);
+            argument = webidl_node_new(WEBIDL_NODE_TYPE_OPTIONAL, argument, $4);
             argument = webidl_node_prepend(argument, $2); /* add type node */
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT, NULL, argument);
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ARGUMENT, NULL, argument);
         }
         |
         Type Ellipsis ArgumentName

@@ -228,7 +228,7 @@ legacyiterable      return TOK_LEGACYITERABLE;
 
 {decimalfloat}      yylval->text = strdup(yytext); return TOK_FLOAT_LITERAL;
 
-\"{quotedstring}*\" yylval->text = strdup(yytext); return TOK_STRING_LITERAL;
+\"{quotedstring}*\" yylval->text = strdup(yytext + 1); *(yylval->text + yyleng - 2) = 0; return TOK_STRING_LITERAL;
 
 {multicomment}      {
                         /* multicomment */

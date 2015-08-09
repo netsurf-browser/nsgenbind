@@ -132,31 +132,149 @@ interface_topoligical_sort(struct interface_map_entry *srcinf, int infc)
         return dstinf;
 }
 
-static int
-count_operation_name(struct interface_map_operation_entry *operationv,
+static struct interface_map_operation_entry *
+find_operation_name(struct interface_map_operation_entry *operationv,
                      int operationc,
                      const char *name)
 {
         struct interface_map_operation_entry *cure;
         int opc;
-        int res = 0;
 
         for (opc = 0; opc < operationc; opc++) {
                 cure = operationv + opc;
 
                 if (cure->name == name) {
                         /* check pointers for equivalence */
-                        res++;
+                        return cure;
                 } else {
                         if ((cure->name != NULL) &&
                             (name != NULL) &&
                             (strcmp(cure->name, name) == 0)) {
-                                res++;
+                                return cure;
                         }
                 }
         }
 
-        return res;
+        return NULL;
+}
+
+static int
+argument_map_new(struct webidl_node *arg_list_node,
+                 int *argumentc_out,
+                 struct interface_map_operation_argument_entry **argumentv_out)
+{
+        int argumentc;
+        struct webidl_node *argument;
+        struct interface_map_operation_argument_entry *argumentv;
+        struct interface_map_operation_argument_entry *cure;
+
+        argumentc = webidl_node_enumerate_type(
+                            webidl_node_getnode(arg_list_node),
+                            WEBIDL_NODE_TYPE_ARGUMENT);
+        if (argumentc == 0) {
+                *argumentc_out = 0;
+                *argumentv_out = NULL;
+                return 0;
+        }
+
+        argumentv = calloc(argumentc, sizeof(*argumentv));
+        cure = argumentv;
+
+        /* iterate each argument node within the list */
+        argument = webidl_node_find_type(webidl_node_getnode(arg_list_node),
+                                         NULL,
+                                         WEBIDL_NODE_TYPE_ARGUMENT);
+
+        while (argument != NULL) {
+
+                cure->name = webidl_node_gettext(
+                                webidl_node_find_type(
+                                        webidl_node_getnode(argument),
+                                        NULL,
+                                        WEBIDL_NODE_TYPE_IDENT));
+
+                cure->node = argument;
+
+
+                cure->optionalc = webidl_node_enumerate_type(
+                        webidl_node_getnode(argument),
+                        WEBIDL_NODE_TYPE_OPTIONAL);
+
+                cure->elipsisc = webidl_node_enumerate_type(
+                        webidl_node_getnode(argument),
+                        WEBIDL_NODE_TYPE_ELLIPSIS);
+
+                cure++;
+
+                argument = webidl_node_find_type(
+                        webidl_node_getnode(arg_list_node),
+                        argument,
+                        WEBIDL_NODE_TYPE_ARGUMENT);
+        }
+
+        *argumentc_out = argumentc;
+        *argumentv_out = argumentv;
+
+        return 0;
+}
+
+/**
+ * create a new overloaded parameter set on an operation
+ *
+ * each operation can be overloaded with multiple function signatures. By
+ * adding them to the operation as overloads duplicate operation enrtries is
+ * avoided.
+ */
+static int
+overload_map_new(struct webidl_node *op_node,
+                 int *overloadc_out,
+                 struct interface_map_operation_overload_entry **overloadv_out)
+{
+        int overloadc = *overloadc_out;
+        struct interface_map_operation_overload_entry *overloadv;
+        struct interface_map_operation_overload_entry *cure;
+        struct webidl_node *arg_list_node;
+        int argc;
+
+        /* update allocation */
+        overloadc++;
+        overloadv = realloc(*overloadv_out, overloadc * sizeof(*overloadv));
+        if (overloadv == NULL) {
+                return -1;
+        }
+
+        /* get added entry */
+        cure = overloadv + (overloadc - 1);
+
+        /* clear entry */
+        cure = memset(cure, 0, sizeof(*cure));
+
+        /* return type */
+        cure->type = webidl_node_find_type(webidl_node_getnode(op_node),
+                                           NULL,
+                                           WEBIDL_NODE_TYPE_TYPE);
+
+        arg_list_node = webidl_node_find_type(webidl_node_getnode(op_node),
+                                              NULL,
+                                              WEBIDL_NODE_TYPE_LIST);
+        if (arg_list_node != NULL) {
+                argument_map_new(arg_list_node,
+                                 &cure->argumentc,
+                                 &cure->argumentv);
+        }
+
+        for (argc = 0; argc < cure->argumentc; argc++) {
+                struct interface_map_operation_argument_entry *arge;
+                arge = cure->argumentv + argc;
+                cure->optionalc += arge->optionalc;
+                cure->elipsisc += arge->elipsisc;
+        }
+
+        /* return entry list */
+        *overloadc_out = overloadc;
+        *overloadv_out = overloadv;
+
+        return 0;
 }
 
 static int
@@ -170,9 +288,8 @@ operation_map_new(struct webidl_node *interface,
         struct interface_map_operation_entry *cure; /* current entry */
         struct interface_map_operation_entry *operationv;
         int operationc;
-        int opc;
 
-        /* enumerate operationss */
+        /* enumerate operationss including overloaded members */
         operationc = enumerate_interface_type(interface,
                                               WEBIDL_NODE_TYPE_OPERATION);
 
@@ -204,25 +321,49 @@ operation_map_new(struct webidl_node *interface,
                         WEBIDL_NODE_TYPE_OPERATION);
 
                 while (op_node != NULL) {
-                        cure->node = op_node;
+                        const char *operation_name;
+                        struct interface_map_operation_entry *finde;
 
-                        cure->name = webidl_node_gettext(
+                        /* get operation name */
+                        operation_name = webidl_node_gettext(
                                 webidl_node_find_type(
                                         webidl_node_getnode(op_node),
                                         NULL,
                                         WEBIDL_NODE_TYPE_IDENT));
+                        /* if this operation is already an entry in the list
+                         * augment that entry else create a new one
+                         */
+                        finde = find_operation_name(operationv,
+                                                    operationc,
+                                                    operation_name);
+                        if (finde == NULL) {
+                                /* operation does not already exist in list */
 
-                        cure->method = genbind_node_find_method_ident(
+                                cure->name = operation_name;
+
+                                cure->node = op_node;
+
+                                cure->method = genbind_node_find_method_ident(
                                                class,
                                                NULL,
                                                GENBIND_METHOD_TYPE_METHOD,
                                                cure->name);
 
-                        cure->overloadc = count_operation_name(operationv,
-                                                               operationc,
-                                                               cure->name);
+                                overload_map_new(op_node,
+                                                 &cure->overloadc,
+                                                 &cure->overloadv);
 
-                        cure++;
+                                cure++; /* advance to next entry */
+                        } else {
+                                overload_map_new(op_node,
+                                                 &finde->overloadc,
+                                                 &finde->overloadv);
+                                /* Overloaded entry does not advance the
+                                 * current entry but does reduce list
+                                 * length. Do not bother shortening allocation.
+                                 */
+                                operationc--;
+                        }
 
                         /* move to next operation */
                         op_node = webidl_node_find_type(
@@ -235,20 +376,6 @@ operation_map_new(struct webidl_node *interface,
                         webidl_node_getnode(interface),
                         list_node,
                         WEBIDL_NODE_TYPE_LIST);
-        }
-
-        /* finally take a pass over the table to correct the overload count */
-        for (opc = 0; opc < operationc; opc++) {
-                cure = operationv + opc;
-                if ((cure->overloadc == 1) &&
-                    (count_operation_name(operationv,
-                                          operationc,
-                                          cure->name) == 1)) {
-                        /* if the "overloaded" member is itself it is not
-                         * overloaded.
-                         */
-                        cure->overloadc = 0;
-                }
         }
 
         *operationc_out = operationc;
@@ -567,46 +694,88 @@ int interface_map_dump(struct interface_map *index)
         for (eidx = 0; eidx < index->entryc; eidx++) {
                 fprintf(dumpf, "%d %s\n", eidx, ecur->name);
                 if (ecur->inherit_name != NULL) {
-                        fprintf(dumpf, "        inherit:%s\n", ecur->inherit_name);
+                        fprintf(dumpf, "\tinherit:%s\n", ecur->inherit_name);
                 }
                 if (ecur->class != NULL) {
-                        fprintf(dumpf, "        class:%p\n", ecur->class);
+                        fprintf(dumpf, "\tclass:%p\n", ecur->class);
                 }
-                if (ecur->operationc > 0) {
-                        int opc = ecur->operationc;
-                        struct interface_map_operation_entry *ope;
 
-                        fprintf(dumpf, "        %d operations\n",
+                if (ecur->operationc > 0) {
+                        int opc;
+
+                        fprintf(dumpf, "\t%d operations\n",
                                 ecur->operationc);
 
-                        ope = ecur->operationv;
-                        while (ope != NULL) {
+                        for (opc = 0; opc < ecur->operationc; opc++) {
+                                int ovlc;
+                                struct interface_map_operation_entry *ope;
+
+                                ope = ecur->operationv + opc;
+
                                 fprintf(dumpf,
-                                        "                %s\n",
+                                        "\t\t%s\n",
                                         ope->name);
                                 fprintf(dumpf,
-                                        "                        method:%p\n",
+                                        "\t\t\tmethod:%p\n",
                                         ope->method);
-                                fprintf(dumpf,
-                                        "                        overload:%d\n",
-                                        ope->overloadc);
-                                ope++;
-                                opc--;
-                                if (opc == 0) {
-                                        break;
+                                for(ovlc = 0; ovlc < ope->overloadc;ovlc++) {
+                                        int argc;
+                                        struct interface_map_operation_overload_entry *ovle;
+                                        ovle = ope->overloadv + ovlc;
+
+                                        fprintf(dumpf,
+                                                "\t\t\toverload:%d\n", ovlc);
+
+                                        fprintf(dumpf,
+                                                "\t\t\t\treturn type:%p\n",
+                                                ovle->type);
+
+                                        fprintf(dumpf,
+                                                "\t\t\t\targuments:%d\n",
+                                                ovle->argumentc);
+
+                                        fprintf(dumpf,
+                                                "\t\t\t\toptionals:%d\n",
+                                                ovle->optionalc);
+
+                                        fprintf(dumpf,
+                                                "\t\t\t\telipsis:%d\n",
+                                                ovle->elipsisc);
+
+                                        for (argc = 0; argc < ovle->argumentc; argc++) {
+                                                struct interface_map_operation_argument_entry *arge;
+                                                arge = ovle->argumentv + argc;
+
+                                                fprintf(dumpf,
+                                                        "\t\t\t\t\t%s\n",
+                                                        arge->name);
+
+                                                if (arge->optionalc != 0) {
+                                                        fprintf(dumpf,
+                                                                "\t\t\t\t\t\toptional:%d\n",
+                                                                arge->optionalc);
+                                                }
+
+                                                if (arge->elipsisc != 0) {
+                                                        fprintf(dumpf,
+                                                                "\t\t\t\t\t\telipsis:%d\n",
+                                                                arge->elipsisc);
+                                                }
+
+                                        }
                                 }
                         }
-
                 }
+
                 if (ecur->attributec > 0) {
                         int attrc = ecur->attributec;
                         struct interface_map_attribute_entry *attre;
 
-                        fprintf(dumpf, "        %d attributes\n", attrc);
+                        fprintf(dumpf, "\t%d attributes\n", attrc);
 
                         attre = ecur->attributev;
                         while (attre != NULL) {
-                                fprintf(dumpf, "                %s %p",
+                                fprintf(dumpf, "\t\t%s %p",
                                         attre->name,
                                         attre->getter);
                                 if (attre->modifier == WEBIDL_TYPE_MODIFIER_NONE) {
@@ -624,13 +793,13 @@ int interface_map_dump(struct interface_map *index)
                 if (ecur->constantc > 0) {
                         int idx;
 
-                        fprintf(dumpf, "        %d constants\n",
+                        fprintf(dumpf, "\t%d constants\n",
                                 ecur->constantc);
 
                         for (idx = 0; idx < ecur->constantc; idx++) {
                                 struct interface_map_constant_entry *cone;
                                 cone = ecur->constantv + idx;
-                                fprintf(dumpf, "                %s\n",
+                                fprintf(dumpf, "\t\t%s\n",
                                         cone->name);
                         }
                 }

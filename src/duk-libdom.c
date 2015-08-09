@@ -160,19 +160,13 @@ output_dump_stack(FILE* outf)
 static int
 output_add_method(FILE* outf,
                   const char *class_name,
-                  const char *method,
-                  int argc)
+                  const char *method)
 {
         fprintf(outf, "\t/* Add a method */\n");
         fprintf(outf, "\tduk_dup(ctx, 0);\n");
         fprintf(outf, "\tduk_push_string(ctx, \"%s\");\n", method);
-        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s, ",
+        fprintf(outf, "\tduk_push_c_function(ctx, %s_%s_%s, DUK_VARARGS);\n",
                 DLPFX, class_name, method);
-        if (argc == -1) {
-                fprintf(outf, "DUK_VARARGS);\n");
-        } else {
-                fprintf(outf, "%d);\n", argc);
-        }
         output_dump_stack(outf);
         fprintf(outf, "\tduk_def_prop(ctx, -3,\n");
         fprintf(outf, "\t             DUK_DEFPROP_HAVE_VALUE |\n");
@@ -700,35 +694,6 @@ output_interface_fini(FILE* outf,
 
 
 /**
- * count the number of arguments to an operation
- *
- * \todo this needs to consider multiple lists (overloaded calls?), varadic
- *       parameters.
- *
- * \retuen number of arguments or -1 if variable
- */
-static int count_operation_arguments(struct webidl_node *node)
-{
-        int argc;
-        struct webidl_node *list_node;
-        list_node = webidl_node_find_type(
-                webidl_node_getnode(node),
-                NULL,
-                WEBIDL_NODE_TYPE_LIST);
-        if (list_node == NULL) {
-                /** \todo is having no argument list an error or a warning? */
-                return 0;
-        }
-        argc = webidl_node_enumerate_type(webidl_node_getnode(list_node),
-                                          WEBIDL_NODE_TYPE_OPTIONAL_ARGUMENT);
-        if (argc != 0) {
-                return -1;
-        }
-        return webidl_node_enumerate_type(webidl_node_getnode(list_node),
-                                          WEBIDL_NODE_TYPE_ARGUMENT);
-}
-
-/**
  * generate a prototype add for a single class method
  */
 static int
@@ -736,23 +701,12 @@ output_prototype_method(FILE* outf,
                         struct interface_map_entry *interfacee,
                         struct interface_map_operation_entry *operatione)
 {
-        int op_argc;
-
-        if (operatione->overloadc > 1) {
-                /* only generate a method for the first occourance of an
-                 * overloaded method
-                 */
-                return 0;
-        }
 
         if (operatione->name != NULL) {
-                /* normal method of prototype */
-                op_argc = count_operation_arguments(operatione->node);
-
+                /* normal method on prototype */
                 output_add_method(outf,
                                   interfacee->class_name,
-                                  operatione->name,
-                                  op_argc);
+                                  operatione->name);
         } else {
                 /* special method on prototype */
                 fprintf(outf,
@@ -929,43 +883,37 @@ output_interface_operation(FILE* outf,
                            struct interface_map_entry *interfacee,
                            struct interface_map_operation_entry *operatione)
 {
-        if (operatione->overloadc > 1) {
-                /* only generate a method for the first occourance of an
-                 * overloaded method
-                 */
-                return 0;
-        }
+        int cdatac; /* cdata blocks output */
 
-        if (operatione->name != NULL) {
-                /* normal method definition */
-
-                int cdatac; /* cdata blocks output */
-
-                fprintf(outf,
-                        "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
-                        DLPFX, interfacee->class_name, operatione->name);
-                fprintf(outf,"{\n");
-
-                output_get_method_private(outf, interfacee->class_name);
-
-                cdatac = output_cdata(outf,
-                                      operatione->method,
-                                      GENBIND_NODE_TYPE_CDATA);
-
-                if (cdatac == 0) {
-                        /* no implementation so generate default */
-                        WARN(WARNING_UNIMPLEMENTED,
-                             "Unimplemented: method %s::%s();",
-                             interfacee->name, operatione->name);
-                        fprintf(outf,"\treturn 0;\n");
-                }
-
-                fprintf(outf, "}\n\n");
-        } else {
+        if (operatione->name == NULL) {
                 /* special method definition */
                 fprintf(outf,
                         "/* Special method definition - UNIMPLEMENTED */\n\n");
+                return 0;
         }
+
+        /* normal method definition */
+
+        fprintf(outf,
+                "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
+                DLPFX, interfacee->class_name, operatione->name);
+        fprintf(outf,"{\n");
+
+        output_get_method_private(outf, interfacee->class_name);
+
+        cdatac = output_cdata(outf,
+                              operatione->method,
+                              GENBIND_NODE_TYPE_CDATA);
+
+        if (cdatac == 0) {
+                /* no implementation so generate default */
+                WARN(WARNING_UNIMPLEMENTED,
+                     "Unimplemented: method %s::%s();",
+                     interfacee->name, operatione->name);
+                fprintf(outf,"\treturn 0;\n");
+        }
+
+        fprintf(outf, "}\n\n");
 
         return 0;
 }
