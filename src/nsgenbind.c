@@ -39,7 +39,7 @@ static struct options* process_cmdline(int argc, char **argv)
                 return NULL;
         }
 
-        while ((opt = getopt(argc, argv, "vgDW::I:")) != -1) {
+        while ((opt = getopt(argc, argv, "vngDW::I:")) != -1) {
                 switch (opt) {
                 case 'I':
                         options->idlpath = strdup(optarg);
@@ -47,6 +47,10 @@ static struct options* process_cmdline(int argc, char **argv)
 
                 case 'v':
                         options->verbose = true;
+                        break;
+
+                case 'n':
+                        options->dryrun = true;
                         break;
 
                 case 'D':

@@ -48,7 +48,11 @@ FILE *genb_fopen(const char *fname, const char *mode)
         char *fpath;
         FILE *filef;
 
-        fpath = genb_fpath(fname);
+        if (options->dryrun) {
+                fpath = strdup("/dev/null");
+        } else {
+                fpath = genb_fpath(fname);
+        }
 
         filef = fopen(fpath, mode);
         if (filef == NULL) {
@@ -68,7 +72,11 @@ FILE *genb_fopen_tmp(const char *fname)
         char *fpath;
         FILE *filef;
 
-        fpath = genb_fpath_tmp(fname);
+        if (options->dryrun) {
+                fpath = strdup("/dev/null");
+        } else {
+                fpath = genb_fpath_tmp(fname);
+        }
 
         filef = fopen(fpath, "w+");
         if (filef == NULL) {
@@ -91,6 +99,11 @@ int genb_fclose_tmp(FILE *filef_tmp, const char *fname)
         char fbuf[1024];
         size_t trd;
         size_t frd;
+
+        if (options->dryrun) {
+                fclose(filef_tmp);
+                return 0;
+        }
 
         fpath = genb_fpath(fname);
         tpath = genb_fpath_tmp(fname);

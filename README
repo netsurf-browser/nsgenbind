@@ -4,7 +4,7 @@ nsgenbind
 This is a tool to generate JavaScript to DOM bindings from w3c webidl
 files and a binding configuration file.
 
-building
+Building
 --------
 
 The tool requires bison and flex as pre-requisites
@@ -12,29 +12,33 @@ The tool requires bison and flex as pre-requisites
 Commandline
 -----------
 
-nsgenbind [-v] [-g] [-D] [-W] [-I idlpath] inputfile outputdir
+nsgenbind [-v] [-n] [-g] [-D] [-W] [-I idlpath] inputfile outputdir
 
 -v
-The verbose switch makes the tool verbose about what operations it is
-performing instead of the default of only reporting errors.
+  The verbose switch makes the tool verbose about what operations it
+   is performing instead of the default of only reporting errors.
+
+-n
+  The tool will not generate any output but will perform all other
+   operations as if it was. Useful for debugging bindings
 
 -g
-The generated code will be augmented with runtime debug logging so it
-can be traced
+  The generated code will be augmented with runtime debug logging so
+   it can be traced
 
 -D
-The tool will generate output to allow debugging of output conversion.
-This includes dumps of the binding and IDL files AST
+  The tool will generate output to allow debugging of output
+   conversion.  This includes dumps of the binding and IDL files AST
 
 -W
-This switch will make the tool generate warnings about various issues
-with the binding or IDL files being processed.
+  This switch will make the tool generate warnings about various
+   issues with the binding or IDL files being processed.
 
 -I
-An additional search path may be given so idl files can be located.
+  An additional search path may be given so idl files can be located.
 
 The tool requires a binding file as input and an output directory in
-which to place its output.
+ which to place its output.
 
 
 Debug output

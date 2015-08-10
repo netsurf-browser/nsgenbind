@@ -18,6 +18,8 @@ struct options {
 	bool verbose; /**< verbose processing */
 	bool debug; /**< debug enabled */
 	bool dbglog; /**< embed debug logging in output */
+        bool dryrun; /**< output is not generated */
+
 	unsigned int warnings; /**< warning flags */
 };
 
