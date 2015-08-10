@@ -13,13 +13,13 @@ struct genbind_node;
 struct webidl_node;
 
 /**
- *map entry for each argument of an overload on an operation
+ * map entry for each argument of an overload on an operation
  */
 struct interface_map_operation_argument_entry {
         const char *name;
 
-        int optionalc; /**< Number of parameters that are optional */
-        int elipsisc; /**< Number of elipsis parameters */
+        int optionalc; /**< 1 if the argument is optional */
+        int elipsisc; /**< 1 if the argument is an elipsis */
 
         struct webidl_node *node;
 };

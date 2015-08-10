@@ -859,25 +859,25 @@ output_interface_prototype(FILE* outf,
         /* generate setting of constants */
         output_prototype_constants(outf, interfacee);
 
-	/* if this is the global object, output all interfaces which do not
-	 * prevent us from doing so
-	 */
-	if (interfacee->primary_global) {
-		fprintf(outf, "\t/* Create interface objects */\n");
-		for (int idx = 0; idx < interface_map->entryc; idx++) {
-			struct interface_map_entry *interfacep;
+        /* if this is the global object, output all interfaces which do not
+         * prevent us from doing so
+         */
+        if (interfacee->primary_global) {
+                fprintf(outf, "\t/* Create interface objects */\n");
+                for (int idx = 0; idx < interface_map->entryc; idx++) {
+                        struct interface_map_entry *interfacep;
 
-			interfacep = interface_map->entries + idx;
-			if (interfacep->noobject) continue;
-			if (interfacep == interfacee)
-				fprintf(outf, "\tduk_dup(ctx, 0);\n");
-			else
-				output_get_prototype(outf, interfacep->name);
-			fprintf(outf,
-				"\tdukky_inject_not_ctr(ctx, 0, \"%s\");\n",
-				interfacep->name);
-		}
-	}
+                        interfacep = interface_map->entries + idx;
+                        if (interfacep->noobject) continue;
+                        if (interfacep == interfacee)
+                                fprintf(outf, "\tduk_dup(ctx, 0);\n");
+                        else
+                                output_get_prototype(outf, interfacep->name);
+                        fprintf(outf,
+                                "\tdukky_inject_not_ctr(ctx, 0, \"%s\");\n",
+                                interfacep->name);
+                }
+        }
 
         /* generate setting of destructor */
         output_set_destructor(outf, interfacee->class_name, 0);
@@ -895,6 +895,174 @@ output_interface_prototype(FILE* outf,
         return 0;
 }
 
+/**
+ * generate a single class method for an interface operation with elipsis
+ */
+static int
+output_interface_elipsis_operation(FILE* outf,
+                               struct interface_map_entry *interfacee,
+                               struct interface_map_operation_entry *operatione)
+{
+        int cdatac; /* cdata blocks output */
+
+        /* overloaded method definition */
+        fprintf(outf,
+                "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
+                DLPFX, interfacee->class_name, operatione->name);
+        fprintf(outf,"{\n");
+
+        /**
+         * \todo This is where the checking of the parameters to the
+         * operation with elipsis should go
+         */
+        WARN(WARNING_UNIMPLEMENTED,
+             "Elipsis parameetrs not checked: method %s::%s();",
+                     interfacee->name, operatione->name);
+
+        output_get_method_private(outf, interfacee->class_name);
+
+        cdatac = output_cdata(outf,
+                              operatione->method,
+                              GENBIND_NODE_TYPE_CDATA);
+
+        if (cdatac == 0) {
+                /* no implementation so generate default */
+                WARN(WARNING_UNIMPLEMENTED,
+                     "Unimplemented: method %s::%s();",
+                     interfacee->name, operatione->name);
+                fprintf(outf,"\treturn 0;\n");
+        }
+
+        fprintf(outf, "}\n\n");
+
+        return 0;
+}
+
+/**
+ * generate a single class method for an interface overloaded operation
+ */
+static int
+output_interface_overloaded_operation(FILE* outf,
+                               struct interface_map_entry *interfacee,
+                               struct interface_map_operation_entry *operatione)
+{
+        int cdatac; /* cdata blocks output */
+
+        /* overloaded method definition */
+        fprintf(outf,
+                "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
+                DLPFX, interfacee->class_name, operatione->name);
+        fprintf(outf,"{\n");
+
+        /** \todo This is where the checking of the parameters to the
+         * overloaded operation should go
+         */
+
+        output_get_method_private(outf, interfacee->class_name);
+
+        cdatac = output_cdata(outf,
+                              operatione->method,
+                              GENBIND_NODE_TYPE_CDATA);
+
+        if (cdatac == 0) {
+                /* no implementation so generate default */
+                WARN(WARNING_UNIMPLEMENTED,
+                     "Unimplemented: method %s::%s();",
+                     interfacee->name, operatione->name);
+                fprintf(outf,"\treturn 0;\n");
+        }
+
+        fprintf(outf, "}\n\n");
+
+        return 0;
+}
+
+/**
+ * generate a single class method for an interface special operation
+ */
+static int
+output_interface_special_operation(FILE* outf,
+                           struct interface_map_entry *interfacee,
+                           struct interface_map_operation_entry *operatione)
+{
+        /* special method definition */
+        fprintf(outf, "/* Special method definition - UNIMPLEMENTED */\n\n");
+
+        WARN(WARNING_UNIMPLEMENTED,
+             "Special operation on interface %s (operation entry %p)",
+             interfacee->name,
+             operatione);
+
+        return 0;
+}
+
+/**
+ * generate default values on the duk stack
+ */
+static int
+output_operation_optional_defaults(FILE* outf,
+        struct interface_map_operation_argument_entry *argumentv,
+        int argumentc)
+{
+        int argc;
+        for (argc = 0; argc < argumentc; argc++) {
+                struct interface_map_operation_argument_entry *cure;
+                struct webidl_node *lit_node; /* literal node */
+                enum webidl_node_type lit_type;
+                int *lit_int;
+                char *lit_str;
+
+                cure = argumentv + argc;
+
+                lit_node = webidl_node_getnode(
+                        webidl_node_find_type(
+                                webidl_node_getnode(cure->node),
+                                NULL,
+                                WEBIDL_NODE_TYPE_OPTIONAL));
+
+                if (lit_node != NULL) {
+
+                        lit_type = webidl_node_gettype(lit_node);
+
+                        switch (lit_type) {
+                        case WEBIDL_NODE_TYPE_LITERAL_NULL:
+                                fprintf(outf,
+                                        "\t\tduk_push_null(ctx);\n");
+                                break;
+
+                        case WEBIDL_NODE_TYPE_LITERAL_INT:
+                                lit_int = webidl_node_getint(lit_node);
+                                fprintf(outf,
+                                        "\t\tduk_push_int(ctx, %d);\n",
+                                        *lit_int);
+                                break;
+
+                        case WEBIDL_NODE_TYPE_LITERAL_BOOL:
+                                lit_int = webidl_node_getint(lit_node);
+                                fprintf(outf,
+                                        "\t\tduk_push_boolean(ctx, %d);\n",
+                                        *lit_int);
+                                break;
+
+                        case WEBIDL_NODE_TYPE_LITERAL_STRING:
+                                lit_str = webidl_node_gettext(lit_node);
+                                fprintf(outf,
+                                        "\t\tduk_push_string(ctx, \"%s\");\n",
+                                        lit_str);
+                                break;
+
+                        case WEBIDL_NODE_TYPE_LITERAL_FLOAT:
+                        default:
+                                fprintf(outf,
+                                        "\t\tduk_push_undefined(ctx);\n");
+                                break;
+                        }
+                } else {
+                        fprintf(outf, "\t\tduk_push_undefined(ctx);\n");
+                }
+        }
+        return 0;
+}
 
 /**
  * generate a single class method for an interface operation
@@ -905,20 +1073,84 @@ output_interface_operation(FILE* outf,
                            struct interface_map_operation_entry *operatione)
 {
         int cdatac; /* cdata blocks output */
+        struct interface_map_operation_overload_entry *overloade;
+        int fixedargc; /* number of non optional arguments */
+        int optargc; /* loop counter for optional arguments */
 
         if (operatione->name == NULL) {
-                /* special method definition */
-                fprintf(outf,
-                        "/* Special method definition - UNIMPLEMENTED */\n\n");
-                return 0;
+                return output_interface_special_operation(outf,
+                                                          interfacee,
+                                                          operatione);
+        }
+
+        if (operatione->overloadc != 1) {
+                return output_interface_overloaded_operation(outf,
+                                                             interfacee,
+                                                             operatione);
+        }
+
+        if (operatione->overloadv->elipsisc != 0) {
+                return output_interface_elipsis_operation(outf,
+                                                          interfacee,
+                                                          operatione);
         }
 
         /* normal method definition */
+        overloade = operatione->overloadv;
 
         fprintf(outf,
                 "static duk_ret_t %s_%s_%s(duk_context *ctx)\n",
                 DLPFX, interfacee->class_name, operatione->name);
         fprintf(outf,"{\n");
+
+        /* check arguments */
+
+        /* generate check for minimum number of parameters */
+
+        fixedargc = overloade->argumentc - overloade->optionalc;
+
+        fprintf(outf,
+                "\t/* ensure the parameters are present */\n"
+                "\tduk_idx_t %s_argc = duk_get_top(ctx);\n\t", DLPFX);
+
+        if (fixedargc > 0) {
+                fprintf(outf,
+                        "if (%s_argc < %d) {\n"
+                        "\t\t/* not enough arguments */\n"
+                        "\t\tduk_error(ctx, DUK_RET_TYPE_ERROR, %s_argument_error_fmt, %d, %s_argc);\n"
+                        "\t} else ",
+                        DLPFX,
+                        fixedargc,
+                        DLPFX,
+                        fixedargc,
+                        DLPFX);
+        }
+
+        for (optargc = fixedargc;
+             optargc < overloade->argumentc;
+             optargc++) {
+                fprintf(outf,
+                        "if (%s_argc == %d) {\n"
+                        "\t\t/* %d optional arguments need adding */\n",
+                        DLPFX,
+                        optargc,
+                        overloade->argumentc - optargc);
+                output_operation_optional_defaults(outf,
+                        overloade->argumentv + optargc,
+                        overloade->argumentc - optargc);
+                fprintf(outf,
+                        "\t} else ");
+        }
+
+        fprintf(outf,
+                "if (%s_argc > %d) {\n"
+                "\t\t/* remove extraneous parameters */\n"
+                "\t\tduk_set_top(ctx, %d);\n",
+                DLPFX,
+                overloade->argumentc,
+                overloade->argumentc);
+        fprintf(outf, "\t}\n");
+
 
         output_get_method_private(outf, interfacee->class_name);
 
@@ -1210,6 +1442,10 @@ output_private_header(struct interface_map *interface_map)
                         NULL,
                         GENBIND_NODE_TYPE_PRIVATE);
                 while (priv_node != NULL) {
+                        /* generate the private variable definition ensuring
+                         * the type is separated from the identifier with
+                         * either a * or space.
+                         */
                         const char *type_cdata;
                         char cdatae;
                         type_cdata = genbind_node_gettext(
@@ -1369,6 +1605,10 @@ output_binding_header(struct interface_map *interface_map)
                 MAGICPFX);
 
         fprintf(bindf,
+                "extern const char *%s_argument_error_fmt;",
+                DLPFX);
+
+        fprintf(bindf,
                 "duk_bool_t %s_instanceof(duk_context *ctx, const char *klass);\n",
                 DLPFX);
 
@@ -1416,6 +1656,13 @@ output_binding_src(struct interface_map *interface_map)
                      interface_map->binding_node,
                      GENBIND_NODE_TYPE_PROLOGUE);
 
+
+        fprintf(bindf, "\n");
+
+        fprintf(bindf,
+                "/* Error format strings */\n"
+                "const char *%s_argument_error_fmt =\"%%d argument required, but ony %%d present.\";\n",
+                DLPFX);
 
         fprintf(bindf, "\n");
 
