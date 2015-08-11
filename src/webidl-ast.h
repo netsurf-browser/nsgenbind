@@ -63,11 +63,14 @@ enum webidl_type {
 	WEBIDL_TYPE_VOID,
 };
 
+/** modifiers for operations, attributes and arguments */
 enum webidl_type_modifier {
         WEBIDL_TYPE_MODIFIER_NONE,
 	WEBIDL_TYPE_MODIFIER_UNSIGNED,
 	WEBIDL_TYPE_MODIFIER_UNRESTRICTED,
 	WEBIDL_TYPE_MODIFIER_READONLY,
+	WEBIDL_TYPE_MODIFIER_STATIC, /**< operation or attribute is static */
+	WEBIDL_TYPE_MODIFIER_INHERIT, /**< attribute inherits */
 };
 
 /* the type of special node */

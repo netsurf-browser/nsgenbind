@@ -150,10 +150,13 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> CallbackRestOrInterface
 
 %type <node> Attribute
+%type <node> AttributeRest
 %type <node> AttributeOrOperation
 %type <node> StringifierAttributeOrOperation
 %type <node> Const
 
+%type <node> StaticMember
+%type <node> StaticMemberRest
 %type <node> Operation
 %type <node> SpecialOperation
 %type <node> Specials
@@ -412,12 +415,14 @@ InterfaceMembers:
  /* [10]
   * SE[10]
   * Second edition actually splits up AttributeOrOperation completely
-  * here we "just" add Iterable as thats what the specs use
+  * here we "just" add Iterable and static member as thats what the specs use
   */
 InterfaceMember:
         Const
         |
         AttributeOrOperation
+        |
+        StaticMember
         |
         Iterable
         ;
@@ -690,28 +695,97 @@ StringifierAttributeOrOperation:
         }
         ;
 
- /* [32] */
+ /* [32]
+  * Modified for SE to use AttributeRest
+  */
 Attribute:
-        Inherit ReadOnly TOK_ATTRIBUTE Type TOK_IDENTIFIER ';'
+        Inherit ReadOnly AttributeRest
         {
-            struct webidl_node *attribute;
+                struct webidl_node *attribute;
 
-            attribute = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $5);
+                attribute = $3;
 
-            /* add attributes type */
-            attribute = webidl_node_prepend(attribute, $4);
+                /* deal with inherit modifier */
+                if ($1) {
+                        attribute = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER,
+                                          attribute,
+                                          (void *)WEBIDL_TYPE_MODIFIER_INHERIT);
+                }
 
-            /* deal with readonly modifier */
-            if ($2) {
-                attribute = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER, attribute, (void *)WEBIDL_TYPE_MODIFIER_READONLY);
-            }
+                /* deal with readonly modifier */
+                if ($2) {
+                        attribute = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER,
+                                         attribute,
+                                         (void *)WEBIDL_TYPE_MODIFIER_READONLY);
+                }
 
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ATTRIBUTE, NULL, attribute);
-
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_ATTRIBUTE,
+                                     NULL,
+                                     attribute);
         }
         ;
 
- /* [33] */
+
+/* SE[37] */
+StaticMember:
+        TOK_STATIC StaticMemberRest
+        {
+                $$ = $2;
+        }
+        ;
+
+
+/* SE[38] */
+StaticMemberRest:
+        ReadOnly AttributeRest
+        {
+                struct webidl_node *attribute;
+
+                attribute = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER,
+                                       $2, (void *)WEBIDL_TYPE_MODIFIER_STATIC);
+
+                /* deal with readonly modifier */
+                if ($1) {
+                        attribute = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER,
+                                         attribute,
+                                         (void *)WEBIDL_TYPE_MODIFIER_READONLY);
+                }
+
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_ATTRIBUTE,
+                                     NULL,
+                                     attribute);
+        }
+        |
+        ReturnType OperationRest
+        {
+                struct webidl_node *operation;
+
+                /* add static modifier */
+                operation = webidl_node_new(WEBIDL_NODE_TYPE_MODIFIER,
+                                       $2, (void *)WEBIDL_TYPE_MODIFIER_STATIC);
+
+                /* put return type on the operation */
+                operation = webidl_node_prepend($1, operation);
+
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION,
+                                     NULL,
+                                     operation);
+        }
+        ;
+
+
+ /* SE[42] */
+AttributeRest:
+        TOK_ATTRIBUTE Type TOK_IDENTIFIER ';'
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, $2, $3);
+        }
+        ;
+
+
+/* [33]
+ * SE[45]
+ */
 Inherit:
         /* empty */
         {
@@ -724,7 +798,10 @@ Inherit:
         }
         ;
 
- /* [34] */
+
+/* [34] 
+ * SE[46]
+ */
 ReadOnly:
         /* empty */
         {
@@ -736,6 +813,7 @@ ReadOnly:
             $$ = true;
         }
         ;
+
 
  /* SE[47] */
 Operation:
