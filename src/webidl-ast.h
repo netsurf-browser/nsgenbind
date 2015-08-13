@@ -47,6 +47,7 @@ enum webidl_node_type {
 };
 
 enum webidl_type {
+        WEBIDL_TYPE_ANY, /**< The type is unconstrained */
 	WEBIDL_TYPE_USER,
 	WEBIDL_TYPE_BOOL,
 	WEBIDL_TYPE_BYTE,

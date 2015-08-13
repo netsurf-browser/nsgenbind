@@ -1074,6 +1074,95 @@ output_operation_optional_defaults(FILE* outf,
         return 0;
 }
 
+static int
+output_operation_argument_type_check(
+        FILE* outf,
+        struct interface_map_entry *interfacee,
+        struct interface_map_operation_entry *operatione,
+        struct interface_map_operation_overload_entry *overloade,
+        int argidx)
+{
+        struct interface_map_operation_argument_entry *argumente;
+        struct webidl_node *type_node;
+        enum webidl_type *argument_type;
+
+        argumente = overloade->argumentv + argidx;
+
+        type_node = webidl_node_find_type(
+                webidl_node_getnode(argumente->node),
+                NULL,
+                WEBIDL_NODE_TYPE_TYPE);
+
+        if (type_node == NULL) {
+                fprintf(stderr, "%s:%s %dth argument %s has no type\n",
+                        interfacee->name,
+                        operatione->name,
+                        argidx,
+                        argumente->name);
+                return -1;
+        }
+
+        argument_type = (enum webidl_type *)webidl_node_getint(
+                webidl_node_find_type(
+                        webidl_node_getnode(type_node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_TYPE_BASE));
+
+        if (argument_type == NULL) {
+                fprintf(stderr,
+                        "%s:%s %dth argument %s has no type base\n",
+                        interfacee->name,
+                        operatione->name,
+                        argidx,
+                        argumente->name);
+                return -1;
+        }
+
+        if (*argument_type == WEBIDL_TYPE_ANY) {
+                /* allowing any type needs no check */
+                return 0;
+        }
+
+        fprintf(outf, "\tif (%s_argc > %d) {\n", DLPFX, argidx);
+
+        switch (*argument_type) {
+        case WEBIDL_TYPE_STRING:
+                fprintf(outf,
+                        "\t\tif (!duk_is_string(ctx, %d)) {\n"
+                        "\t\t\tduk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_string_type, %d, \"%s\");\n"
+                        "\t\t}\n", argidx, DLPFX, argidx, argumente->name);
+                break;
+
+        case WEBIDL_TYPE_BOOL:
+                fprintf(outf,
+                        "\t\tif (!duk_is_boolean(ctx, %d)) {\n"
+                        "\t\t\tduk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_bool_type, %d, \"%s\");\n"
+                        "\t\t}\n", argidx, DLPFX, argidx, argumente->name);
+                break;
+
+        case WEBIDL_TYPE_FLOAT:
+        case WEBIDL_TYPE_DOUBLE:
+        case WEBIDL_TYPE_SHORT:
+        case WEBIDL_TYPE_LONG:
+        case WEBIDL_TYPE_LONGLONG:
+                fprintf(outf,
+                        "\t\tif (!duk_is_number(ctx, %d)) {\n"
+                        "\t\t\tduk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_number_type, %d, \"%s\");\n"
+                        "\t\t}\n", argidx, DLPFX, argidx, argumente->name);
+                break;
+
+
+        default:
+                fprintf(outf,
+                        "\t\t/* unhandled type check */\n");
+        }
+
+        fprintf(outf, "\t}\n");
+
+        return 0;
+}
+
+
 /**
  * generate a single class method for an interface operation
  */
@@ -1085,6 +1174,7 @@ output_interface_operation(FILE* outf,
         int cdatac; /* cdata blocks output */
         struct interface_map_operation_overload_entry *overloade;
         int fixedargc; /* number of non optional arguments */
+        int argidx; /* loop counter for arguments */
         int optargc; /* loop counter for optional arguments */
 
         if (operatione->name == NULL) {
@@ -1155,12 +1245,24 @@ output_interface_operation(FILE* outf,
         fprintf(outf,
                 "if (%s_argc > %d) {\n"
                 "\t\t/* remove extraneous parameters */\n"
-                "\t\tduk_set_top(ctx, %d);\n",
+                "\t\tduk_set_top(ctx, %d);\n"
+                "\t}\n",
                 DLPFX,
                 overloade->argumentc,
                 overloade->argumentc);
-        fprintf(outf, "\t}\n");
+        fprintf(outf, "\n");
 
+        /* generate argument type checks */
+
+        fprintf(outf, "\t/* check types of passed arguments are correct */\n");
+
+        for (argidx = 0; argidx < overloade->argumentc; argidx++) {
+                output_operation_argument_type_check(outf,
+                                                     interfacee,
+                                                     operatione,
+                                                     overloade,
+                                                     argidx);
+       }
 
         output_get_method_private(outf, interfacee->class_name);
 
@@ -1618,10 +1720,13 @@ output_binding_header(struct interface_map *interface_map)
         fprintf(bindf,
                 "/* Constant strings */\n"
                 "extern const char *%s_error_fmt_argument;\n"
+                "extern const char *%s_error_fmt_string_type;\n"
+                "extern const char *%s_error_fmt_bool_type;\n"
+                "extern const char *%s_error_fmt_number_type;\n"
                 "extern const char *%s_magic_string_private;\n"
                 "extern const char *%s_magic_string_prototypes;\n"
                 "\n",
-                DLPFX, DLPFX, DLPFX);
+                DLPFX, DLPFX, DLPFX, DLPFX, DLPFX, DLPFX);
 
         fprintf(bindf,
                 "duk_bool_t %s_instanceof(duk_context *ctx, const char *klass);\n",
@@ -1676,8 +1781,11 @@ output_binding_src(struct interface_map *interface_map)
 
         fprintf(bindf,
                 "/* Error format strings */\n"
-                "const char *%s_error_fmt_argument =\"%%d argument required, but ony %%d present.\";\n",
-                DLPFX);
+                "const char *%s_error_fmt_argument =\"%%d argument required, but ony %%d present.\";\n"
+                "const char *%s_error_fmt_string_type =\"argument %%d (%%s) requires a string\";\n"
+                "const char *%s_error_fmt_bool_type =\"argument %%d (%%s) requires a bool\";\n"
+                "const char *%s_error_fmt_number_type =\"argument %%d (%%s) requires a number\";\n",
+                DLPFX, DLPFX, DLPFX, DLPFX);
 
         fprintf(bindf, "\n");
 

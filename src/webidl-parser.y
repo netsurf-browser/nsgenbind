@@ -180,6 +180,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> ReturnType
 %type <node> SingleType
 %type <node> UnionType
+%type <node> UnionMemberType
+%type <node> UnionMemberTypes
 %type <node> NonAnyType
 %type <node> ConstType
 %type <node> PrimitiveType
@@ -1462,7 +1464,9 @@ SingleType:
         |
         TOK_ANY TypeSuffixStartingWithArray
         {
-            $$ = NULL; /* todo implement */
+                /* todo deal with TypeSuffixStartingWithArray */
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE_BASE,
+                                     NULL, (void *)WEBIDL_TYPE_ANY);
         }
         ;
 
@@ -1470,24 +1474,40 @@ SingleType:
 UnionType:
         '(' UnionMemberType TOK_OR UnionMemberType UnionMemberTypes ')'
         {
-            $$ = NULL;
+                $$ = webidl_node_prepend($2, webidl_node_prepend($4, $5));
         }
         ;
 
  /* [60] */
 UnionMemberType:
         NonAnyType
+        {
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_TYPE, NULL, $1);
+        }
         |
         UnionType TypeSuffix
+        {
+            /* todo handle suffix */
+            $$ = $1;
+        }
         |
         TOK_ANY '[' ']' TypeSuffix
+        {
+                $$ = NULL;
+        }
         ;
 
  /* [61] */
 UnionMemberTypes:
         /* empty */
+        {
+                $$ = NULL;
+        }
         |
         TOK_OR UnionMemberType UnionMemberTypes
+        {
+                $$ = webidl_node_prepend($2, $3);
+        }
         ;
 
  /* [62]
