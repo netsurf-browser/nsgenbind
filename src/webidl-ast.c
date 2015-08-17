@@ -96,6 +96,7 @@ webidl_node_add(struct webidl_node *node, struct webidl_node *list)
 	switch (node->type) {
 	case WEBIDL_NODE_TYPE_ROOT:
 	case WEBIDL_NODE_TYPE_INTERFACE:
+	case WEBIDL_NODE_TYPE_DICTIONARY:
 	case WEBIDL_NODE_TYPE_LIST:
 	case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
 	case WEBIDL_NODE_TYPE_ATTRIBUTE:
@@ -265,7 +266,7 @@ char *webidl_node_gettext(struct webidl_node *node)
 
 		switch(node->type) {
 		case WEBIDL_NODE_TYPE_IDENT:
-		case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
+		case WEBIDL_NODE_TYPE_INHERITANCE:
 		case WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS:
                 case WEBIDL_NODE_TYPE_LITERAL_STRING:
 			return node->r.text;
@@ -311,6 +312,7 @@ struct webidl_node *webidl_node_getnode(struct webidl_node *node)
 		switch (node->type) {
 		case WEBIDL_NODE_TYPE_ROOT:
 		case WEBIDL_NODE_TYPE_INTERFACE:
+		case WEBIDL_NODE_TYPE_DICTIONARY:
 		case WEBIDL_NODE_TYPE_LIST:
 		case WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE:
 		case WEBIDL_NODE_TYPE_ATTRIBUTE:
@@ -338,7 +340,7 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 	case WEBIDL_NODE_TYPE_IDENT:
 		return "Ident";
 
-	case WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE:
+	case WEBIDL_NODE_TYPE_INHERITANCE:
 		return "Inherit";
 
 	case WEBIDL_NODE_TYPE_INTERFACE_IMPLEMENTS:
@@ -346,6 +348,9 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 
 	case WEBIDL_NODE_TYPE_INTERFACE:
 		return "Interface";
+
+	case WEBIDL_NODE_TYPE_DICTIONARY:
+		return "Dictionary";
 
 	case WEBIDL_NODE_TYPE_LIST:
 		return "List";
@@ -600,7 +605,7 @@ static int implements_copy_nodes(struct webidl_node *src_node,
 
 	while (src != NULL) {
 		if (src->type == WEBIDL_NODE_TYPE_LIST) {
-			/** @todo technicaly this should copy WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE */
+			/** @todo technicaly this should copy WEBIDL_NODE_TYPE_INHERITANCE */
 			dst = webidl_node_new(src->type, dst, src->r.text);
 		}
 		src = src->l;

@@ -66,7 +66,6 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_BOOLEAN
 %token TOK_BYTE
 %token TOK_CALLBACK
-%token TOK_LEGACYCALLER
 %token TOK_CONST
 %token TOK_CREATOR
 %token TOK_DATE
@@ -87,6 +86,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_INHERIT
 %token TOK_INTERFACE
 %token TOK_ITERABLE
+%token TOK_LEGACYCALLER
 %token TOK_LEGACYITERABLE
 %token TOK_LONG
 %token TOK_MODULE
@@ -102,6 +102,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_PROMISE
 %token TOK_RAISES
 %token TOK_READONLY
+%token TOK_REQUIRED
 %token TOK_SETRAISES
 %token TOK_SETTER
 %token TOK_SEQUENCE
@@ -134,6 +135,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %type <node> Dictionary
 %type <node> PartialDictionary
+%type <node> DictionaryMembers
+%type <node> DictionaryMember
 
 %type <node> Exception
 %type <node> Enum
@@ -151,6 +154,8 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 
 %type <node> Attribute
 %type <node> AttributeRest
+%type <text> AttributeName
+%type <text> AttributeNameKeyword
 %type <node> AttributeOrOperation
 %type <node> StringifierAttributeOrOperation
 %type <node> Const
@@ -201,6 +206,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <isit> ReadOnly
 %type <isit> OptionalLong
 %type <isit> Inherit
+ //%type <isit> Required
 
 %type <node> ExtendedAttributeList
 %type <node> ExtendedAttributes
@@ -209,6 +215,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %type <node> ExtendedAttribute
 %type <text> Other
 %type <text> OtherOrComma
+
 
 %%
 
@@ -274,34 +281,40 @@ CallbackRestOrInterface:
 Interface:
         TOK_INTERFACE TOK_IDENTIFIER Inheritance '{' InterfaceMembers '}' ';'
         {
-            /* extend interface with additional members */
-            struct webidl_node *interface_node;
-            struct webidl_node *members = NULL;
+                /* extend interface with additional members */
+                struct webidl_node *interface_node;
+                struct webidl_node *members = NULL;
 
-            if ($3 != NULL) {
-                members = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE, members, $3);
-            }
+                if ($3 != NULL) {
+                        members = webidl_node_new(WEBIDL_NODE_TYPE_INHERITANCE,
+                                                  members,
+                                                  $3);
+                }
 
-            members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, members, $5);
+                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, members, $5);
 
 
-            interface_node = webidl_node_find_type_ident(*webidl_ast,
+                interface_node = webidl_node_find_type_ident(*webidl_ast,
                                                      WEBIDL_NODE_TYPE_INTERFACE,
-                                                     $2);
+                                                             $2);
 
-            if (interface_node == NULL) {
-                /* no existing interface - create one with ident */
-                members = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, members, $2);
+                if (interface_node == NULL) {
+                        /* no existing interface - create one with ident */
+                        members = webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                                  members,
+                                                  $2);
 
-                $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE, NULL, members);
-            } else {
-                /* update the existing interface */
+                        $$ = webidl_node_new(WEBIDL_NODE_TYPE_INTERFACE,
+                                             NULL,
+                                             members);
+                } else {
+                        /* update the existing interface */
 
-                /* link member node into interfaces_node */
-                webidl_node_add(interface_node, members);
+                        /* link member node into interfaces_node */
+                        webidl_node_add(interface_node, members);
 
-                $$ = NULL; /* updating so no need to add a new node */
-            }
+                        $$ = NULL; /* updating so no need to add a new node */
+                }
         }
         ;
 
@@ -353,64 +366,65 @@ PartialInterface:
 
  /* [9] slightly altered from original grammar to be left recursive */
 InterfaceMembers:
-        /* empty */
         {
-          $$ = NULL;
+                $$ = NULL; /* empty */
         }
         |
         InterfaceMembers ExtendedAttributeList InterfaceMember
-        /* This needs to deal with members with the same identifier which
-         * indicate polymorphism. this is handled in the AST by adding the
-         * argument lists for each polymorphism to the same
-         * WEBIDL_NODE_TYPE_OPERATION
-         *
-         * @todo need to consider qualifer/stringifier compatibility
-         */
         {
-            struct webidl_node *member_node;
-            struct webidl_node *ident_node;
-            struct webidl_node *list_node;
-
-            ident_node = webidl_node_find_type(webidl_node_getnode($3),
-                                               NULL,
-                                               WEBIDL_NODE_TYPE_IDENT);
-
-            list_node = webidl_node_find_type(webidl_node_getnode($3),
-                                              NULL,
-                                              WEBIDL_NODE_TYPE_LIST);
-
-            if (ident_node == NULL) {
-                /* something with no ident - possibly constructors? */
-                /* @todo understand this better */
-
-                $$ = webidl_node_prepend($1, $3);
-
-            } else if (list_node == NULL) {
-                /* member with no argument list, usually an attribute, cannot
-                 * be polymorphic
+                /* This needs to deal with members with the same
+                 * identifier which indicate polymorphism. this is
+                 * handled in the AST by adding the argument lists for
+                 * each polymorphism to the same
+                 * WEBIDL_NODE_TYPE_OPERATION
+                 *
+                 * @todo need to consider qualifer/stringifier compatibility
                  */
+                struct webidl_node *member_node;
+                struct webidl_node *ident_node;
+                struct webidl_node *list_node;
 
-                /* add extended attributes to parameter list */
-                webidl_node_add($3, $2);
+                ident_node = webidl_node_find_type(webidl_node_getnode($3),
+                                                   NULL,
+                                                   WEBIDL_NODE_TYPE_IDENT);
 
-                $$ = webidl_node_prepend($1, $3);
+                list_node = webidl_node_find_type(webidl_node_getnode($3),
+                                                  NULL,
+                                                  WEBIDL_NODE_TYPE_LIST);
 
-            } else {
-                /* add extended attributes to parameter list */
-                webidl_node_add(list_node, $2);
+                if (ident_node == NULL) {
+                        /* something with no ident - possibly constructors? */
+                        /* @todo understand this better */
 
-                /* has an arguemnt list so can be polymorphic */
-                member_node = webidl_node_find_type_ident($1,
-                                             webidl_node_gettype($3),
-                                             webidl_node_gettext(ident_node));
-                if (member_node == NULL) {
-                    /* not a member with that ident already present */
-                    $$ = webidl_node_prepend($1, $3);
+                        $$ = webidl_node_prepend($1, $3);
+
+                } else if (list_node == NULL) {
+                        /* member with no argument list, usually an
+                         * attribute, cannot be polymorphic
+                         */
+
+                        /* add extended attributes to parameter list */
+                        webidl_node_add($3, $2);
+
+                        $$ = webidl_node_prepend($1, $3);
+
                 } else {
-                    webidl_node_add(member_node, list_node);
-                    $$ = $1; /* updated existing node do not add new one */
+                        /* add extended attributes to parameter list */
+                        webidl_node_add(list_node, $2);
+
+                        /* has an arguemnt list so can be polymorphic */
+                        member_node = webidl_node_find_type_ident(
+                                              $1,
+                                              webidl_node_gettype($3),
+                                              webidl_node_gettext(ident_node));
+                        if (member_node == NULL) {
+                                /* not a member with that ident already present */
+                                $$ = webidl_node_prepend($1, $3);
+                        } else {
+                                webidl_node_add(member_node, list_node);
+                                $$ = $1; /* updated existing node do not add new one */
+                        }
                 }
-            }
         }
         ;
 
@@ -433,28 +447,134 @@ InterfaceMember:
 Dictionary:
         TOK_DICTIONARY TOK_IDENTIFIER Inheritance '{' DictionaryMembers '}' ';'
         {
-            $$ = NULL;
+                /* extend dictionary with additional members */
+                struct webidl_node *dictionary_node;
+                struct webidl_node *members = NULL;
+
+                if ($3 != NULL) {
+                        members = webidl_node_new(WEBIDL_NODE_TYPE_INHERITANCE,
+                                                  members,
+                                                  $3);
+                }
+
+                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, members, $5);
+
+                dictionary_node = webidl_node_find_type_ident(
+                                         *webidl_ast,
+                                         WEBIDL_NODE_TYPE_DICTIONARY,
+                                         $2);
+
+                if (dictionary_node == NULL) {
+                        /* no existing interface - create one with ident */
+                        members = webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                                  members,
+                                                  $2);
+
+                        $$ = webidl_node_new(WEBIDL_NODE_TYPE_DICTIONARY,
+                                             NULL,
+                                             members);
+                } else {
+                        /* update the existing interface */
+
+                        /* link member node into interfaces_node */
+                        webidl_node_add(dictionary_node, members);
+
+                        $$ = NULL; /* updating so no need to add a new node */
+                }
         }
         ;
 
- /* [12] */
+ /* SE[12] */
 DictionaryMembers:
-        /* empty */
+        {
+                $$ = NULL; /* empty */
+        }
         |
         ExtendedAttributeList DictionaryMember DictionaryMembers
+        {
+                /** \todo handle ExtendedAttributeList */
+                $$ = webidl_node_append($3, $2);
+        }
         ;
 
- /* [13] */
+ /* SE[13]
+  * Second edition introduces Required except required type may not
+  * have default so why not express this in grammar here and remove
+  * rule 14?
+  */
 DictionaryMember:
+        TOK_REQUIRED Type TOK_IDENTIFIER ';'
+        {
+            struct webidl_node *member;
+            /* add name */
+            member = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $3);
+            /* add type node */
+            member = webidl_node_prepend(member, $2);
+
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ARGUMENT, NULL, member);
+        }
+        |
         Type TOK_IDENTIFIER Default ';'
+        {
+            struct webidl_node *member;
+            /* add name */
+            member = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $2);
+            /* add default */
+            member = webidl_node_new(WEBIDL_NODE_TYPE_OPTIONAL, member, $3);
+            /* add type node */
+            member = webidl_node_prepend(member, $1);
+
+            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ARGUMENT, NULL, member);
+        }
         ;
+
+/* SE[14] */
+//Required:
+//        {
+//                $$ = false; /* empty */
+//        }
+//        |
+//        TOK_REQUIRED
+//        {
+//                $$ = true;
+//        }
+//        ;
 
  /* [14] */
 PartialDictionary:
         TOK_DICTIONARY TOK_IDENTIFIER '{' DictionaryMembers '}' ';'
         {
-            $$ = NULL;
+                /* extend dictionary with additional members */
+                struct webidl_node *members;
+                struct webidl_node *dictionary_node;
+
+                dictionary_node = webidl_node_find_type_ident(
+                                         *webidl_ast,
+                                         WEBIDL_NODE_TYPE_DICTIONARY,
+                                         $2);
+
+                members = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, $4);
+
+                if (dictionary_node == NULL) {
+                        /* doesnt already exist so create it */
+
+                        members = webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                                  members,
+                                                  $2);
+
+                        $$ = webidl_node_new(WEBIDL_NODE_TYPE_DICTIONARY,
+                                             NULL,
+                                             members);
+                } else {
+                        /* update the existing dictionary */
+
+                        /* link member node into dictionary node */
+                        webidl_node_add(dictionary_node, members);
+
+                        $$ = NULL; /* updating so no need to add a new node */
+                }
         }
+        ;
 
  /* [15] */
 Default:
@@ -778,12 +898,25 @@ StaticMemberRest:
 
  /* SE[42] */
 AttributeRest:
-        TOK_ATTRIBUTE Type TOK_IDENTIFIER ';'
+        TOK_ATTRIBUTE Type AttributeName ';'
         {
                 $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, $2, $3);
         }
         ;
 
+/* SE[43] */
+AttributeName:
+        AttributeNameKeyword
+        |
+        TOK_IDENTIFIER
+        ;
+
+/* SE[44] */
+AttributeNameKeyword:
+        TOK_REQUIRED
+        {
+            $$ = strdup("required");
+        }
 
 /* [33]
  * SE[45]
@@ -1333,7 +1466,9 @@ Other:
         }
         ;
 
- /* [55] */
+ /* [55]
+  * SE[71] extended with new keywords
+  */
 ArgumentNameKeyword:
         TOK_ATTRIBUTE
         {
@@ -1395,14 +1530,29 @@ ArgumentNameKeyword:
             $$ = strdup("interface");
         }
         |
+        TOK_ITERABLE
+        {
+            $$ = strdup("iterable");
+        }
+        |
         TOK_LEGACYCALLER
         {
             $$ = strdup("legacycaller");
         }
         |
+        TOK_LEGACYITERABLE
+        {
+            $$ = strdup("legacyiterable");
+        }
+        |
         TOK_PARTIAL
         {
             $$ = strdup("partial");
+        }
+        |
+        TOK_REQUIRED
+        {
+            $$ = strdup("required");
         }
         |
         TOK_SETTER

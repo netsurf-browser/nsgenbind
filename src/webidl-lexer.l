@@ -213,6 +213,8 @@ iterable            return TOK_ITERABLE;
 
 legacyiterable      return TOK_LEGACYITERABLE;
 
+required            return TOK_REQUIRED;
+
 {identifier}        {
                         /* A leading "_" is used to escape an identifier from 
                          *   looking like a reserved word terminal. */

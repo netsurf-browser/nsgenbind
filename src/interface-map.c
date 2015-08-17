@@ -596,7 +596,7 @@ int interface_map_new(struct genbind_node *genbind,
                     webidl_node_find_type(
                         webidl_node_getnode(node),
                         NULL,
-                        WEBIDL_NODE_TYPE_INTERFACE_INHERITANCE));
+                        WEBIDL_NODE_TYPE_INHERITANCE));
 
                 /* is the interface marked as not generating an object */
                 if (webidl_node_find_type_ident(
