@@ -17,7 +17,7 @@
 #include "options.h"
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
-#include "interface-map.h"
+#include "ir.h"
 #include "jsapi-libdom.h"
 #include "duk-libdom.h"
 
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
         int res;
         struct genbind_node *genbind_root = NULL;
         struct webidl_node *webidl_root = NULL;
-        struct interface_map *interface_map = NULL;
+        struct ir *ir = NULL;
         enum bindingtype_e bindingtype;
 
         options = process_cmdline(argc, argv);
@@ -225,20 +225,20 @@ int main(int argc, char **argv)
 	/* debug dump of web idl AST */
         webidl_dump_ast(webidl_root);
 
-        /* generate map of WebIDL interfaces sorted by inheritance */
-        res = interface_map_new(genbind_root, webidl_root, &interface_map);
+        /* generate intermediate representation */
+        res = ir_new(genbind_root, webidl_root, &ir);
         if (res != 0) {
                 return 5;
         }
 
-        /* dump the interface mapping */
-        interface_map_dump(interface_map);
-        interface_map_dumpdot(interface_map);
+        /* dump the intermediate representation */
+        ir_dump(ir);
+        ir_dumpdot(ir);
 
         /* generate binding */
         switch (bindingtype) {
         case BINDINGTYPE_DUK_LIBDOM:
-                res = duk_libdom_output(interface_map);
+                res = duk_libdom_output(ir);
                 break;
 
         default:

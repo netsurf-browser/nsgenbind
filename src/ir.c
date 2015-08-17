@@ -1,4 +1,4 @@
-/* interface mapping
+/* intermediate representation of WebIDL and binding data
  *
  * This file is part of nsgenbind.
  * Published under the MIT License,
@@ -17,7 +17,7 @@
 #include "utils.h"
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
-#include "interface-map.h"
+#include "ir.h"
 
 /** count the number of nodes of a given type on an interface */
 static int
@@ -49,7 +49,7 @@ enumerate_interface_type(struct webidl_node *interface_node,
  * binding also maintain refcounts
  */
 static void
-compute_inherit_refcount(struct interface_map_entry *entries, int entryc)
+compute_inherit_refcount(struct ir_interface_entry *entries, int entryc)
 {
         int idx;
         int inf;
@@ -81,14 +81,14 @@ compute_inherit_refcount(struct interface_map_entry *entries, int entryc)
  *   reduce refcount on inherit index if !=-1
  *   remove entry from source map
  */
-static struct interface_map_entry *
-interface_topoligical_sort(struct interface_map_entry *srcinf, int infc)
+static struct ir_interface_entry *
+interface_topoligical_sort(struct ir_interface_entry *srcinf, int infc)
 {
-        struct interface_map_entry *dstinf;
+        struct ir_interface_entry *dstinf;
         int idx;
         int inf;
 
-        dstinf = calloc(infc, sizeof(struct interface_map_entry));
+        dstinf = calloc(infc, sizeof(struct ir_interface_entry));
         if (dstinf == NULL) {
                 return NULL;
         }
@@ -132,12 +132,12 @@ interface_topoligical_sort(struct interface_map_entry *srcinf, int infc)
         return dstinf;
 }
 
-static struct interface_map_operation_entry *
-find_operation_name(struct interface_map_operation_entry *operationv,
+static struct ir_operation_entry *
+find_operation_name(struct ir_operation_entry *operationv,
                      int operationc,
                      const char *name)
 {
-        struct interface_map_operation_entry *cure;
+        struct ir_operation_entry *cure;
         int opc;
 
         for (opc = 0; opc < operationc; opc++) {
@@ -161,12 +161,12 @@ find_operation_name(struct interface_map_operation_entry *operationv,
 static int
 argument_map_new(struct webidl_node *arg_list_node,
                  int *argumentc_out,
-                 struct interface_map_operation_argument_entry **argumentv_out)
+                 struct ir_operation_argument_entry **argumentv_out)
 {
         int argumentc;
         struct webidl_node *argument;
-        struct interface_map_operation_argument_entry *argumentv;
-        struct interface_map_operation_argument_entry *cure;
+        struct ir_operation_argument_entry *argumentv;
+        struct ir_operation_argument_entry *cure;
 
         argumentc = webidl_node_enumerate_type(
                             webidl_node_getnode(arg_list_node),
@@ -228,11 +228,11 @@ argument_map_new(struct webidl_node *arg_list_node,
 static int
 overload_map_new(struct webidl_node *op_node,
                  int *overloadc_out,
-                 struct interface_map_operation_overload_entry **overloadv_out)
+                 struct ir_operation_overload_entry **overloadv_out)
 {
         int overloadc = *overloadc_out;
-        struct interface_map_operation_overload_entry *overloadv;
-        struct interface_map_operation_overload_entry *cure;
+        struct ir_operation_overload_entry *overloadv;
+        struct ir_operation_overload_entry *cure;
         struct webidl_node *arg_list_node;
         int argc;
 
@@ -264,7 +264,7 @@ overload_map_new(struct webidl_node *op_node,
         }
 
         for (argc = 0; argc < cure->argumentc; argc++) {
-                struct interface_map_operation_argument_entry *arge;
+                struct ir_operation_argument_entry *arge;
                 arge = cure->argumentv + argc;
                 cure->optionalc += arge->optionalc;
                 cure->elipsisc += arge->elipsisc;
@@ -281,12 +281,12 @@ static int
 operation_map_new(struct webidl_node *interface,
                   struct genbind_node *class,
                   int *operationc_out,
-                  struct interface_map_operation_entry **operationv_out)
+                  struct ir_operation_entry **operationv_out)
 {
         struct webidl_node *list_node;
         struct webidl_node *op_node; /* attribute node */
-        struct interface_map_operation_entry *cure; /* current entry */
-        struct interface_map_operation_entry *operationv;
+        struct ir_operation_entry *cure; /* current entry */
+        struct ir_operation_entry *operationv;
         int operationc;
 
         /* enumerate operationss including overloaded members */
@@ -301,7 +301,7 @@ operation_map_new(struct webidl_node *interface,
         }
 
         operationv = calloc(operationc,
-                            sizeof(struct interface_map_operation_entry));
+                            sizeof(struct ir_operation_entry));
         if (operationv == NULL) {
                 return -1;
         };
@@ -322,7 +322,7 @@ operation_map_new(struct webidl_node *interface,
 
                 while (op_node != NULL) {
                         const char *operation_name;
-                        struct interface_map_operation_entry *finde;
+                        struct ir_operation_entry *finde;
 
                         /* get operation name */
                         operation_name = webidl_node_gettext(
@@ -388,12 +388,12 @@ static int
 attribute_map_new(struct webidl_node *interface,
                   struct genbind_node *class,
                   int *attributec_out,
-                  struct interface_map_attribute_entry **attributev_out)
+                  struct ir_attribute_entry **attributev_out)
 {
         struct webidl_node *list_node;
         struct webidl_node *at_node; /* attribute node */
-        struct interface_map_attribute_entry *cure; /* current entry */
-        struct interface_map_attribute_entry *attributev;
+        struct ir_attribute_entry *cure; /* current entry */
+        struct ir_attribute_entry *attributev;
         int attributec;
 
         /* enumerate attributes */
@@ -407,7 +407,7 @@ attribute_map_new(struct webidl_node *interface,
         }
 
         attributev = calloc(attributec,
-                            sizeof(struct interface_map_attribute_entry));
+                            sizeof(struct ir_attribute_entry));
         if (attributev == NULL) {
                 return -1;
         };
@@ -484,12 +484,12 @@ attribute_map_new(struct webidl_node *interface,
 static int
 constant_map_new(struct webidl_node *interface,
                  int *constantc_out,
-                 struct interface_map_constant_entry **constantv_out)
+                 struct ir_constant_entry **constantv_out)
 {
         struct webidl_node *list_node;
         struct webidl_node *constant_node; /* constant node */
-        struct interface_map_constant_entry *cure; /* current entry */
-        struct interface_map_constant_entry *constantv;
+        struct ir_constant_entry *cure; /* current entry */
+        struct ir_constant_entry *constantv;
         int constantc;
 
         /* enumerate constants */
@@ -505,7 +505,7 @@ constant_map_new(struct webidl_node *interface,
         *constantc_out = constantc;
 
         constantv = calloc(constantc,
-                           sizeof(struct interface_map_constant_entry));
+                           sizeof(struct ir_constant_entry));
         if (constantv == NULL) {
                 return -1;
         };
@@ -553,16 +553,16 @@ constant_map_new(struct webidl_node *interface,
         return 0;
 }
 
-int interface_map_new(struct genbind_node *genbind,
+int ir_new(struct genbind_node *genbind,
                         struct webidl_node *webidl,
-                        struct interface_map **map_out)
+                        struct ir **map_out)
 {
         int interfacec;
-        struct interface_map_entry *entries;
-        struct interface_map_entry *sorted_entries;
-        struct interface_map_entry *ecur;
+        struct ir_interface_entry *entries;
+        struct ir_interface_entry *sorted_entries;
+        struct ir_interface_entry *ecur;
         struct webidl_node *node;
-        struct interface_map *map;
+        struct ir *map;
 
         interfacec = webidl_node_enumerate_type(webidl,
                                                 WEBIDL_NODE_TYPE_INTERFACE);
@@ -571,7 +571,7 @@ int interface_map_new(struct genbind_node *genbind,
                 printf("Mapping %d interfaces\n", interfacec);
         }
 
-        entries = calloc(interfacec, sizeof(struct interface_map_entry));
+        entries = calloc(interfacec, sizeof(struct ir_interface_entry));
         if (entries == NULL) {
                 return -1;
         }
@@ -662,9 +662,9 @@ int interface_map_new(struct genbind_node *genbind,
         /* compute inheritance and refcounts on sorted map */
         compute_inherit_refcount(sorted_entries, interfacec);
 
-        map = malloc(sizeof(struct interface_map));
-        map->entryc = interfacec;
-        map->entries = sorted_entries;
+        map = malloc(sizeof(struct ir));
+        map->interfacec = interfacec;
+        map->interfaces = sorted_entries;
         map->webidl = webidl;
         map->binding_node = genbind_node_find_type(genbind, NULL,
                                                    GENBIND_NODE_TYPE_BINDING);
@@ -674,11 +674,11 @@ int interface_map_new(struct genbind_node *genbind,
         return 0;
 }
 
-int interface_map_dump(struct interface_map *index)
+int ir_dump(struct ir *index)
 {
         FILE *dumpf;
         int eidx;
-        struct interface_map_entry *ecur;
+        struct ir_interface_entry *ecur;
 
         /* only dump AST to file if required */
         if (!options->debug) {
@@ -690,8 +690,8 @@ int interface_map_dump(struct interface_map *index)
                 return 2;
         }
 
-        ecur = index->entries;
-        for (eidx = 0; eidx < index->entryc; eidx++) {
+        ecur = index->interfaces;
+        for (eidx = 0; eidx < index->interfacec; eidx++) {
                 fprintf(dumpf, "%d %s\n", eidx, ecur->name);
                 if (ecur->inherit_name != NULL) {
                         fprintf(dumpf, "\tinherit:%s\n", ecur->inherit_name);
@@ -708,7 +708,7 @@ int interface_map_dump(struct interface_map *index)
 
                         for (opc = 0; opc < ecur->operationc; opc++) {
                                 int ovlc;
-                                struct interface_map_operation_entry *ope;
+                                struct ir_operation_entry *ope;
 
                                 ope = ecur->operationv + opc;
 
@@ -720,7 +720,7 @@ int interface_map_dump(struct interface_map *index)
                                         ope->method);
                                 for(ovlc = 0; ovlc < ope->overloadc;ovlc++) {
                                         int argc;
-                                        struct interface_map_operation_overload_entry *ovle;
+                                        struct ir_operation_overload_entry *ovle;
                                         ovle = ope->overloadv + ovlc;
 
                                         fprintf(dumpf,
@@ -743,7 +743,7 @@ int interface_map_dump(struct interface_map *index)
                                                 ovle->elipsisc);
 
                                         for (argc = 0; argc < ovle->argumentc; argc++) {
-                                                struct interface_map_operation_argument_entry *arge;
+                                                struct ir_operation_argument_entry *arge;
                                                 arge = ovle->argumentv + argc;
 
                                                 fprintf(dumpf,
@@ -769,7 +769,7 @@ int interface_map_dump(struct interface_map *index)
 
                 if (ecur->attributec > 0) {
                         int attrc = ecur->attributec;
-                        struct interface_map_attribute_entry *attre;
+                        struct ir_attribute_entry *attre;
 
                         fprintf(dumpf, "\t%d attributes\n", attrc);
 
@@ -797,7 +797,7 @@ int interface_map_dump(struct interface_map *index)
                                 ecur->constantc);
 
                         for (idx = 0; idx < ecur->constantc; idx++) {
-                                struct interface_map_constant_entry *cone;
+                                struct ir_constant_entry *cone;
                                 cone = ecur->constantv + idx;
                                 fprintf(dumpf, "\t\t%s\n",
                                         cone->name);
@@ -811,11 +811,11 @@ int interface_map_dump(struct interface_map *index)
         return 0;
 }
 
-int interface_map_dumpdot(struct interface_map *index)
+int ir_dumpdot(struct ir *index)
 {
         FILE *dumpf;
         int eidx;
-        struct interface_map_entry *ecur;
+        struct ir_interface_entry *ecur;
 
         /* only dump AST to file if required */
         if (!options->debug) {
@@ -831,8 +831,8 @@ int interface_map_dumpdot(struct interface_map *index)
 
         fprintf(dumpf, "node [shape=box]\n");
 
-        ecur = index->entries;
-        for (eidx = 0; eidx < index->entryc; eidx++) {
+        ecur = index->interfaces;
+        for (eidx = 0; eidx < index->interfacec; eidx++) {
                 fprintf(dumpf, "%04d [label=\"%s\"", eidx, ecur->name);
                 if (ecur->noobject == true) {
                         /* noobject interfaces in red */
@@ -845,11 +845,11 @@ int interface_map_dumpdot(struct interface_map *index)
                 ecur++;
         }
 
-        ecur = index->entries;
-        for (eidx = 0; eidx < index->entryc; eidx++) {
-            if (index->entries[eidx].inherit_idx != -1) {
+        ecur = index->interfaces;
+        for (eidx = 0; eidx < index->interfacec; eidx++) {
+            if (index->interfaces[eidx].inherit_idx != -1) {
                 fprintf(dumpf, "%04d -> %04d;\n",
-                        eidx, index->entries[eidx].inherit_idx);
+                        eidx, index->interfaces[eidx].inherit_idx);
             }
         }
 
@@ -860,15 +860,15 @@ int interface_map_dumpdot(struct interface_map *index)
         return 0;
 }
 
-struct interface_map_entry *
-interface_map_inherit_entry(struct interface_map *map,
-                           struct interface_map_entry *entry)
+struct ir_interface_entry *
+ir_inherit_entry(struct ir *map,
+                 struct ir_interface_entry *entry)
 {
-        struct interface_map_entry *res = NULL;
+        struct ir_interface_entry *res = NULL;
 
         if ((entry != NULL) &&
             (entry->inherit_idx != -1)) {
-                res = &map->entries[entry->inherit_idx];
+                res = &map->interfaces[entry->inherit_idx];
         }
         return res;
 }

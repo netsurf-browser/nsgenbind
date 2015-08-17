@@ -19,7 +19,7 @@
 #include "utils.h"
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
-#include "interface-map.h"
+#include "ir.h"
 #include "duk-libdom.h"
 
 /** prefix for all generated functions */
@@ -293,7 +293,7 @@ static int output_tool_preface(FILE* outf)
  *  - if the previous character in the input name was uppercase and the current
  *    one is lowercase insert an underscore before the *previous* character.
  */
-static char *gen_class_name(struct interface_map_entry *interfacee)
+static char *gen_class_name(struct ir_interface_entry *interfacee)
 {
         const char *inc;
         char *outc;
@@ -373,7 +373,7 @@ output_cdata(FILE* outf,
         return res;
 }
 
-static FILE *open_header(struct interface_map *interface_map, const char *name)
+static FILE *open_header(struct ir *ir, const char *name)
 {
         FILE *hdrf;
         char *fname;
@@ -392,7 +392,7 @@ static FILE *open_header(struct interface_map *interface_map, const char *name)
 
         /* binding preface */
         output_cdata(hdrf,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_PREFACE);
 
         /* tool preface */
@@ -405,7 +405,7 @@ static FILE *open_header(struct interface_map *interface_map, const char *name)
         return hdrf;
 }
 
-static int close_header(struct interface_map *interface_map,
+static int close_header(struct ir *ir,
                         FILE *hdrf,
                         const char *name)
 {
@@ -420,7 +420,7 @@ static int close_header(struct interface_map *interface_map,
 
         /* binding postface */
         output_cdata(hdrf,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_POSTFACE);
 
         genb_fclose_tmp(hdrf, fname);
@@ -434,7 +434,7 @@ static int close_header(struct interface_map *interface_map,
  * generate the interface constructor
  */
 static int
-output_interface_constructor(FILE* outf, struct interface_map_entry *interfacee)
+output_interface_constructor(FILE* outf, struct ir_interface_entry *interfacee)
 {
         int init_argc;
 
@@ -470,7 +470,7 @@ output_interface_constructor(FILE* outf, struct interface_map_entry *interfacee)
  * generate the interface destructor
  */
 static int
-output_interface_destructor(FILE* outf, struct interface_map_entry *interfacee)
+output_interface_destructor(FILE* outf, struct ir_interface_entry *interfacee)
 {
         /* destructor definition */
         fprintf(outf,
@@ -498,8 +498,8 @@ output_interface_destructor(FILE* outf, struct interface_map_entry *interfacee)
  */
 static int
 output_interface_inherit_init(FILE* outf,
-                              struct interface_map_entry *interfacee,
-                              struct interface_map_entry *inherite)
+                              struct ir_interface_entry *interfacee,
+                              struct ir_interface_entry *inherite)
 {
         struct genbind_node *init_node;
         struct genbind_node *inh_init_node;
@@ -593,7 +593,7 @@ output_interface_inherit_init(FILE* outf,
 
 static int
 output_interface_init_declaration(FILE* outf,
-                                  struct interface_map_entry *interfacee,
+                                  struct ir_interface_entry *interfacee,
                                   struct genbind_node *init_node)
 {
         struct genbind_node *param_node;
@@ -627,8 +627,8 @@ output_interface_init_declaration(FILE* outf,
 
 static int
 output_interface_init(FILE* outf,
-                      struct interface_map_entry *interfacee,
-                      struct interface_map_entry *inherite)
+                      struct ir_interface_entry *interfacee,
+                      struct ir_interface_entry *inherite)
 {
         struct genbind_node *init_node;
         int res;
@@ -666,8 +666,8 @@ output_interface_init(FILE* outf,
 
 static int
 output_interface_fini(FILE* outf,
-                      struct interface_map_entry *interfacee,
-                      struct interface_map_entry *inherite)
+                      struct ir_interface_entry *interfacee,
+                      struct ir_interface_entry *inherite)
 {
         struct genbind_node *fini_node;
 
@@ -708,8 +708,8 @@ output_interface_fini(FILE* outf,
  */
 static int
 output_prototype_method(FILE* outf,
-                        struct interface_map_entry *interfacee,
-                        struct interface_map_operation_entry *operatione)
+                        struct ir_interface_entry *interfacee,
+                        struct ir_operation_entry *operatione)
 {
 
         if (operatione->name != NULL) {
@@ -730,7 +730,7 @@ output_prototype_method(FILE* outf,
  * generate prototype method definitions
  */
 static int
-output_prototype_methods(FILE *outf, struct interface_map_entry *interfacee)
+output_prototype_methods(FILE *outf, struct ir_interface_entry *interfacee)
 {
         int opc;
         int res = 0;
@@ -750,8 +750,8 @@ output_prototype_methods(FILE *outf, struct interface_map_entry *interfacee)
 
 static int
 output_prototype_attribute(FILE *outf,
-                        struct interface_map_entry *interfacee,
-                        struct interface_map_attribute_entry *attributee)
+                        struct ir_interface_entry *interfacee,
+                        struct ir_attribute_entry *attributee)
 {
         if (attributee->modifier == WEBIDL_TYPE_MODIFIER_READONLY) {
                 return output_populate_ro_property(outf,
@@ -767,7 +767,7 @@ output_prototype_attribute(FILE *outf,
  * generate prototype attribute definitions
  */
 static int
-output_prototype_attributes(FILE *outf, struct interface_map_entry *interfacee)
+output_prototype_attributes(FILE *outf, struct ir_interface_entry *interfacee)
 {
         int attrc;
         int res = 0;
@@ -791,7 +791,7 @@ output_prototype_attributes(FILE *outf, struct interface_map_entry *interfacee)
  */
 static int
 output_prototype_constant(FILE *outf,
-                          struct interface_map_constant_entry *constante)
+                          struct ir_constant_entry *constante)
 {
         int *value;
 
@@ -810,7 +810,7 @@ output_prototype_constant(FILE *outf,
  * generate prototype constant definitions
  */
 static int
-output_prototype_constants(FILE *outf, struct interface_map_entry *interfacee)
+output_prototype_constants(FILE *outf, struct ir_interface_entry *interfacee)
 {
         int attrc;
         int res = 0;
@@ -831,9 +831,9 @@ output_prototype_constants(FILE *outf, struct interface_map_entry *interfacee)
  */
 static int
 output_interface_prototype(FILE* outf,
-                           struct interface_map_entry *interfacee,
-                           struct interface_map_entry *inherite,
-                           struct interface_map *interface_map)
+                           struct ir_interface_entry *interfacee,
+                           struct ir_interface_entry *inherite,
+                           struct ir *ir)
 {
         struct genbind_node *proto_node;
 
@@ -874,10 +874,10 @@ output_interface_prototype(FILE* outf,
          */
         if (interfacee->primary_global) {
                 fprintf(outf, "\t/* Create interface objects */\n");
-                for (int idx = 0; idx < interface_map->entryc; idx++) {
-                        struct interface_map_entry *interfacep;
+                for (int idx = 0; idx < ir->interfacec; idx++) {
+                        struct ir_interface_entry *interfacep;
 
-                        interfacep = interface_map->entries + idx;
+                        interfacep = ir->interfaces + idx;
                         if (interfacep->noobject) continue;
                         if (interfacep == interfacee)
                                 fprintf(outf, "\tduk_dup(ctx, 0);\n");
@@ -910,8 +910,8 @@ output_interface_prototype(FILE* outf,
  */
 static int
 output_interface_elipsis_operation(FILE* outf,
-                               struct interface_map_entry *interfacee,
-                               struct interface_map_operation_entry *operatione)
+                               struct ir_interface_entry *interfacee,
+                               struct ir_operation_entry *operatione)
 {
         int cdatac; /* cdata blocks output */
 
@@ -953,8 +953,8 @@ output_interface_elipsis_operation(FILE* outf,
  */
 static int
 output_interface_overloaded_operation(FILE* outf,
-                               struct interface_map_entry *interfacee,
-                               struct interface_map_operation_entry *operatione)
+                               struct ir_interface_entry *interfacee,
+                               struct ir_operation_entry *operatione)
 {
         int cdatac; /* cdata blocks output */
 
@@ -992,8 +992,8 @@ output_interface_overloaded_operation(FILE* outf,
  */
 static int
 output_interface_special_operation(FILE* outf,
-                           struct interface_map_entry *interfacee,
-                           struct interface_map_operation_entry *operatione)
+                           struct ir_interface_entry *interfacee,
+                           struct ir_operation_entry *operatione)
 {
         /* special method definition */
         fprintf(outf, "/* Special method definition - UNIMPLEMENTED */\n\n");
@@ -1011,12 +1011,12 @@ output_interface_special_operation(FILE* outf,
  */
 static int
 output_operation_optional_defaults(FILE* outf,
-        struct interface_map_operation_argument_entry *argumentv,
+        struct ir_operation_argument_entry *argumentv,
         int argumentc)
 {
         int argc;
         for (argc = 0; argc < argumentc; argc++) {
-                struct interface_map_operation_argument_entry *cure;
+                struct ir_operation_argument_entry *cure;
                 struct webidl_node *lit_node; /* literal node */
                 enum webidl_node_type lit_type;
                 int *lit_int;
@@ -1077,12 +1077,12 @@ output_operation_optional_defaults(FILE* outf,
 static int
 output_operation_argument_type_check(
         FILE* outf,
-        struct interface_map_entry *interfacee,
-        struct interface_map_operation_entry *operatione,
-        struct interface_map_operation_overload_entry *overloade,
+        struct ir_interface_entry *interfacee,
+        struct ir_operation_entry *operatione,
+        struct ir_operation_overload_entry *overloade,
         int argidx)
 {
-        struct interface_map_operation_argument_entry *argumente;
+        struct ir_operation_argument_entry *argumente;
         struct webidl_node *type_node;
         enum webidl_type *argument_type;
 
@@ -1168,11 +1168,11 @@ output_operation_argument_type_check(
  */
 static int
 output_interface_operation(FILE* outf,
-                           struct interface_map_entry *interfacee,
-                           struct interface_map_operation_entry *operatione)
+                           struct ir_interface_entry *interfacee,
+                           struct ir_operation_entry *operatione)
 {
         int cdatac; /* cdata blocks output */
-        struct interface_map_operation_overload_entry *overloade;
+        struct ir_operation_overload_entry *overloade;
         int fixedargc; /* number of non optional arguments */
         int argidx; /* loop counter for arguments */
         int optargc; /* loop counter for optional arguments */
@@ -1287,7 +1287,7 @@ output_interface_operation(FILE* outf,
  * generate class methods for each interface operation
  */
 static int
-output_interface_operations(FILE* outf, struct interface_map_entry *interfacee)
+output_interface_operations(FILE* outf, struct ir_interface_entry *interfacee)
 {
         int opc;
         int res = 0;
@@ -1309,8 +1309,8 @@ output_interface_operations(FILE* outf, struct interface_map_entry *interfacee)
  */
 static int
 output_interface_attribute(FILE* outf,
-                           struct interface_map_entry *interfacee,
-                           struct interface_map_attribute_entry *atributee)
+                           struct ir_interface_entry *interfacee,
+                           struct ir_attribute_entry *atributee)
 {
         int cdatac;
 
@@ -1370,7 +1370,7 @@ output_interface_attribute(FILE* outf,
  */
 static int
 output_interface_attributes(FILE* outf,
-                            struct interface_map_entry *interfacee)
+                            struct ir_interface_entry *interfacee)
 {
         int attrc;
 
@@ -1409,12 +1409,12 @@ static int output_tool_prologue(FILE* outf)
 /**
  * generate a source file to implement an interface using duk and libdom.
  */
-static int output_interface(struct interface_map *interface_map,
-                            struct interface_map_entry *interfacee)
+static int output_interface(struct ir *ir,
+                            struct ir_interface_entry *interfacee)
 {
         FILE *ifacef;
         int ifacenamelen;
-        struct interface_map_entry *inherite;
+        struct ir_interface_entry *inherite;
         int res = 0;
 
         /* do not generate class for interfaces marked no output */
@@ -1438,14 +1438,14 @@ static int output_interface(struct interface_map *interface_map,
         }
 
         /* find parent interface entry */
-        inherite = interface_map_inherit_entry(interface_map, interfacee);
+        inherite = ir_inherit_entry(ir, interfacee);
 
         /* tool preface */
         output_tool_preface(ifacef);
 
         /* binding preface */
         output_cdata(ifacef,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_PREFACE);
 
         /* class preface */
@@ -1456,7 +1456,7 @@ static int output_interface(struct interface_map *interface_map,
 
         /* binding prologue */
         output_cdata(ifacef,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_PROLOGUE);
 
         /* class prologue */
@@ -1486,7 +1486,7 @@ static int output_interface(struct interface_map *interface_map,
         output_interface_attributes(ifacef, interfacee);
 
         /* prototype */
-        output_interface_prototype(ifacef, interfacee, inherite, interface_map);
+        output_interface_prototype(ifacef, interfacee, inherite, ir);
 
         fprintf(ifacef, "\n");
 
@@ -1495,7 +1495,7 @@ static int output_interface(struct interface_map *interface_map,
 
         /* binding epilogue */
         output_cdata(ifacef,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_EPILOGUE);
 
         /* class postface */
@@ -1503,7 +1503,7 @@ static int output_interface(struct interface_map *interface_map,
 
         /* binding postface */
         output_cdata(ifacef,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_POSTFACE);
 
 op_error:
@@ -1516,20 +1516,20 @@ op_error:
  * generate private header
  */
 static int
-output_private_header(struct interface_map *interface_map)
+output_private_header(struct ir *ir)
 {
         int idx;
         FILE *privf;
 
         /* open header */
-        privf = open_header(interface_map, "private");
+        privf = open_header(ir, "private");
 
-        for (idx = 0; idx < interface_map->entryc; idx++) {
-                struct interface_map_entry *interfacee;
-                struct interface_map_entry *inherite;
+        for (idx = 0; idx < ir->interfacec; idx++) {
+                struct ir_interface_entry *interfacee;
+                struct ir_interface_entry *inherite;
                 struct genbind_node *priv_node;
 
-                interfacee = interface_map->entries + idx;
+                interfacee = ir->interfaces + idx;
 
                 /* do not generate private structs for interfaces marked no
                  * output
@@ -1539,7 +1539,7 @@ output_private_header(struct interface_map *interface_map)
                 }
 
                 /* find parent interface entry */
-                inherite = interface_map_inherit_entry(interface_map,
+                inherite = ir_inherit_entry(ir,
                                                        interfacee);
 
                 fprintf(privf, "typedef struct {\n");
@@ -1585,7 +1585,7 @@ output_private_header(struct interface_map *interface_map)
 
         }
 
-        close_header(interface_map, privf, "private");
+        close_header(ir, privf, "private");
 
         return 0;
 }
@@ -1594,19 +1594,19 @@ output_private_header(struct interface_map *interface_map)
  * generate prototype header
  */
 static int
-output_prototype_header(struct interface_map *interface_map)
+output_prototype_header(struct ir *ir)
 {
         int idx;
         FILE *protof;
 
         /* open header */
-        protof = open_header(interface_map, "prototype");
+        protof = open_header(ir, "prototype");
 
-        for (idx = 0; idx < interface_map->entryc; idx++) {
-                struct interface_map_entry *interfacee;
+        for (idx = 0; idx < ir->interfacec; idx++) {
+                struct ir_interface_entry *interfacee;
                 struct genbind_node *init_node;
 
-                interfacee = interface_map->entries + idx;
+                interfacee = ir->interfaces + idx;
 
                 /* do not generate prototype declarations for interfaces marked
                  * no output
@@ -1641,7 +1641,7 @@ output_prototype_header(struct interface_map *interface_map)
                 fprintf(protof, ";\n\n");
         }
 
-        close_header(interface_map, protof, "prototype");
+        close_header(ir, protof, "prototype");
 
         return 0;
 }
@@ -1650,7 +1650,7 @@ output_prototype_header(struct interface_map *interface_map)
  * generate makefile fragment
  */
 static int
-output_makefile(struct interface_map *interface_map)
+output_makefile(struct ir *ir)
 {
         int idx;
         FILE *makef;
@@ -1664,10 +1664,10 @@ output_makefile(struct interface_map *interface_map)
         fprintf(makef, "# duk libdom makefile fragment\n\n");
 
         fprintf(makef, "NSGENBIND_SOURCES:=binding.c ");
-        for (idx = 0; idx < interface_map->entryc; idx++) {
-                struct interface_map_entry *interfacee;
+        for (idx = 0; idx < ir->interfacec; idx++) {
+                struct ir_interface_entry *interfacee;
 
-                interfacee = interface_map->entries + idx;
+                interfacee = ir->interfaces + idx;
 
                 /* no source for interfaces marked no output */
                 if (interfacee->noobject) {
@@ -1695,12 +1695,12 @@ output_makefile(struct interface_map *interface_map)
  * the primary global (if any) generated last.
  */
 static int
-output_binding_header(struct interface_map *interface_map)
+output_binding_header(struct ir *ir)
 {
         FILE *bindf;
 
         /* open header */
-        bindf = open_header(interface_map, "binding");
+        bindf = open_header(ir, "binding");
 
         fprintf(bindf,
                 "#define _MAGIC(S) (\"%s\" S)\n"
@@ -1735,7 +1735,7 @@ output_binding_header(struct interface_map *interface_map)
         fprintf(bindf,
                 "duk_ret_t %s_create_prototypes(duk_context *ctx);\n", DLPFX);
 
-        close_header(interface_map, bindf, "binding");
+        close_header(ir, bindf, "binding");
 
         return 0;
 }
@@ -1748,11 +1748,11 @@ output_binding_header(struct interface_map *interface_map)
  * implementations.
  */
 static int
-output_binding_src(struct interface_map *interface_map)
+output_binding_src(struct ir *ir)
 {
         int idx;
         FILE *bindf;
-        struct interface_map_entry *pglobale = NULL;
+        struct ir_interface_entry *pglobale = NULL;
         char *proto_name;
 
         /* open output file */
@@ -1766,14 +1766,14 @@ output_binding_src(struct interface_map *interface_map)
 
         /* binding preface */
         output_cdata(bindf,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_PREFACE);
 
         output_tool_prologue(bindf);
 
         /* binding prologue */
         output_cdata(bindf,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_PROLOGUE);
 
 
@@ -1893,10 +1893,10 @@ output_binding_src(struct interface_map *interface_map)
 
         fprintf(bindf, "{\n");
 
-        for (idx = 0; idx < interface_map->entryc; idx++) {
-                struct interface_map_entry *interfacee;
+        for (idx = 0; idx < ir->interfacec; idx++) {
+                struct ir_interface_entry *interfacee;
 
-                interfacee = interface_map->entries + idx;
+                interfacee = ir->interfaces + idx;
 
                 /* do not generate prototype calls for interfaces marked
                  * no output
@@ -1943,7 +1943,7 @@ output_binding_src(struct interface_map *interface_map)
 
         /* binding postface */
         output_cdata(bindf,
-                     interface_map->binding_node,
+                     ir->binding_node,
                      GENBIND_NODE_TYPE_POSTFACE);
 
         genb_fclose_tmp(bindf, "binding.c");
@@ -1951,46 +1951,46 @@ output_binding_src(struct interface_map *interface_map)
         return 0;
 }
 
-int duk_libdom_output(struct interface_map *interface_map)
+int duk_libdom_output(struct ir *ir)
 {
         int idx;
         int res = 0;
 
         /* generate interfaces */
-        for (idx = 0; idx < interface_map->entryc; idx++) {
-                res = output_interface(interface_map,
-                                       interface_map->entries + idx);
+        for (idx = 0; idx < ir->interfacec; idx++) {
+                res = output_interface(ir,
+                                       ir->interfaces + idx);
                 if (res != 0) {
                         goto output_err;
                 }
         }
 
         /* generate private header */
-        res = output_private_header(interface_map);
+        res = output_private_header(ir);
         if (res != 0) {
                 goto output_err;
         }
 
         /* generate prototype header */
-        res = output_prototype_header(interface_map);
+        res = output_prototype_header(ir);
         if (res != 0) {
                 goto output_err;
         }
 
         /* generate binding header */
-        res = output_binding_header(interface_map);
+        res = output_binding_header(ir);
         if (res != 0) {
                 goto output_err;
         }
 
         /* generate binding source */
-        res = output_binding_src(interface_map);
+        res = output_binding_src(ir);
         if (res != 0) {
                 goto output_err;
         }
 
         /* generate makefile fragment */
-        res = output_makefile(interface_map);
+        res = output_makefile(ir);
 
 output_err:
 

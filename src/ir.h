@@ -1,4 +1,4 @@
-/* Interface mapping
+/* intermediate representation of WebIDL and binding data
  *
  * This file is part of nsgenbind.
  * Licensed under the MIT License,
@@ -6,8 +6,8 @@
  * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
  */
 
-#ifndef nsgenbind_interface_map_h
-#define nsgenbind_interface_map_h
+#ifndef nsgenbind_ir_h
+#define nsgenbind_ir_h
 
 struct genbind_node;
 struct webidl_node;
@@ -15,7 +15,7 @@ struct webidl_node;
 /**
  * map entry for each argument of an overload on an operation
  */
-struct interface_map_operation_argument_entry {
+struct ir_operation_argument_entry {
         const char *name;
 
         int optionalc; /**< 1 if the argument is optional */
@@ -25,28 +25,28 @@ struct interface_map_operation_argument_entry {
 };
 
 /** map entry for each overload of an operation */
-struct interface_map_operation_overload_entry {
+struct ir_operation_overload_entry {
         struct webidl_node *type; /**< The return type of this overload */
 
         int optionalc; /**< Number of parameters that are optional */
         int elipsisc; /**< Number of elipsis parameters */
 
         int argumentc; /**< the number of parameters */
-        struct interface_map_operation_argument_entry *argumentv;
+        struct ir_operation_argument_entry *argumentv;
 };
 
 /** map entry for operations on an interface */
-struct interface_map_operation_entry {
+struct ir_operation_entry {
         const char *name; /** operation name */
         struct webidl_node *node; /**< AST operation node */
         struct genbind_node *method; /**< method from binding */
 
         int overloadc; /**< Number of overloads of this operation */
-        struct interface_map_operation_overload_entry *overloadv;
+        struct ir_operation_overload_entry *overloadv;
 };
 
 /** map entry for attributes on an interface */
-struct interface_map_attribute_entry {
+struct ir_attribute_entry {
         const char *name; /** attribute name */
         struct webidl_node *node; /**< AST attribute node */
         enum webidl_type_modifier modifier;
@@ -55,13 +55,13 @@ struct interface_map_attribute_entry {
 };
 
 /** map entry for constants on an interface */
-struct interface_map_constant_entry {
+struct ir_constant_entry {
         const char *name; /** attribute name */
         struct webidl_node *node; /**< AST constant node */
 };
 
 /** map entry for an interface */
-struct interface_map_entry {
+struct ir_interface_entry {
         const char *name; /** interface name */
         struct webidl_node *node; /**< AST interface node */
         const char *inherit_name; /**< Name of interface inhertited from */
@@ -80,13 +80,13 @@ struct interface_map_entry {
                              */
 
         int operationc; /**< number of operations on interface */
-        struct interface_map_operation_entry *operationv;
+        struct ir_operation_entry *operationv;
 
         int attributec; /**< number of attributes on interface */
-        struct interface_map_attribute_entry *attributev;
+        struct ir_attribute_entry *attributev;
 
         int constantc; /**< number of constants on interface */
-        struct interface_map_constant_entry *constantv;
+        struct ir_constant_entry *constantv;
 
 
         struct genbind_node *class; /**< class from binding (if any) */
@@ -108,10 +108,20 @@ struct interface_map_entry {
                               */
 };
 
-/** WebIDL interface map */
-struct interface_map {
-        int entryc; /**< count of interfaces */
-        struct interface_map_entry *entries; /**< interface entries */
+/** map entry for a dictionary */
+struct ir_dictionary_entry {
+        const char *name; /** dictionary name */
+        struct webidl_node *node; /**< AST dictionary node */
+        const char *inherit_name; /**< Name of interface inhertited from */
+};
+
+/** intermediate representation of WebIDL and binding data */
+struct ir {
+        int interfacec; /**< count of interfaces */
+        struct ir_interface_entry *interfaces; /**< interface entries */
+
+        int dictionaryc; /**< count of dictionaries */
+        struct ir_dictionary_entry *dictionaries; /**< dictionary entries */
 
         /** The AST node of the binding information */
         struct genbind_node *binding_node;
@@ -123,19 +133,19 @@ struct interface_map {
 /**
  * Create a new interface map
  */
-int interface_map_new(struct genbind_node *genbind,
+int ir_new(struct genbind_node *genbind,
                       struct webidl_node *webidl,
-                      struct interface_map **map_out);
+                      struct ir **map_out);
 
-int interface_map_dump(struct interface_map *map);
+int ir_dump(struct ir *map);
 
-int interface_map_dumpdot(struct interface_map *map);
+int ir_dumpdot(struct ir *map);
 
 /**
  * interface map parent entry
  *
  * \return inherit entry or NULL if there is not one
  */
-struct interface_map_entry *interface_map_inherit_entry(struct interface_map *map, struct interface_map_entry *entry);
+struct ir_interface_entry *ir_inherit_entry(struct ir *map, struct ir_interface_entry *entry);
 
 #endif
