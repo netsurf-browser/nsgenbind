@@ -24,7 +24,9 @@ struct ir_operation_argument_entry {
         struct webidl_node *node;
 };
 
-/** map entry for each overload of an operation */
+/**
+ * map entry for each overload of an operation.
+ */
 struct ir_operation_overload_entry {
         struct webidl_node *type; /**< The return type of this overload */
 
@@ -49,6 +51,7 @@ struct ir_operation_entry {
 struct ir_attribute_entry {
         const char *name; /** attribute name */
         struct webidl_node *node; /**< AST attribute node */
+
         enum webidl_type_modifier modifier;
         struct genbind_node *getter; /**< getter from binding */
         struct genbind_node *setter; /**< getter from binding */
@@ -81,8 +84,12 @@ struct ir_interface_entry {
         struct ir_constant_entry *constantv;
 };
 
-/** map entry for a dictionary */
+/**
+ * map entry for a dictionary
+ */
 struct ir_dictionary_entry {
+        int memberc; /**< the number of members */
+        struct ir_operation_argument_entry *memberv;
 };
 
 enum ir_entry_type {

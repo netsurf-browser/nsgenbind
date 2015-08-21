@@ -189,7 +189,6 @@ argument_map_new(struct webidl_node *arg_list_node,
 
                 cure->node = argument;
 
-
                 cure->optionalc = webidl_node_enumerate_type(
                         webidl_node_getnode(argument),
                         WEBIDL_NODE_TYPE_OPTIONAL);
@@ -547,6 +546,86 @@ constant_map_new(struct webidl_node *interface,
         return 0;
 }
 
+
+static int
+member_map_new(struct webidl_node *dictionary,
+               int *memberc_out,
+               struct ir_operation_argument_entry **memberv_out)
+{
+        struct webidl_node *list_node;
+        struct webidl_node *member_node; /* member node */
+        struct ir_operation_argument_entry *cure; /* current entry */
+        struct ir_operation_argument_entry *memberv;
+        int memberc;
+
+        /* enumerate members */
+        memberc = enumerate_interface_type(dictionary,
+                                           WEBIDL_NODE_TYPE_ARGUMENT);
+
+        if (memberc < 1) {
+                *memberc_out = 0;
+                *memberv_out = NULL; /* no members so empty map */
+                return 0;
+        }
+
+        memberv = calloc(memberc, sizeof(struct ir_operation_argument_entry));
+        if (memberv == NULL) {
+                return -1;
+        };
+        cure = memberv;
+
+        /* iterate each list node within the dictionary */
+        list_node = webidl_node_find_type(
+                webidl_node_getnode(dictionary),
+                NULL,
+                WEBIDL_NODE_TYPE_LIST);
+
+        while (list_node != NULL) {
+                /* iterate through members on list */
+                member_node = webidl_node_find_type(
+                        webidl_node_getnode(list_node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_ARGUMENT);
+
+                while (member_node != NULL) {
+                        cure->node = member_node;
+
+                        cure->name = webidl_node_gettext(
+                                webidl_node_find_type(
+                                        webidl_node_getnode(member_node),
+                                        NULL,
+                                        WEBIDL_NODE_TYPE_IDENT));
+
+                        cure->optionalc = webidl_node_enumerate_type(
+                                webidl_node_getnode(member_node),
+                                WEBIDL_NODE_TYPE_OPTIONAL);
+
+                        cure->elipsisc = webidl_node_enumerate_type(
+                                webidl_node_getnode(member_node),
+                                WEBIDL_NODE_TYPE_ELLIPSIS);
+
+                        cure++;
+
+                        /* move to next member */
+                        member_node = webidl_node_find_type(
+                                webidl_node_getnode(list_node),
+                                member_node,
+                                WEBIDL_NODE_TYPE_ARGUMENT);
+                }
+
+                list_node = webidl_node_find_type(
+                        webidl_node_getnode(dictionary),
+                        list_node,
+                        WEBIDL_NODE_TYPE_LIST);
+        }
+
+        *memberc_out = memberc;
+        *memberv_out = memberv; /* resulting members map */
+
+        return 0;
+
+}
+
 static int
 entry_map_new(struct genbind_node *genbind,
                   struct webidl_node *interface,
@@ -692,8 +771,10 @@ entry_map_new(struct genbind_node *genbind,
                 /* identify this is an interface entry */
                 cure->type = IR_ENTRY_TYPE_DICTIONARY;
 
-
-
+                /* enumerate and map the dictionary members */
+                member_map_new(node,
+                               &cure->u.dictionary.memberc,
+                               &cure->u.dictionary.memberv);
 
                 /* move to next interface */
                 node = webidl_node_find_type(interface,
@@ -750,6 +831,36 @@ int ir_new(struct genbind_node *genbind,
 
         *map_out = map;
 
+        return 0;
+}
+
+static int ir_dump_dictionary(FILE *dumpf, struct ir_entry *ecur)
+{
+        if (ecur->u.dictionary.memberc > 0) {
+                int argc;
+
+                fprintf(dumpf, "\t%d members\n", ecur->u.dictionary.memberc);
+
+                for (argc = 0; argc < ecur->u.dictionary.memberc; argc++) {
+                        struct ir_operation_argument_entry *arge;
+
+                        arge = ecur->u.dictionary.memberv + argc;
+
+                        fprintf(dumpf, "\t\t%s\n", arge->name);
+
+                        if (arge->optionalc != 0) {
+                                fprintf(dumpf,
+                                        "\t\t\toptional:%d\n",
+                                        arge->optionalc);
+                        }
+
+                        if (arge->elipsisc != 0) {
+                                fprintf(dumpf,
+                                        "\t\t\telipsis:%d\n",
+                                        arge->elipsisc);
+                        }
+                }
+        }
         return 0;
 }
 
@@ -886,8 +997,15 @@ int ir_dump(struct ir *ir)
                         fprintf(dumpf, "\tclass:%p\n", ecur->class);
                 }
 
-                if (ecur->type == IR_ENTRY_TYPE_INTERFACE) {
+                switch (ecur->type) {
+                case IR_ENTRY_TYPE_INTERFACE:
                         ir_dump_interface(dumpf, ecur);
+                        break;
+
+                case IR_ENTRY_TYPE_DICTIONARY:
+                        ir_dump_dictionary(dumpf, ecur);
+                        break;
+
                 }
                 ecur++;
         }
