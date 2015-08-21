@@ -49,7 +49,7 @@ enumerate_interface_type(struct webidl_node *interface_node,
  * binding also maintain refcounts
  */
 static void
-compute_inherit_refcount(struct ir_interface_entry *entries, int entryc)
+compute_inherit_refcount(struct ir_entry *entries, int entryc)
 {
         int idx;
         int inf;
@@ -81,14 +81,14 @@ compute_inherit_refcount(struct ir_interface_entry *entries, int entryc)
  *   reduce refcount on inherit index if !=-1
  *   remove entry from source map
  */
-static struct ir_interface_entry *
-interface_topoligical_sort(struct ir_interface_entry *srcinf, int infc)
+static struct ir_entry *
+entry_topoligical_sort(struct ir_entry *srcinf, int infc)
 {
-        struct ir_interface_entry *dstinf;
+        struct ir_entry *dstinf;
         int idx;
         int inf;
 
-        dstinf = calloc(infc, sizeof(struct ir_interface_entry));
+        dstinf = calloc(infc, sizeof(struct ir_entry));
         if (dstinf == NULL) {
                 return NULL;
         }
@@ -110,15 +110,9 @@ interface_topoligical_sort(struct ir_interface_entry *srcinf, int infc)
                 dstinf[idx].name = srcinf[inf].name;
                 dstinf[idx].node = srcinf[inf].node;
                 dstinf[idx].inherit_name = srcinf[inf].inherit_name;
-                dstinf[idx].noobject = srcinf[inf].noobject;
-                dstinf[idx].primary_global = srcinf[inf].primary_global;
-                dstinf[idx].operationc = srcinf[inf].operationc;
-                dstinf[idx].operationv = srcinf[inf].operationv;
-                dstinf[idx].attributec = srcinf[inf].attributec;
-                dstinf[idx].attributev = srcinf[inf].attributev;
-                dstinf[idx].constantc = srcinf[inf].constantc;
-                dstinf[idx].constantv = srcinf[inf].constantv;
                 dstinf[idx].class = srcinf[inf].class;
+                dstinf[idx].type = srcinf[inf].type;
+                dstinf[idx].u = srcinf[inf].u;
 
                 /* reduce refcount on inherit index if !=-1 */
                 if (srcinf[inf].inherit_idx != -1) {
@@ -553,50 +547,69 @@ constant_map_new(struct webidl_node *interface,
         return 0;
 }
 
-int ir_new(struct genbind_node *genbind,
-                        struct webidl_node *webidl,
-                        struct ir **map_out)
+static int
+entry_map_new(struct genbind_node *genbind,
+                  struct webidl_node *interface,
+                  int *interfacec_out,
+                  struct ir_entry **interfacev_out)
 {
         int interfacec;
-        struct ir_interface_entry *entries;
-        struct ir_interface_entry *sorted_entries;
-        struct ir_interface_entry *ecur;
+        int dictionaryc;
+        int entryc;
+        struct ir_entry *entries;
+        struct ir_entry *sorted_entries;
+        struct ir_entry *cure;
         struct webidl_node *node;
-        struct ir *map;
 
-        interfacec = webidl_node_enumerate_type(webidl,
-                                                WEBIDL_NODE_TYPE_INTERFACE);
-
+        interfacec = webidl_node_enumerate_type(interface,
+                                            WEBIDL_NODE_TYPE_INTERFACE);
+        dictionaryc = webidl_node_enumerate_type(interface,
+                                            WEBIDL_NODE_TYPE_DICTIONARY);
         if (options->verbose) {
                 printf("Mapping %d interfaces\n", interfacec);
+                printf("Mapping %d dictionaries\n", dictionaryc);
         }
 
-        entries = calloc(interfacec, sizeof(struct ir_interface_entry));
+        entryc = interfacec + dictionaryc;
+
+        entries = calloc(entryc, sizeof(struct ir_entry));
         if (entries == NULL) {
                 return -1;
         }
 
         /* for each interface populate an entry in the map */
-        ecur = entries;
-        node = webidl_node_find_type(webidl, NULL, WEBIDL_NODE_TYPE_INTERFACE);
+        cure = entries;
+        node = webidl_node_find_type(interface,
+                                     NULL,
+                                     WEBIDL_NODE_TYPE_INTERFACE);
         while (node != NULL) {
 
                 /* fill map entry */
-                ecur->node = node;
+                cure->node = node;
 
                 /* name of interface */
-                ecur->name = webidl_node_gettext(
-                    webidl_node_find_type(
-                        webidl_node_getnode(node),
-                        NULL,
-                        WEBIDL_NODE_TYPE_IDENT));
+                cure->name = webidl_node_gettext(
+                        webidl_node_find_type(
+                                webidl_node_getnode(node),
+                                NULL,
+                                WEBIDL_NODE_TYPE_IDENT));
 
                 /* name of the inherited interface (if any) */
-                ecur->inherit_name = webidl_node_gettext(
-                    webidl_node_find_type(
-                        webidl_node_getnode(node),
+                cure->inherit_name = webidl_node_gettext(
+                        webidl_node_find_type(
+                                webidl_node_getnode(node),
+                                NULL,
+                                WEBIDL_NODE_TYPE_INHERITANCE));
+
+                /* matching class from binding  */
+                cure->class = genbind_node_find_type_ident(
+                        genbind,
                         NULL,
-                        WEBIDL_NODE_TYPE_INHERITANCE));
+                        GENBIND_NODE_TYPE_CLASS,
+                        cure->name);
+
+                /* identify this is an interface entry */
+                cure->type = IR_ENTRY_TYPE_INTERFACE;
 
                 /* is the interface marked as not generating an object */
                 if (webidl_node_find_type_ident(
@@ -607,7 +620,7 @@ int ir_new(struct genbind_node *genbind,
                          * cannot form part of an inheritance chain if it is
                          * not generating an output class
                          */
-                        ecur->noobject = true;
+                        cure->u.interface.noobject = true;
                 }
 
                 /* is the interface marked as the primary global */
@@ -619,79 +632,252 @@ int ir_new(struct genbind_node *genbind,
                          * class or all hell will break loose having two
                          * primary globals.
                          */
-                        ecur->primary_global = true;
+                        cure->u.interface.primary_global = true;
                 }
-
-                /* matching class from binding  */
-                ecur->class = genbind_node_find_type_ident(genbind,
-                                     NULL, GENBIND_NODE_TYPE_CLASS, ecur->name);
 
                 /* enumerate and map the interface operations */
                 operation_map_new(node,
-                                  ecur->class,
-                                  &ecur->operationc,
-                                  &ecur->operationv);
+                                  cure->class,
+                                  &cure->u.interface.operationc,
+                                  &cure->u.interface.operationv);
 
                 /* enumerate and map the interface attributes */
                 attribute_map_new(node,
-                                  ecur->class,
-                                  &ecur->attributec,
-                                  &ecur->attributev);
+                                  cure->class,
+                                  &cure->u.interface.attributec,
+                                  &cure->u.interface.attributev);
 
                 /* enumerate and map the interface constants */
                 constant_map_new(node,
-                                 &ecur->constantc,
-                                 &ecur->constantv);
+                                 &cure->u.interface.constantc,
+                                 &cure->u.interface.constantv);
 
                 /* move to next interface */
-                node = webidl_node_find_type(webidl, node,
+                node = webidl_node_find_type(interface,
+                                             node,
                                              WEBIDL_NODE_TYPE_INTERFACE);
-                ecur++;
+                cure++;
+        }
+
+        /* for each dictionary populate an entry in the map */
+        node = webidl_node_find_type(interface,
+                                     NULL,
+                                     WEBIDL_NODE_TYPE_DICTIONARY);
+        while (node != NULL) {
+
+                /* fill map entry */
+                cure->node = node;
+
+                /* name of interface */
+                cure->name = webidl_node_gettext(
+                        webidl_node_find_type(
+                                webidl_node_getnode(node),
+                                NULL,
+                                WEBIDL_NODE_TYPE_IDENT));
+
+                /* name of the inherited interface (if any) */
+                cure->inherit_name = webidl_node_gettext(
+                        webidl_node_find_type(
+                                webidl_node_getnode(node),
+                                NULL,
+                                WEBIDL_NODE_TYPE_INHERITANCE));
+
+                /* matching class from binding  */
+                cure->class = genbind_node_find_type_ident(
+                        genbind,
+                        NULL,
+                        GENBIND_NODE_TYPE_CLASS,
+                        cure->name);
+
+                /* identify this is an interface entry */
+                cure->type = IR_ENTRY_TYPE_DICTIONARY;
+
+
+
+
+                /* move to next interface */
+                node = webidl_node_find_type(interface,
+                                             node,
+                                             WEBIDL_NODE_TYPE_DICTIONARY);
+                cure++;
         }
 
         /* compute inheritance and refcounts on map */
-        compute_inherit_refcount(entries, interfacec);
+        compute_inherit_refcount(entries, entryc);
 
-        /* sort interfaces to ensure correct ordering */
-        sorted_entries = interface_topoligical_sort(entries, interfacec);
+        /* sort entries to ensure correct ordering */
+        sorted_entries = entry_topoligical_sort(entries, entryc);
         free(entries);
         if (sorted_entries == NULL) {
                 return -1;
         }
 
         /* compute inheritance and refcounts on sorted map */
-        compute_inherit_refcount(sorted_entries, interfacec);
+        compute_inherit_refcount(sorted_entries, entryc);
+
+        *interfacec_out = entryc;
+        *interfacev_out = sorted_entries;
+
+        return 0;
+}
+
+
+int ir_new(struct genbind_node *genbind,
+           struct webidl_node *webidl,
+           struct ir **map_out)
+{
+        struct ir *map;
+        int ret;
 
         map = malloc(sizeof(struct ir));
-        map->interfacec = interfacec;
-        map->interfaces = sorted_entries;
+        if (map == NULL) {
+            return -1;
+        }
+
         map->webidl = webidl;
         map->binding_node = genbind_node_find_type(genbind, NULL,
                                                    GENBIND_NODE_TYPE_BINDING);
+
+        /* interfaces */
+        ret = entry_map_new(genbind,
+                            webidl,
+                            &map->entryc,
+                            &map->entries);
+        if (ret != 0) {
+                free(map);
+                return ret;
+        }
 
         *map_out = map;
 
         return 0;
 }
 
-int ir_dump(struct ir *index)
+static int ir_dump_interface(FILE *dumpf, struct ir_entry *ecur)
+{
+        if (ecur->u.interface.operationc > 0) {
+                int opc;
+
+                fprintf(dumpf, "\t%d operations\n",
+                        ecur->u.interface.operationc);
+
+                for (opc = 0; opc < ecur->u.interface.operationc; opc++) {
+                        int ovlc;
+                        struct ir_operation_entry *ope;
+
+                        ope = ecur->u.interface.operationv + opc;
+
+                        fprintf(dumpf,
+                                "\t\t%s\n",
+                                ope->name);
+                        fprintf(dumpf,
+                                "\t\t\tmethod:%p\n",
+                                ope->method);
+                        for(ovlc = 0; ovlc < ope->overloadc;ovlc++) {
+                                int argc;
+                                struct ir_operation_overload_entry *ovle;
+                                ovle = ope->overloadv + ovlc;
+
+                                fprintf(dumpf,
+                                        "\t\t\toverload:%d\n", ovlc);
+
+                                fprintf(dumpf,
+                                        "\t\t\t\treturn type:%p\n",
+                                        ovle->type);
+
+                                fprintf(dumpf,
+                                        "\t\t\t\targuments:%d\n",
+                                        ovle->argumentc);
+
+                                fprintf(dumpf,
+                                        "\t\t\t\toptionals:%d\n",
+                                        ovle->optionalc);
+
+                                fprintf(dumpf,
+                                        "\t\t\t\telipsis:%d\n",
+                                        ovle->elipsisc);
+
+                                for (argc = 0; argc < ovle->argumentc; argc++) {
+                                        struct ir_operation_argument_entry *arge;
+                                        arge = ovle->argumentv + argc;
+
+                                        fprintf(dumpf,
+                                                "\t\t\t\t\t%s\n",
+                                                arge->name);
+
+                                        if (arge->optionalc != 0) {
+                                                fprintf(dumpf,
+                                                        "\t\t\t\t\t\toptional:%d\n",
+                                                        arge->optionalc);
+                                        }
+
+                                        if (arge->elipsisc != 0) {
+                                                fprintf(dumpf,
+                                                        "\t\t\t\t\t\telipsis:%d\n",
+                                                        arge->elipsisc);
+                                        }
+
+                                }
+                        }
+                }
+        }
+
+        if (ecur->u.interface.attributec > 0) {
+                int attrc = ecur->u.interface.attributec;
+                struct ir_attribute_entry *attre;
+
+                fprintf(dumpf, "\t%d attributes\n", attrc);
+
+                attre = ecur->u.interface.attributev;
+                while (attre != NULL) {
+                        fprintf(dumpf, "\t\t%s %p",
+                                attre->name,
+                                attre->getter);
+                        if (attre->modifier == WEBIDL_TYPE_MODIFIER_NONE) {
+                                fprintf(dumpf, " %p\n", attre->setter);
+                        } else {
+                                fprintf(dumpf, "\n");
+                        }
+                        attre++;
+                        attrc--;
+                        if (attrc == 0) {
+                                break;
+                        }
+                }
+        }
+        if (ecur->u.interface.constantc > 0) {
+                int idx;
+
+                fprintf(dumpf, "\t%d constants\n",
+                        ecur->u.interface.constantc);
+
+                for (idx = 0; idx < ecur->u.interface.constantc; idx++) {
+                        struct ir_constant_entry *cone;
+                        cone = ecur->u.interface.constantv + idx;
+                        fprintf(dumpf, "\t\t%s\n", cone->name);
+                }
+        }
+        return 0;
+}
+
+int ir_dump(struct ir *ir)
 {
         FILE *dumpf;
         int eidx;
-        struct ir_interface_entry *ecur;
+        struct ir_entry *ecur;
 
         /* only dump AST to file if required */
         if (!options->debug) {
                 return 0;
         }
 
-        dumpf = genb_fopen("interface-map", "w");
+        dumpf = genb_fopen("ir-map", "w");
         if (dumpf == NULL) {
                 return 2;
         }
 
-        ecur = index->interfaces;
-        for (eidx = 0; eidx < index->interfacec; eidx++) {
+        ecur = ir->entries;
+        for (eidx = 0; eidx < ir->entryc; eidx++) {
                 fprintf(dumpf, "%d %s\n", eidx, ecur->name);
                 if (ecur->inherit_name != NULL) {
                         fprintf(dumpf, "\tinherit:%s\n", ecur->inherit_name);
@@ -700,108 +886,8 @@ int ir_dump(struct ir *index)
                         fprintf(dumpf, "\tclass:%p\n", ecur->class);
                 }
 
-                if (ecur->operationc > 0) {
-                        int opc;
-
-                        fprintf(dumpf, "\t%d operations\n",
-                                ecur->operationc);
-
-                        for (opc = 0; opc < ecur->operationc; opc++) {
-                                int ovlc;
-                                struct ir_operation_entry *ope;
-
-                                ope = ecur->operationv + opc;
-
-                                fprintf(dumpf,
-                                        "\t\t%s\n",
-                                        ope->name);
-                                fprintf(dumpf,
-                                        "\t\t\tmethod:%p\n",
-                                        ope->method);
-                                for(ovlc = 0; ovlc < ope->overloadc;ovlc++) {
-                                        int argc;
-                                        struct ir_operation_overload_entry *ovle;
-                                        ovle = ope->overloadv + ovlc;
-
-                                        fprintf(dumpf,
-                                                "\t\t\toverload:%d\n", ovlc);
-
-                                        fprintf(dumpf,
-                                                "\t\t\t\treturn type:%p\n",
-                                                ovle->type);
-
-                                        fprintf(dumpf,
-                                                "\t\t\t\targuments:%d\n",
-                                                ovle->argumentc);
-
-                                        fprintf(dumpf,
-                                                "\t\t\t\toptionals:%d\n",
-                                                ovle->optionalc);
-
-                                        fprintf(dumpf,
-                                                "\t\t\t\telipsis:%d\n",
-                                                ovle->elipsisc);
-
-                                        for (argc = 0; argc < ovle->argumentc; argc++) {
-                                                struct ir_operation_argument_entry *arge;
-                                                arge = ovle->argumentv + argc;
-
-                                                fprintf(dumpf,
-                                                        "\t\t\t\t\t%s\n",
-                                                        arge->name);
-
-                                                if (arge->optionalc != 0) {
-                                                        fprintf(dumpf,
-                                                                "\t\t\t\t\t\toptional:%d\n",
-                                                                arge->optionalc);
-                                                }
-
-                                                if (arge->elipsisc != 0) {
-                                                        fprintf(dumpf,
-                                                                "\t\t\t\t\t\telipsis:%d\n",
-                                                                arge->elipsisc);
-                                                }
-
-                                        }
-                                }
-                        }
-                }
-
-                if (ecur->attributec > 0) {
-                        int attrc = ecur->attributec;
-                        struct ir_attribute_entry *attre;
-
-                        fprintf(dumpf, "\t%d attributes\n", attrc);
-
-                        attre = ecur->attributev;
-                        while (attre != NULL) {
-                                fprintf(dumpf, "\t\t%s %p",
-                                        attre->name,
-                                        attre->getter);
-                                if (attre->modifier == WEBIDL_TYPE_MODIFIER_NONE) {
-                                        fprintf(dumpf, " %p\n", attre->setter);
-                                } else {
-                                        fprintf(dumpf, "\n");
-                                }
-                                attre++;
-                                attrc--;
-                                if (attrc == 0) {
-                                        break;
-                                }
-                        }
-                }
-                if (ecur->constantc > 0) {
-                        int idx;
-
-                        fprintf(dumpf, "\t%d constants\n",
-                                ecur->constantc);
-
-                        for (idx = 0; idx < ecur->constantc; idx++) {
-                                struct ir_constant_entry *cone;
-                                cone = ecur->constantv + idx;
-                                fprintf(dumpf, "\t\t%s\n",
-                                        cone->name);
-                        }
+                if (ecur->type == IR_ENTRY_TYPE_INTERFACE) {
+                        ir_dump_interface(dumpf, ecur);
                 }
                 ecur++;
         }
@@ -815,14 +901,14 @@ int ir_dumpdot(struct ir *index)
 {
         FILE *dumpf;
         int eidx;
-        struct ir_interface_entry *ecur;
+        struct ir_entry *ecur;
 
         /* only dump AST to file if required */
         if (!options->debug) {
                 return 0;
         }
 
-        dumpf = genb_fopen("interface.dot", "w");
+        dumpf = genb_fopen("ir.dot", "w");
         if (dumpf == NULL) {
                 return 2;
         }
@@ -831,25 +917,27 @@ int ir_dumpdot(struct ir *index)
 
         fprintf(dumpf, "node [shape=box]\n");
 
-        ecur = index->interfaces;
-        for (eidx = 0; eidx < index->interfacec; eidx++) {
+        ecur = index->entries;
+        for (eidx = 0; eidx < index->entryc; eidx++) {
                 fprintf(dumpf, "%04d [label=\"%s\"", eidx, ecur->name);
-                if (ecur->noobject == true) {
+                if ((ecur == IR_ENTRY_TYPE_INTERFACE) &&
+                    (ecur->u.interface.noobject == true)) {
                         /* noobject interfaces in red */
                         fprintf(dumpf, "fontcolor=\"red\"");
                 } else if (ecur->class != NULL) {
                         /* interfaces bound to a class are shown in blue */
                         fprintf(dumpf, "fontcolor=\"blue\"");
                 }
+
                 fprintf(dumpf, "];\n");
                 ecur++;
         }
 
-        ecur = index->interfaces;
-        for (eidx = 0; eidx < index->interfacec; eidx++) {
-            if (index->interfaces[eidx].inherit_idx != -1) {
+        ecur = index->entries;
+        for (eidx = 0; eidx < index->entryc; eidx++) {
+            if (index->entries[eidx].inherit_idx != -1) {
                 fprintf(dumpf, "%04d -> %04d;\n",
-                        eidx, index->interfaces[eidx].inherit_idx);
+                        eidx, index->entries[eidx].inherit_idx);
             }
         }
 
@@ -860,15 +948,15 @@ int ir_dumpdot(struct ir *index)
         return 0;
 }
 
-struct ir_interface_entry *
+struct ir_entry *
 ir_inherit_entry(struct ir *map,
-                 struct ir_interface_entry *entry)
+                 struct ir_entry *entry)
 {
-        struct ir_interface_entry *res = NULL;
+        struct ir_entry *res = NULL;
 
         if ((entry != NULL) &&
             (entry->inherit_idx != -1)) {
-                res = &map->interfaces[entry->inherit_idx];
+                res = &map->entries[entry->inherit_idx];
         }
         return res;
 }

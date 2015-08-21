@@ -60,17 +60,9 @@ struct ir_constant_entry {
         struct webidl_node *node; /**< AST constant node */
 };
 
+
 /** map entry for an interface */
 struct ir_interface_entry {
-        const char *name; /** interface name */
-        struct webidl_node *node; /**< AST interface node */
-        const char *inherit_name; /**< Name of interface inhertited from */
-        int inherit_idx; /**< index into map of inherited interface or -1 for
-			  * not in map
-			  */
-	int refcount; /**< number of interfacess in map that refer to this
-		       * interface
-		       */
         bool noobject; /**< flag indicating if no interface object should eb
                         * generated. This allows for interfaces which do not
                         * generate code. For implements (mixin) interfaces
@@ -87,12 +79,39 @@ struct ir_interface_entry {
 
         int constantc; /**< number of constants on interface */
         struct ir_constant_entry *constantv;
+};
 
+/** map entry for a dictionary */
+struct ir_dictionary_entry {
+};
 
+enum ir_entry_type {
+        IR_ENTRY_TYPE_INTERFACE,
+        IR_ENTRY_TYPE_DICTIONARY,
+};
+
+/** top level entry info common to interfaces and dictionaries */
+struct ir_entry {
+        const char *name; /** dictionary name */
+        struct webidl_node *node; /**< AST dictionary node */
+        const char *inherit_name; /**< Name of interface inhertited from */
         struct genbind_node *class; /**< class from binding (if any) */
 
+        enum ir_entry_type type;
+        union {
+                struct ir_dictionary_entry dictionary;
+                struct ir_interface_entry interface;
+        } u;
+
+        int inherit_idx; /**< index into map of inherited interface or -1 for
+			  * not in map
+			  */
+	int refcount; /**< number of interfacess in map that refer to this
+		       * interface
+		       */
+
         /* The variables are created and used by the output generation but
-         * rtaher than have another allocation and pointer the data they are
+         * rather than have another allocation and pointer the data they are
          * just inline here.
          */
 
@@ -108,20 +127,10 @@ struct ir_interface_entry {
                               */
 };
 
-/** map entry for a dictionary */
-struct ir_dictionary_entry {
-        const char *name; /** dictionary name */
-        struct webidl_node *node; /**< AST dictionary node */
-        const char *inherit_name; /**< Name of interface inhertited from */
-};
-
 /** intermediate representation of WebIDL and binding data */
 struct ir {
-        int interfacec; /**< count of interfaces */
-        struct ir_interface_entry *interfaces; /**< interface entries */
-
-        int dictionaryc; /**< count of dictionaries */
-        struct ir_dictionary_entry *dictionaries; /**< dictionary entries */
+        int entryc; /**< count of entries */
+        struct ir_entry *entries; /**< interface entries */
 
         /** The AST node of the binding information */
         struct genbind_node *binding_node;
@@ -146,6 +155,6 @@ int ir_dumpdot(struct ir *map);
  *
  * \return inherit entry or NULL if there is not one
  */
-struct ir_interface_entry *ir_inherit_entry(struct ir *map, struct ir_interface_entry *entry);
+struct ir_entry *ir_inherit_entry(struct ir *map, struct ir_entry *entry);
 
 #endif

@@ -293,7 +293,7 @@ static int output_tool_preface(FILE* outf)
  *  - if the previous character in the input name was uppercase and the current
  *    one is lowercase insert an underscore before the *previous* character.
  */
-static char *gen_class_name(struct ir_interface_entry *interfacee)
+static char *gen_class_name(struct ir_entry *interfacee)
 {
         const char *inc;
         char *outc;
@@ -301,7 +301,8 @@ static char *gen_class_name(struct ir_interface_entry *interfacee)
         int wasupper;
 
         /* enpty strings are a bad idea */
-        if ((interfacee->name == NULL) || (interfacee->name[0] == 0)) {
+        if ((interfacee->name == NULL) ||
+            (interfacee->name[0] == 0)) {
                 return NULL;
         }
 
@@ -434,7 +435,7 @@ static int close_header(struct ir *ir,
  * generate the interface constructor
  */
 static int
-output_interface_constructor(FILE* outf, struct ir_interface_entry *interfacee)
+output_interface_constructor(FILE* outf, struct ir_entry *interfacee)
 {
         int init_argc;
 
@@ -470,7 +471,7 @@ output_interface_constructor(FILE* outf, struct ir_interface_entry *interfacee)
  * generate the interface destructor
  */
 static int
-output_interface_destructor(FILE* outf, struct ir_interface_entry *interfacee)
+output_interface_destructor(FILE* outf, struct ir_entry *interfacee)
 {
         /* destructor definition */
         fprintf(outf,
@@ -498,8 +499,8 @@ output_interface_destructor(FILE* outf, struct ir_interface_entry *interfacee)
  */
 static int
 output_interface_inherit_init(FILE* outf,
-                              struct ir_interface_entry *interfacee,
-                              struct ir_interface_entry *inherite)
+                              struct ir_entry *interfacee,
+                              struct ir_entry *inherite)
 {
         struct genbind_node *init_node;
         struct genbind_node *inh_init_node;
@@ -593,7 +594,7 @@ output_interface_inherit_init(FILE* outf,
 
 static int
 output_interface_init_declaration(FILE* outf,
-                                  struct ir_interface_entry *interfacee,
+                                  struct ir_entry *interfacee,
                                   struct genbind_node *init_node)
 {
         struct genbind_node *param_node;
@@ -627,8 +628,8 @@ output_interface_init_declaration(FILE* outf,
 
 static int
 output_interface_init(FILE* outf,
-                      struct ir_interface_entry *interfacee,
-                      struct ir_interface_entry *inherite)
+                      struct ir_entry *interfacee,
+                      struct ir_entry *inherite)
 {
         struct genbind_node *init_node;
         int res;
@@ -666,8 +667,8 @@ output_interface_init(FILE* outf,
 
 static int
 output_interface_fini(FILE* outf,
-                      struct ir_interface_entry *interfacee,
-                      struct ir_interface_entry *inherite)
+                      struct ir_entry *interfacee,
+                      struct ir_entry *inherite)
 {
         struct genbind_node *fini_node;
 
@@ -708,7 +709,7 @@ output_interface_fini(FILE* outf,
  */
 static int
 output_prototype_method(FILE* outf,
-                        struct ir_interface_entry *interfacee,
+                        struct ir_entry *interfacee,
                         struct ir_operation_entry *operatione)
 {
 
@@ -730,15 +731,16 @@ output_prototype_method(FILE* outf,
  * generate prototype method definitions
  */
 static int
-output_prototype_methods(FILE *outf, struct ir_interface_entry *interfacee)
+output_prototype_methods(FILE *outf, struct ir_entry *entry)
 {
         int opc;
         int res = 0;
 
-        for (opc = 0; opc < interfacee->operationc; opc++) {
-                res = output_prototype_method(outf,
-                                              interfacee,
-                                              interfacee->operationv + opc);
+        for (opc = 0; opc < entry->u.interface.operationc; opc++) {
+                res = output_prototype_method(
+                        outf,
+                        entry,
+                        entry->u.interface.operationv + opc);
                 if (res != 0) {
                         break;
                 }
@@ -750,8 +752,8 @@ output_prototype_methods(FILE *outf, struct ir_interface_entry *interfacee)
 
 static int
 output_prototype_attribute(FILE *outf,
-                        struct ir_interface_entry *interfacee,
-                        struct ir_attribute_entry *attributee)
+                           struct ir_entry *interfacee,
+                           struct ir_attribute_entry *attributee)
 {
         if (attributee->modifier == WEBIDL_TYPE_MODIFIER_READONLY) {
                 return output_populate_ro_property(outf,
@@ -767,14 +769,16 @@ output_prototype_attribute(FILE *outf,
  * generate prototype attribute definitions
  */
 static int
-output_prototype_attributes(FILE *outf, struct ir_interface_entry *interfacee)
+output_prototype_attributes(FILE *outf, struct ir_entry *entry)
 {
         int attrc;
         int res = 0;
 
-        for (attrc = 0; attrc < interfacee->attributec; attrc++) {
-                res = output_prototype_attribute(outf,interfacee,
-                              interfacee->attributev + attrc);
+        for (attrc = 0; attrc < entry->u.interface.attributec; attrc++) {
+                res = output_prototype_attribute(
+                        outf,
+                        entry,
+                        entry->u.interface.attributev + attrc);
                 if (res != 0) {
                         break;
                 }
@@ -810,14 +814,15 @@ output_prototype_constant(FILE *outf,
  * generate prototype constant definitions
  */
 static int
-output_prototype_constants(FILE *outf, struct ir_interface_entry *interfacee)
+output_prototype_constants(FILE *outf, struct ir_entry *entry)
 {
         int attrc;
         int res = 0;
 
-        for (attrc = 0; attrc < interfacee->constantc; attrc++) {
-                res = output_prototype_constant(outf,
-                                                interfacee->constantv + attrc);
+        for (attrc = 0; attrc < entry->u.interface.constantc; attrc++) {
+                res = output_prototype_constant(
+                        outf,
+                        entry->u.interface.constantv + attrc);
                 if (res != 0) {
                         break;
                 }
@@ -826,14 +831,46 @@ output_prototype_constants(FILE *outf, struct ir_interface_entry *interfacee)
         return res;
 }
 
+static int
+output_global_create_prototype(FILE* outf,
+                               struct ir *ir,
+                               struct ir_entry *interfacee)
+{
+        int idx;
+
+        fprintf(outf, "\t/* Create interface objects */\n");
+        for (idx = 0; idx < ir->entryc; idx++) {
+                struct ir_entry *entry;
+
+                entry = ir->entries + idx;
+
+                if (entry->type == IR_ENTRY_TYPE_INTERFACE) {
+
+                        if (entry->u.interface.noobject) {
+                                continue;
+                        }
+
+                        if (entry == interfacee) {
+                                fprintf(outf, "\tduk_dup(ctx, 0);\n");
+                        } else {
+                                output_get_prototype(outf, entry->name);
+                        }
+
+                        fprintf(outf,
+                                "\tdukky_inject_not_ctr(ctx, 0, \"%s\");\n",
+                                entry->name);
+                }
+        }
+        return 0;
+}
 /**
  * generate the interface prototype creator
  */
 static int
 output_interface_prototype(FILE* outf,
-                           struct ir_interface_entry *interfacee,
-                           struct ir_interface_entry *inherite,
-                           struct ir *ir)
+                           struct ir *ir,
+                           struct ir_entry *interfacee,
+                           struct ir_entry *inherite)
 {
         struct genbind_node *proto_node;
 
@@ -872,21 +909,8 @@ output_interface_prototype(FILE* outf,
         /* if this is the global object, output all interfaces which do not
          * prevent us from doing so
          */
-        if (interfacee->primary_global) {
-                fprintf(outf, "\t/* Create interface objects */\n");
-                for (int idx = 0; idx < ir->interfacec; idx++) {
-                        struct ir_interface_entry *interfacep;
-
-                        interfacep = ir->interfaces + idx;
-                        if (interfacep->noobject) continue;
-                        if (interfacep == interfacee)
-                                fprintf(outf, "\tduk_dup(ctx, 0);\n");
-                        else
-                                output_get_prototype(outf, interfacep->name);
-                        fprintf(outf,
-                                "\tdukky_inject_not_ctr(ctx, 0, \"%s\");\n",
-                                interfacep->name);
-                }
+        if (interfacee->u.interface.primary_global) {
+                output_global_create_prototype(outf, ir, interfacee);
         }
 
         /* generate setting of destructor */
@@ -910,7 +934,7 @@ output_interface_prototype(FILE* outf,
  */
 static int
 output_interface_elipsis_operation(FILE* outf,
-                               struct ir_interface_entry *interfacee,
+                               struct ir_entry *interfacee,
                                struct ir_operation_entry *operatione)
 {
         int cdatac; /* cdata blocks output */
@@ -953,7 +977,7 @@ output_interface_elipsis_operation(FILE* outf,
  */
 static int
 output_interface_overloaded_operation(FILE* outf,
-                               struct ir_interface_entry *interfacee,
+                               struct ir_entry *interfacee,
                                struct ir_operation_entry *operatione)
 {
         int cdatac; /* cdata blocks output */
@@ -992,7 +1016,7 @@ output_interface_overloaded_operation(FILE* outf,
  */
 static int
 output_interface_special_operation(FILE* outf,
-                           struct ir_interface_entry *interfacee,
+                           struct ir_entry *interfacee,
                            struct ir_operation_entry *operatione)
 {
         /* special method definition */
@@ -1077,7 +1101,7 @@ output_operation_optional_defaults(FILE* outf,
 static int
 output_operation_argument_type_check(
         FILE* outf,
-        struct ir_interface_entry *interfacee,
+        struct ir_entry *interfacee,
         struct ir_operation_entry *operatione,
         struct ir_operation_overload_entry *overloade,
         int argidx)
@@ -1168,7 +1192,7 @@ output_operation_argument_type_check(
  */
 static int
 output_interface_operation(FILE* outf,
-                           struct ir_interface_entry *interfacee,
+                           struct ir_entry *interfacee,
                            struct ir_operation_entry *operatione)
 {
         int cdatac; /* cdata blocks output */
@@ -1287,15 +1311,16 @@ output_interface_operation(FILE* outf,
  * generate class methods for each interface operation
  */
 static int
-output_interface_operations(FILE* outf, struct ir_interface_entry *interfacee)
+output_interface_operations(FILE* outf, struct ir_entry *ife)
 {
         int opc;
         int res = 0;
 
-        for (opc = 0; opc < interfacee->operationc; opc++) {
-                res = output_interface_operation(outf,
-                                                 interfacee,
-                                                 interfacee->operationv + opc);
+        for (opc = 0; opc < ife->u.interface.operationc; opc++) {
+                res = output_interface_operation(
+                        outf,
+                        ife,
+                        ife->u.interface.operationv + opc);
                 if (res != 0) {
                         break;
                 }
@@ -1309,7 +1334,7 @@ output_interface_operations(FILE* outf, struct ir_interface_entry *interfacee)
  */
 static int
 output_interface_attribute(FILE* outf,
-                           struct ir_interface_entry *interfacee,
+                           struct ir_entry *interfacee,
                            struct ir_attribute_entry *atributee)
 {
         int cdatac;
@@ -1369,15 +1394,15 @@ output_interface_attribute(FILE* outf,
  * generate class property getters and setters for each interface attribute
  */
 static int
-output_interface_attributes(FILE* outf,
-                            struct ir_interface_entry *interfacee)
+output_interface_attributes(FILE* outf, struct ir_entry *ife)
 {
         int attrc;
 
-        for (attrc = 0; attrc < interfacee->attributec; attrc++) {
-                output_interface_attribute(outf,
-                                           interfacee,
-                                           interfacee->attributev + attrc);
+        for (attrc = 0; attrc < ife->u.interface.attributec; attrc++) {
+                output_interface_attribute(
+                        outf,
+                        ife,
+                        ife->u.interface.attributev + attrc);
         }
 
         return 0;
@@ -1407,29 +1432,110 @@ static int output_tool_prologue(FILE* outf)
 }
 
 /**
- * generate a source file to implement an interface using duk and libdom.
+ * generate a source file to implement a dictionary using duk and libdom.
  */
-static int output_interface(struct ir *ir,
-                            struct ir_interface_entry *interfacee)
+static int output_dictionary(struct ir *ir, struct ir_entry *dictionarye)
 {
         FILE *ifacef;
-        int ifacenamelen;
-        struct ir_interface_entry *inherite;
+        struct ir_entry *inherite;
         int res = 0;
 
-        /* do not generate class for interfaces marked no output */
-        if (interfacee->noobject) {
-                return 0;
+        /* open output file */
+        ifacef = genb_fopen_tmp(dictionarye->filename);
+        if (ifacef == NULL) {
+                return -1;
         }
 
-        /* compute class name */
-        interfacee->class_name = gen_class_name(interfacee);
+        /* find parent interface entry */
+        inherite = ir_inherit_entry(ir, dictionarye);
 
-        /* generate source filename */
-        ifacenamelen = strlen(interfacee->class_name) + 4;
-        interfacee->filename = malloc(ifacenamelen);
-        snprintf(interfacee->filename, ifacenamelen,
-                 "%s.c", interfacee->class_name);
+        /* tool preface */
+        output_tool_preface(ifacef);
+
+        /* binding preface */
+        output_cdata(ifacef,
+                     ir->binding_node,
+                     GENBIND_NODE_TYPE_PREFACE);
+
+        /* class preface */
+        output_cdata(ifacef, dictionarye->class, GENBIND_NODE_TYPE_PREFACE);
+
+        /* tool prologue */
+        output_tool_prologue(ifacef);
+
+        /* binding prologue */
+        output_cdata(ifacef,
+                     ir->binding_node,
+                     GENBIND_NODE_TYPE_PROLOGUE);
+
+        /* class prologue */
+        output_cdata(ifacef, dictionarye->class, GENBIND_NODE_TYPE_PROLOGUE);
+
+        fprintf(ifacef, "\n");
+
+        /* initialisor */
+        res = output_interface_init(ifacef, dictionarye, inherite);
+        if (res != 0) {
+                goto op_error;
+        }
+
+        /* finaliser */
+        res = output_interface_fini(ifacef, dictionarye, inherite);
+        if (res != 0) {
+                goto op_error;
+        }
+
+        /* constructor */
+        res = output_interface_constructor(ifacef, dictionarye);
+        if (res != 0) {
+                goto op_error;
+        }
+
+        /* destructor */
+        res = output_interface_destructor(ifacef, dictionarye);
+        if (res != 0) {
+                goto op_error;
+        }
+
+        /* prototype */
+        res = output_interface_prototype(ifacef, ir, dictionarye, inherite);
+        if (res != 0) {
+                goto op_error;
+        }
+
+
+        fprintf(ifacef, "\n");
+
+        /* class epilogue */
+        output_cdata(ifacef, dictionarye->class, GENBIND_NODE_TYPE_EPILOGUE);
+
+        /* binding epilogue */
+        output_cdata(ifacef,
+                     ir->binding_node,
+                     GENBIND_NODE_TYPE_EPILOGUE);
+
+        /* class postface */
+        output_cdata(ifacef, dictionarye->class, GENBIND_NODE_TYPE_POSTFACE);
+
+        /* binding postface */
+        output_cdata(ifacef,
+                     ir->binding_node,
+                     GENBIND_NODE_TYPE_POSTFACE);
+
+op_error:
+        genb_fclose_tmp(ifacef, dictionarye->filename);
+
+        return res;
+}
+
+/**
+ * generate a source file to implement an interface using duk and libdom.
+ */
+static int output_interface(struct ir *ir, struct ir_entry *interfacee)
+{
+        FILE *ifacef;
+        struct ir_entry *inherite;
+        int res = 0;
 
         /* open output file */
         ifacef = genb_fopen_tmp(interfacee->filename);
@@ -1486,7 +1592,7 @@ static int output_interface(struct ir *ir,
         output_interface_attributes(ifacef, interfacee);
 
         /* prototype */
-        output_interface_prototype(ifacef, interfacee, inherite, ir);
+        output_interface_prototype(ifacef, ir, interfacee, inherite);
 
         fprintf(ifacef, "\n");
 
@@ -1524,25 +1630,39 @@ output_private_header(struct ir *ir)
         /* open header */
         privf = open_header(ir, "private");
 
-        for (idx = 0; idx < ir->interfacec; idx++) {
-                struct ir_interface_entry *interfacee;
-                struct ir_interface_entry *inherite;
+        for (idx = 0; idx < ir->entryc; idx++) {
+                struct ir_entry *interfacee;
+                struct ir_entry *inherite;
                 struct genbind_node *priv_node;
 
-                interfacee = ir->interfaces + idx;
+                interfacee = ir->entries + idx;
 
                 /* do not generate private structs for interfaces marked no
                  * output
                  */
-                if (interfacee->noobject) {
+                if ((interfacee->type == IR_ENTRY_TYPE_INTERFACE) &&
+                    (interfacee->u.interface.noobject)) {
                         continue;
                 }
 
-                /* find parent interface entry */
-                inherite = ir_inherit_entry(ir,
-                                                       interfacee);
+                switch (interfacee->type) {
+                case IR_ENTRY_TYPE_INTERFACE:
+                        fprintf(privf,
+                                "/* Private data for %s interface */\n",
+                                interfacee->name);
+                        break;
+
+                case IR_ENTRY_TYPE_DICTIONARY:
+                        fprintf(privf,
+                                "/* Private data for %s dictionary */\n",
+                                interfacee->name);
+                        break;
+                }
 
                 fprintf(privf, "typedef struct {\n");
+
+                /* find parent entry and include in private */
+                inherite = ir_inherit_entry(ir, interfacee);
                 if (inherite != NULL) {
                         fprintf(privf, "\t%s_private_t parent;\n",
                                 inherite->class_name);
@@ -1602,16 +1722,17 @@ output_prototype_header(struct ir *ir)
         /* open header */
         protof = open_header(ir, "prototype");
 
-        for (idx = 0; idx < ir->interfacec; idx++) {
-                struct ir_interface_entry *interfacee;
+        for (idx = 0; idx < ir->entryc; idx++) {
+                struct ir_entry *interfacee;
                 struct genbind_node *init_node;
 
-                interfacee = ir->interfaces + idx;
+                interfacee = ir->entries + idx;
 
                 /* do not generate prototype declarations for interfaces marked
                  * no output
                  */
-                if (interfacee->noobject) {
+                if ((interfacee->type == IR_ENTRY_TYPE_INTERFACE) &&
+                    (interfacee->u.interface.noobject)) {
                         continue;
                 }
 
@@ -1664,13 +1785,14 @@ output_makefile(struct ir *ir)
         fprintf(makef, "# duk libdom makefile fragment\n\n");
 
         fprintf(makef, "NSGENBIND_SOURCES:=binding.c ");
-        for (idx = 0; idx < ir->interfacec; idx++) {
-                struct ir_interface_entry *interfacee;
+        for (idx = 0; idx < ir->entryc; idx++) {
+                struct ir_entry *interfacee;
 
-                interfacee = ir->interfaces + idx;
+                interfacee = ir->entries + idx;
 
                 /* no source for interfaces marked no output */
-                if (interfacee->noobject) {
+                if ((interfacee->type == IR_ENTRY_TYPE_INTERFACE) &&
+                    (interfacee->u.interface.noobject)) {
                         continue;
                 }
 
@@ -1752,7 +1874,7 @@ output_binding_src(struct ir *ir)
 {
         int idx;
         FILE *bindf;
-        struct ir_interface_entry *pglobale = NULL;
+        struct ir_entry *pglobale = NULL;
         char *proto_name;
 
         /* open output file */
@@ -1893,23 +2015,24 @@ output_binding_src(struct ir *ir)
 
         fprintf(bindf, "{\n");
 
-        for (idx = 0; idx < ir->interfacec; idx++) {
-                struct ir_interface_entry *interfacee;
+        for (idx = 0; idx < ir->entryc; idx++) {
+                struct ir_entry *interfacee;
 
-                interfacee = ir->interfaces + idx;
+                interfacee = ir->entries + idx;
 
                 /* do not generate prototype calls for interfaces marked
                  * no output
                  */
-                if (interfacee->noobject) {
-                        continue;
-                }
+                if (interfacee->type == IR_ENTRY_TYPE_INTERFACE) {
+                        if (interfacee->u.interface.noobject) {
+                                continue;
+                        }
 
-                if (interfacee->primary_global) {
-                        pglobale = interfacee;
-                        continue;
+                        if (interfacee->u.interface.primary_global) {
+                                pglobale = interfacee;
+                                continue;
+                        }
                 }
-
                 proto_name = get_prototype_name(interfacee->name);
 
                 fprintf(bindf,
@@ -1951,18 +2074,74 @@ output_binding_src(struct ir *ir)
         return 0;
 }
 
+static int output_interfaces_dictionaries(struct ir *ir)
+{
+        int res;
+        int idx;
+
+        /* generate interfaces */
+        for (idx = 0; idx < ir->entryc; idx++) {
+                struct ir_entry *irentry;
+
+                irentry = ir->entries + idx;
+
+                switch (irentry->type) {
+                case IR_ENTRY_TYPE_INTERFACE:
+                        /* do not generate class for interfaces marked no
+                         * output
+                         */
+                        if (!irentry->u.interface.noobject) {
+                                res = output_interface(ir, irentry);
+                                if (res != 0) {
+                                        return res;
+                                }
+                        }
+                        break;
+
+                case IR_ENTRY_TYPE_DICTIONARY:
+                        res = output_dictionary(ir, irentry);
+                        if (res != 0) {
+                                return res;
+                        }
+
+                default:
+                        break;
+                }
+        }
+
+        return 0;
+}
+
 int duk_libdom_output(struct ir *ir)
 {
         int idx;
         int res = 0;
 
-        /* generate interfaces */
-        for (idx = 0; idx < ir->interfacec; idx++) {
-                res = output_interface(ir,
-                                       ir->interfaces + idx);
-                if (res != 0) {
-                        goto output_err;
+        /* process ir entries for output */
+        for (idx = 0; idx < ir->entryc; idx++) {
+                struct ir_entry *irentry;
+
+                irentry = ir->entries + idx;
+
+                /* compute class name */
+                irentry->class_name = gen_class_name(irentry);
+
+                if (irentry->class_name != NULL) {
+                        int ifacenamelen;
+
+                        /* generate source filename */
+                        ifacenamelen = strlen(irentry->class_name) + 4;
+                        irentry->filename = malloc(ifacenamelen);
+                        snprintf(irentry->filename,
+                                 ifacenamelen,
+                                 "%s.c",
+                                 irentry->class_name);
                 }
+        }
+
+        res = output_interfaces_dictionaries(ir);
+        if (res != 0) {
+                goto output_err;
         }
 
         /* generate private header */
