@@ -367,6 +367,9 @@ output_dictionary_init_declaration(FILE* outf,
 {
         struct genbind_node *param_node;
 
+        if  (dictionarye->refcount == 0) {
+                fprintf(outf, "static ");
+        }
         fprintf(outf,
                 "void %s_%s___init(duk_context *ctx, %s_private_t *priv",
                 DLPFX, dictionarye->class_name, dictionarye->class_name);
@@ -446,6 +449,9 @@ output_dictionary_fini(FILE* outf,
                                              GENBIND_METHOD_TYPE_FINI);
 
         /* finaliser definition */
+        if  (dictionarye->refcount == 0) {
+                fprintf(outf, "static ");
+        }
         fprintf(outf,
                 "void %s_%s___fini(duk_context *ctx, %s_private_t *priv)\n",
                 DLPFX, dictionarye->class_name, dictionarye->class_name);

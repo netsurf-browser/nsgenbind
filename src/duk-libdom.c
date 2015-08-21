@@ -331,26 +331,27 @@ output_prototype_header(struct ir *ir)
                 fprintf(protof, "duk_ret_t %s_%s___proto(duk_context *ctx);\n",
                         DLPFX, interfacee->class_name);
 
-                /** \todo if the interface has no references (no other
-                 * interface inherits from it) there is no reason to export
-                 * the initalisor/finaliser as no other class
-                 * constructor/destructor should call them. Additionally the
-                 * init/fini definition should be made static.
+                /* if the interface has no references (no other interface
+                 * inherits from it) there is no reason to export the
+                 * initalisor/finaliser as no other class
+                 * constructor/destructor should call them.
                  */
+                if (interfacee->refcount > 0) {
+                        /* finaliser declaration */
+                        fprintf(protof,
+                                "void %s_%s___fini(duk_context *ctx, %s_private_t *priv);\n",
+                                DLPFX, interfacee->class_name, interfacee->class_name);
 
-                /* finaliser declaration */
-                fprintf(protof,
-                        "void %s_%s___fini(duk_context *ctx, %s_private_t *priv);\n",
-                        DLPFX, interfacee->class_name, interfacee->class_name);
+                        /* find the initialisor method on the class (if any) */
+                        init_node = genbind_node_find_method(interfacee->class,
+                                                             NULL,
+                                                             GENBIND_METHOD_TYPE_INIT);
 
-                /* find the initialisor method on the class (if any) */
-                init_node = genbind_node_find_method(interfacee->class,
-                                                     NULL,
-                                                     GENBIND_METHOD_TYPE_INIT);
-
-                /* initialisor definition */
-                output_interface_init_declaration(protof, interfacee, init_node);
-                fprintf(protof, ";\n\n");
+                        /* initialisor definition */
+                        output_interface_init_declaration(protof, interfacee, init_node);
+                        fprintf(protof, ";\n\n");
+                }
+                fprintf(protof, "\n");
         }
 
         close_header(ir, protof, "prototype");
