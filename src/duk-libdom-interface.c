@@ -792,7 +792,7 @@ output_interface_elipsis_operation(FILE* outf,
          * operation with elipsis should go
          */
         WARN(WARNING_UNIMPLEMENTED,
-             "Elipsis parameetrs not checked: method %s::%s();",
+             "Elipsis parameters not checked: method %s::%s();",
                      interfacee->name, operatione->name);
 
         output_get_method_private(outf, interfacee->class_name);
@@ -1339,3 +1339,46 @@ op_error:
         return res;
 }
 
+/* exported function documented in duk-libdom.h */
+int output_interface_declaration(FILE* outf, struct ir_entry *interfacee)
+{
+        struct genbind_node *init_node;
+
+        /* do not generate prototype declarations for interfaces marked no
+         * output
+         */
+        if (interfacee->u.interface.noobject) {
+                return 0;
+        }
+
+        /* prototype declaration */
+        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx);\n",
+                DLPFX, interfacee->class_name);
+
+        /* if the interface has no references (no other interface inherits from
+         * it) there is no reason to export the initalisor/finaliser as no
+         * other class constructor/destructor should call them.
+         */
+        if (interfacee->refcount < 1) {
+                fprintf(outf, "\n");
+
+                return 0;
+        }
+
+        /* finaliser declaration */
+        fprintf(outf,
+                "void %s_%s___fini(duk_context *ctx, %s_private_t *priv);\n",
+                DLPFX, interfacee->class_name, interfacee->class_name);
+
+        /* find the initialisor method on the class (if any) */
+        init_node = genbind_node_find_method(interfacee->class,
+                                             NULL,
+                                             GENBIND_METHOD_TYPE_INIT);
+
+        /* initialisor definition */
+        output_interface_init_declaration(outf, interfacee, init_node);
+
+        fprintf(outf, ";\n\n");
+
+        return 0;
+}

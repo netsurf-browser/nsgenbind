@@ -105,6 +105,8 @@ struct webidl_node *webidl_node_add(struct webidl_node *node, struct webidl_node
 char *webidl_node_gettext(struct webidl_node *node);
 struct webidl_node *webidl_node_getnode(struct webidl_node *node);
 int *webidl_node_getint(struct webidl_node *node);
+float *webidl_node_getfloat(struct webidl_node *node);
+
 enum webidl_node_type webidl_node_gettype(struct webidl_node *node);
 
 /* node searches */

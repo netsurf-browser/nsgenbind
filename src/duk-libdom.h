@@ -20,9 +20,19 @@ int duk_libdom_output(struct ir *ir);
 int output_interface(struct ir *ir, struct ir_entry *interfacee);
 
 /**
+ * generate a declaration to implement a dictionary using duk and libdom.
+ */
+int output_interface_declaration(FILE* outf, struct ir_entry *interfacee);
+
+/**
  * generate a source file to implement a dictionary using duk and libdom.
  */
 int output_dictionary(struct ir *ir, struct ir_entry *dictionarye);
+
+/**
+ * generate a declaration to implement a dictionary using duk and libdom.
+ */
+int output_dictionary_declaration(FILE* outf, struct ir_entry *dictionarye);
 
 /**
  * generate preface block for nsgenbind

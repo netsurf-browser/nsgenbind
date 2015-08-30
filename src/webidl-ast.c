@@ -34,6 +34,7 @@ struct webidl_node {
 		void *value;
 		struct webidl_node *node; /* node has a list of nodes */
 		char *text; /* node data is text */
+                float *flt;
 		int number; /* node data is an integer */
 	} r;
 };
@@ -299,6 +300,22 @@ webidl_node_getint(struct webidl_node *node)
 }
 
 /* exported interface defined in webidl-ast.h */
+float *
+webidl_node_getfloat(struct webidl_node *node)
+{
+	if (node != NULL) {
+		switch(node->type) {
+                case WEBIDL_NODE_TYPE_LITERAL_FLOAT:
+			return node->r.flt;
+
+		default:
+			break;
+		}
+	}
+	return NULL;
+}
+
+/* exported interface defined in webidl-ast.h */
 enum webidl_node_type webidl_node_gettype(struct webidl_node *node)
 {
 	return node->type;
@@ -398,7 +415,7 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 		return "Literal (bool)";
 
 	case WEBIDL_NODE_TYPE_LITERAL_FLOAT:
-		return "Literal (string)";
+		return "Literal (float)";
 
 	case WEBIDL_NODE_TYPE_LITERAL_STRING:
 		return "Literal (string)";

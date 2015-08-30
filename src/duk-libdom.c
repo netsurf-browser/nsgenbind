@@ -132,13 +132,13 @@ static FILE *open_header(struct ir *ir, const char *name)
                 return NULL;
         }
 
+        /* tool preface */
+        output_tool_preface(hdrf);
+
         /* binding preface */
         output_cdata(hdrf,
                      ir->binding_node,
                      GENBIND_NODE_TYPE_PREFACE);
-
-        /* tool preface */
-        output_tool_preface(hdrf);
 
         /* header guard */
         fprintf(hdrf, "\n#ifndef %s_%s_h\n", DLPFX, name);
@@ -167,43 +167,6 @@ static int close_header(struct ir *ir,
 
         genb_fclose_tmp(hdrf, fname);
         free(fname);
-
-        return 0;
-}
-
-
-
-
-static int
-output_interface_init_declaration(FILE* outf,
-                                  struct ir_entry *interfacee,
-                                  struct genbind_node *init_node)
-{
-        struct genbind_node *param_node;
-
-        fprintf(outf,
-                "void %s_%s___init(duk_context *ctx, %s_private_t *priv",
-                DLPFX, interfacee->class_name, interfacee->class_name);
-
-        /* count the number of arguments on the initializer */
-        interfacee->class_init_argc = 0;
-
-        /* output the paramters on the method (if any) */
-        param_node = genbind_node_find_type(
-                genbind_node_getnode(init_node),
-                NULL, GENBIND_NODE_TYPE_PARAMETER);
-        while (param_node != NULL) {
-                interfacee->class_init_argc++;
-                fprintf(outf, ", ");
-                output_cdata(outf, param_node, GENBIND_NODE_TYPE_TYPE);
-                output_cdata(outf, param_node, GENBIND_NODE_TYPE_IDENT);
-
-                param_node = genbind_node_find_type(
-                        genbind_node_getnode(init_node),
-                        param_node, GENBIND_NODE_TYPE_PARAMETER);
-        }
-
-        fprintf(outf,")");
 
         return 0;
 }
@@ -314,44 +277,19 @@ output_prototype_header(struct ir *ir)
         protof = open_header(ir, "prototype");
 
         for (idx = 0; idx < ir->entryc; idx++) {
-                struct ir_entry *interfacee;
-                struct genbind_node *init_node;
+                struct ir_entry *entry;
 
-                interfacee = ir->entries + idx;
+                entry = ir->entries + idx;
 
-                /* do not generate prototype declarations for interfaces marked
-                 * no output
-                 */
-                if ((interfacee->type == IR_ENTRY_TYPE_INTERFACE) &&
-                    (interfacee->u.interface.noobject)) {
-                        continue;
+                switch (entry->type) {
+                case IR_ENTRY_TYPE_INTERFACE:
+                        output_interface_declaration(protof, entry);
+                        break;
+
+                case IR_ENTRY_TYPE_DICTIONARY:
+                        output_dictionary_declaration(protof, entry);
+                        break;
                 }
-
-                /* prototype declaration */
-                fprintf(protof, "duk_ret_t %s_%s___proto(duk_context *ctx);\n",
-                        DLPFX, interfacee->class_name);
-
-                /* if the interface has no references (no other interface
-                 * inherits from it) there is no reason to export the
-                 * initalisor/finaliser as no other class
-                 * constructor/destructor should call them.
-                 */
-                if (interfacee->refcount > 0) {
-                        /* finaliser declaration */
-                        fprintf(protof,
-                                "void %s_%s___fini(duk_context *ctx, %s_private_t *priv);\n",
-                                DLPFX, interfacee->class_name, interfacee->class_name);
-
-                        /* find the initialisor method on the class (if any) */
-                        init_node = genbind_node_find_method(interfacee->class,
-                                                             NULL,
-                                                             GENBIND_METHOD_TYPE_INIT);
-
-                        /* initialisor definition */
-                        output_interface_init_declaration(protof, interfacee, init_node);
-                        fprintf(protof, ";\n\n");
-                }
-                fprintf(protof, "\n");
         }
 
         close_header(ir, protof, "prototype");
@@ -611,6 +549,10 @@ output_binding_src(struct ir *ir)
                 struct ir_entry *interfacee;
 
                 interfacee = ir->entries + idx;
+
+                if (interfacee->type == IR_ENTRY_TYPE_DICTIONARY) {
+                        continue;
+                }
 
                 /* do not generate prototype calls for interfaces marked
                  * no output
