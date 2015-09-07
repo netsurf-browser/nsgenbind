@@ -993,10 +993,11 @@ output_operation_argument_type_check(
 
         switch (*argument_type) {
         case WEBIDL_TYPE_STRING:
+                /* coerce values to string */
                 fprintf(outf,
                         "\t\tif (!duk_is_string(ctx, %d)) {\n"
-                        "\t\t\tduk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_string_type, %d, \"%s\");\n"
-                        "\t\t}\n", argidx, DLPFX, argidx, argumente->name);
+                        "\t\t\tduk_to_string(ctx, %d);\n"
+                        "\t\t}\n", argidx, argidx);
                 break;
 
         case WEBIDL_TYPE_BOOL:

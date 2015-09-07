@@ -372,13 +372,12 @@ output_binding_header(struct ir *ir)
         fprintf(bindf,
                 "/* Constant strings */\n"
                 "extern const char *%s_error_fmt_argument;\n"
-                "extern const char *%s_error_fmt_string_type;\n"
                 "extern const char *%s_error_fmt_bool_type;\n"
                 "extern const char *%s_error_fmt_number_type;\n"
                 "extern const char *%s_magic_string_private;\n"
                 "extern const char *%s_magic_string_prototypes;\n"
                 "\n",
-                DLPFX, DLPFX, DLPFX, DLPFX, DLPFX, DLPFX);
+                DLPFX, DLPFX, DLPFX, DLPFX, DLPFX);
 
         fprintf(bindf,
                 "duk_bool_t %s_instanceof(duk_context *ctx, const char *klass);\n",
@@ -434,10 +433,9 @@ output_binding_src(struct ir *ir)
         fprintf(bindf,
                 "/* Error format strings */\n"
                 "const char *%s_error_fmt_argument =\"%%d argument required, but ony %%d present.\";\n"
-                "const char *%s_error_fmt_string_type =\"argument %%d (%%s) requires a string\";\n"
                 "const char *%s_error_fmt_bool_type =\"argument %%d (%%s) requires a bool\";\n"
                 "const char *%s_error_fmt_number_type =\"argument %%d (%%s) requires a number\";\n",
-                DLPFX, DLPFX, DLPFX, DLPFX);
+                DLPFX, DLPFX, DLPFX);
 
         fprintf(bindf, "\n");
 
