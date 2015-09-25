@@ -12,7 +12,7 @@
 enum genbind_node_type {
         GENBIND_NODE_TYPE_ROOT = 0,
         GENBIND_NODE_TYPE_IDENT, /**< generic identifier string */
-        GENBIND_NODE_TYPE_TYPE, /**< generic type string */
+        GENBIND_NODE_TYPE_NAME, /**< generic type string */
         GENBIND_NODE_TYPE_MODIFIER, /**< node modifier */
         GENBIND_NODE_TYPE_CDATA, /**< verbatim block of character data */
         GENBIND_NODE_TYPE_STRING, /**< text string */
@@ -149,30 +149,6 @@ genbind_node_find_type_ident(struct genbind_node *node,
                              struct genbind_node *prev,
                              enum genbind_node_type nodetype,
                              const char *ident);
-
-
-/**
- * Returning node of the specified type with a GENBIND_NODE_TYPE_TYPE
- * subnode with matching text.
- *
- * This is a conveniance wrapper around nested calls to
- * genbind_node_find_type() which performs a depth first left hand
- * search returning nodes of the specified type and a child node of
- * GENBIND_NODE_TYPE_TYPE with matching text.
- *
- *
- * @param node The node to start the search from
- * @param prev The node at which to stop the search, either NULL to
- *             search the full tree depth (initial search) or the result
- *             of a previous search to continue.
- * @param nodetype The type of node to seach for.
- * @param type The text to match the type child node to.
- */
-struct genbind_node *
-genbind_node_find_type_type(struct genbind_node *node,
-                             struct genbind_node *prev,
-                             enum genbind_node_type nodetype,
-                             const char *type_text);
 
 
 /**

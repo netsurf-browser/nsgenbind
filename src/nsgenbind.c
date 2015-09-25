@@ -168,7 +168,7 @@ static enum bindingtype_e genbind_get_type(struct genbind_node *node)
                 genbind_node_find_type(
                         genbind_node_getnode(binding_node),
                         NULL,
-                        GENBIND_NODE_TYPE_TYPE));
+                        GENBIND_NODE_TYPE_NAME));
         if (binding_type == NULL) {
                 fprintf(stderr, "Error: missing binding type\n");
                 return BINDINGTYPE_UNKNOWN;

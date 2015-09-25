@@ -228,25 +228,10 @@ output_private_header(struct ir *ir)
                         NULL,
                         GENBIND_NODE_TYPE_PRIVATE);
                 while (priv_node != NULL) {
-                        /* generate the private variable definition ensuring
-                         * the type is separated from the identifier with
-                         * either a * or space.
-                         */
-                        const char *type_cdata;
-                        char cdatae;
-                        type_cdata = genbind_node_gettext(
-                                genbind_node_find_type(
-                                        genbind_node_getnode(priv_node),
-                                        NULL,
-                                        GENBIND_NODE_TYPE_TYPE));
+                        fprintf(privf, "\t");
 
-                        fprintf(privf, "\t%s", type_cdata);
-                        cdatae = type_cdata[strlen(type_cdata) - 1];
-                        if ((cdatae != '*') && (cdatae != ' ')) {
-                                fputc(' ', privf);
-                        }
+                        output_ctype(privf, priv_node, true);
 
-                        output_cdata(privf, priv_node, GENBIND_NODE_TYPE_IDENT);
                         fprintf(privf, ";\n");
 
                         priv_node = genbind_node_find_type(

@@ -93,49 +93,38 @@ dblcolon                \:\:
  /* binding terminals */
 
 binding                 return TOK_BINDING;
-
 webidl                  return TOK_WEBIDL;
-
 preface                 return TOK_PREFACE;
-
 prologue                return TOK_PROLOGUE;
-
 epilogue                return TOK_EPILOGUE;
-
 postface                return TOK_POSTFACE;
 
 
  /* class member terminals */
 
 class                   return TOK_CLASS;
-
 private                 return TOK_PRIVATE;
-
 internal                return TOK_INTERNAL;
-
 flags                   return TOK_FLAGS;
-
 type                    return TOK_TYPE;
-
 unshared                return TOK_UNSHARED;
-
 shared                  return TOK_SHARED;
-
 property                return TOK_PROPERTY;
 
  /* implementation terminals */
 
 init                    return TOK_INIT;
-
 fini                    return TOK_FINI;
-
 method                  return TOK_METHOD;
-
 getter                  return TOK_GETTER;
-
 setter                  return TOK_SETTER;
-
 prototype               return TOK_PROTOTYPE;
+
+ /* c type terminals */
+
+struct                  return TOK_STRUCT;
+union                   return TOK_UNION;
+unsigned                return TOK_UNSIGNED;
 
  /* other terminals */
 

@@ -328,6 +328,42 @@ output_interface_destructor(FILE* outf, struct ir_entry *interfacee)
 }
 
 /**
+ * Compare two nodes to check their c types match.
+ */
+static bool compare_ctypes(struct genbind_node *a, struct genbind_node *b)
+{
+        struct genbind_node *ta;
+        struct genbind_node *tb;
+
+        ta = genbind_node_find_type(genbind_node_getnode(a),
+                                    NULL, GENBIND_NODE_TYPE_NAME);
+        tb = genbind_node_find_type(genbind_node_getnode(b),
+                                    NULL, GENBIND_NODE_TYPE_NAME);
+
+        while ((ta != NULL) && (tb != NULL)) {
+                char *txt_a;
+                char *txt_b;
+
+                txt_a = genbind_node_gettext(ta);
+                txt_b = genbind_node_gettext(tb);
+
+                if (strcmp(txt_a, txt_b) != 0) {
+                        return false; /* missmatch */
+                }
+
+                ta = genbind_node_find_type(genbind_node_getnode(a),
+                                            ta, GENBIND_NODE_TYPE_NAME);
+                tb = genbind_node_find_type(genbind_node_getnode(b),
+                                            tb, GENBIND_NODE_TYPE_NAME);
+        }
+        if (ta != tb) {
+                return false;
+        }
+
+        return true;
+}
+
+/**
  * generate an initialisor call to parent interface
  */
 static int
@@ -389,26 +425,14 @@ output_interface_inherit_init(FILE* outf,
                                 param_name);
                         return -1;
                 } else {
-                        char *param_type;
-                        char *inh_param_type;
-
                         fprintf(outf, ", ");
 
                         /* cast the parameter if required */
-                        param_type = genbind_node_gettext(
-                                genbind_node_find_type(
-                                        genbind_node_getnode(param_node),
-                                        NULL,
-                                        GENBIND_NODE_TYPE_TYPE));
-
-                        inh_param_type = genbind_node_gettext(
-                                genbind_node_find_type(
-                                        genbind_node_getnode(inh_param_node),
-                                        NULL,
-                                        GENBIND_NODE_TYPE_TYPE));
-
-                        if (strcmp(param_type, inh_param_type) != 0) {
-                                fprintf(outf, "(%s)", inh_param_type);
+                        if (compare_ctypes(param_node,
+                                           inh_param_node) == false) {
+                                fputc('(', outf);
+                                output_ctype(outf, inh_param_node, false);
+                                fputc(')', outf);
                         }
 
                         /* output the parameter identifier */
@@ -449,8 +473,8 @@ output_interface_init_declaration(FILE* outf,
         while (param_node != NULL) {
                 interfacee->class_init_argc++;
                 fprintf(outf, ", ");
-                output_cdata(outf, param_node, GENBIND_NODE_TYPE_TYPE);
-                output_cdata(outf, param_node, GENBIND_NODE_TYPE_IDENT);
+
+                output_ctype(outf, param_node, true);
 
                 param_node = genbind_node_find_type(
                         genbind_node_getnode(init_node),

@@ -259,34 +259,6 @@ genbind_node_find_type_ident(struct genbind_node *node,
         return found_node;
 }
 
-/* exported interface documented in nsgenbind-ast.h */
-struct genbind_node *
-genbind_node_find_type_type(struct genbind_node *node,
-                             struct genbind_node *prev,
-                             enum genbind_node_type type,
-                             const char *ident)
-{
-        struct genbind_node *found_node;
-        struct genbind_node *ident_node;
-
-        found_node = genbind_node_find_type(node, prev, type);
-
-
-        while (found_node != NULL) {
-                /* look for a type node  */
-                ident_node = genbind_node_find_type(genbind_node_getnode(found_node),
-                                               NULL,
-                                               GENBIND_NODE_TYPE_TYPE);
-                if (ident_node != NULL) {
-                        if (strcmp(ident_node->r.text, ident) == 0)
-                                break;
-                }
-
-                /* look for next matching node */
-                found_node = genbind_node_find_type(node, found_node, type);
-        }
-        return found_node;
-}
 
 
 /* exported interface documented in nsgenbind-ast.h */
@@ -371,7 +343,7 @@ char *genbind_node_gettext(struct genbind_node *node)
                 case GENBIND_NODE_TYPE_EPILOGUE:
                 case GENBIND_NODE_TYPE_POSTFACE:
                 case GENBIND_NODE_TYPE_IDENT:
-                case GENBIND_NODE_TYPE_TYPE:
+                case GENBIND_NODE_TYPE_NAME:
                 case GENBIND_NODE_TYPE_CDATA:
                         return node->r.text;
 
@@ -449,8 +421,8 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
         case GENBIND_NODE_TYPE_BINDING:
                 return "Binding";
 
-        case GENBIND_NODE_TYPE_TYPE:
-                return "Type";
+        case GENBIND_NODE_TYPE_NAME:
+                return "TypeName";
 
         case GENBIND_NODE_TYPE_PRIVATE:
                 return "Private";

@@ -56,4 +56,19 @@ int output_tool_prologue(FILE* outf);
  */
 int output_cdata(FILE* outf, struct genbind_node *node, enum genbind_node_type nodetype);
 
+/**
+ * output a C variable type
+ *
+ * Used to output c type and optionlly identifier declarations for parameters
+ * and structure entries.
+ * If the optional identifier is output it is ensured the type is separated
+ * from the identifier with either a * or space.
+ *
+ * \param outf The file handle to write output.
+ * \param node The node to generate content for.
+ * \param identifier If the indentifier should be output.
+ * \return 0 on success.
+ */
+int output_ctype(FILE *outf, struct genbind_node *node, bool identifier);
+
 #endif

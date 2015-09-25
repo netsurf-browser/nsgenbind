@@ -14,6 +14,6 @@ class HTMLUnknownElement {
 	postface %{
 /* class post */
 		%};	
-}
+};
 
-init HTMLUnknownElement("struct dom_html_element *" html_unknown_element::html_element);
+init HTMLUnknownElement(struct dom_html_element *html_unknown_element::html_element);

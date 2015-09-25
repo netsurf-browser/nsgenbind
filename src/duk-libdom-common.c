@@ -76,3 +76,42 @@ int output_tool_prologue(FILE* outf)
 
         return 0;
 }
+
+
+/* exported interface documented in duk-libdom.h */
+int output_ctype(FILE *outf, struct genbind_node *node, bool identifier)
+{
+        const char *type_cdata = NULL;
+        struct genbind_node *typename_node;
+
+        typename_node = genbind_node_find_type(genbind_node_getnode(node),
+                                               NULL,
+                                               GENBIND_NODE_TYPE_NAME);
+        while (typename_node != NULL) {
+                type_cdata = genbind_node_gettext(typename_node);
+
+                fprintf(outf, "%s", type_cdata);
+
+                typename_node = genbind_node_find_type(
+                        genbind_node_getnode(node),
+                        typename_node,
+                        GENBIND_NODE_TYPE_NAME);
+
+                /* separate all but the last entry with spaces */
+                if (typename_node != NULL) {
+                        fputc(' ', outf);
+                }
+        }
+
+        if (identifier) {
+            if ((type_cdata != NULL) &&
+                (type_cdata[0] != '*') &&
+                (type_cdata[0] != ' ')) {
+                fputc(' ', outf);
+            }
+
+            output_cdata(outf, node, GENBIND_NODE_TYPE_IDENT);
+        }
+
+        return 0;
+}
