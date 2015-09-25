@@ -49,21 +49,21 @@ enum webidl_node_type {
 };
 
 enum webidl_type {
-        WEBIDL_TYPE_ANY, /**< The type is unconstrained */
-	WEBIDL_TYPE_USER,
-	WEBIDL_TYPE_BOOL,
-	WEBIDL_TYPE_BYTE,
-	WEBIDL_TYPE_OCTET,
-	WEBIDL_TYPE_FLOAT,
-	WEBIDL_TYPE_DOUBLE,
-	WEBIDL_TYPE_SHORT,
-	WEBIDL_TYPE_LONG,
-	WEBIDL_TYPE_LONGLONG,
-	WEBIDL_TYPE_STRING,
-	WEBIDL_TYPE_SEQUENCE,
-	WEBIDL_TYPE_OBJECT,
-	WEBIDL_TYPE_DATE,
-	WEBIDL_TYPE_VOID,
+        WEBIDL_TYPE_ANY, /**< 0 - The type is unconstrained */
+	WEBIDL_TYPE_USER, /**< 1 - The type is a dictionary or interface */
+	WEBIDL_TYPE_BOOL, /**< 2 - The type is boolean */
+	WEBIDL_TYPE_BYTE, /**< 3 - The type is a byte */
+	WEBIDL_TYPE_OCTET, /**< 4 - The type is a octet */
+	WEBIDL_TYPE_FLOAT, /**< 5 - The type is a float point number */
+	WEBIDL_TYPE_DOUBLE, /**< 6 - The type is a double */
+	WEBIDL_TYPE_SHORT, /**< 7 - The type is a signed 16bit */
+	WEBIDL_TYPE_LONG, /**< 8 - The type is a signed 32bit */
+	WEBIDL_TYPE_LONGLONG, /**< 9 - The type is a signed 64bit */
+	WEBIDL_TYPE_STRING, /**< 10 - The type is a string */
+	WEBIDL_TYPE_SEQUENCE, /**< 11 - The type is a sequence */
+	WEBIDL_TYPE_OBJECT, /**< 12 - The type is a object */
+	WEBIDL_TYPE_DATE, /**< 13 - The type is a date */
+	WEBIDL_TYPE_VOID, /**< 14 - The type is void */
 };
 
 /** modifiers for operations, attributes and arguments */
