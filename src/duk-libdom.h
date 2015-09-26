@@ -47,7 +47,7 @@ int output_tool_prologue(FILE* outf);
 /**
  * output character data of node of given type.
  *
- * used for any cdata including pre/pro/epi/post sections
+ * used for any cdata sections
  *
  * \param outf The file handle to write output.
  * \param node The node to search.
@@ -55,6 +55,18 @@ int output_tool_prologue(FILE* outf);
  * \return The number of nodes written or 0 for none.
  */
 int output_cdata(FILE* outf, struct genbind_node *node, enum genbind_node_type nodetype);
+
+/**
+ * output character data of method node of given type.
+ *
+ * used for any cdata including pre/pro/epi/post sections
+ *
+ * \param outf The file handle to write output.
+ * \param node The node to search.
+ * \param nodetype the type of child node to search for.
+ * \return The number of nodes written or 0 for none.
+ */
+int output_method_cdata(FILE* outf, struct genbind_node *node, enum genbind_method_type sel_method_type);
 
 /**
  * output a C variable type

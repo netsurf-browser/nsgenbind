@@ -338,10 +338,6 @@ char *genbind_node_gettext(struct genbind_node *node)
                 switch(node->type) {
                 case GENBIND_NODE_TYPE_WEBIDL:
                 case GENBIND_NODE_TYPE_STRING:
-                case GENBIND_NODE_TYPE_PREFACE:
-                case GENBIND_NODE_TYPE_PROLOGUE:
-                case GENBIND_NODE_TYPE_EPILOGUE:
-                case GENBIND_NODE_TYPE_POSTFACE:
                 case GENBIND_NODE_TYPE_IDENT:
                 case GENBIND_NODE_TYPE_NAME:
                 case GENBIND_NODE_TYPE_CDATA:
@@ -405,18 +401,6 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 
         case GENBIND_NODE_TYPE_STRING:
                 return "String";
-
-        case GENBIND_NODE_TYPE_PREFACE:
-                return "Preface";
-
-        case GENBIND_NODE_TYPE_POSTFACE:
-                return "Postface";
-
-        case GENBIND_NODE_TYPE_PROLOGUE:
-                return "Prologue";
-
-        case GENBIND_NODE_TYPE_EPILOGUE:
-                return "Epilogue";
 
         case GENBIND_NODE_TYPE_BINDING:
                 return "Binding";

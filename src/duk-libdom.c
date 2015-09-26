@@ -136,9 +136,9 @@ static FILE *open_header(struct ir *ir, const char *name)
         output_tool_preface(hdrf);
 
         /* binding preface */
-        output_cdata(hdrf,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_PREFACE);
+        output_method_cdata(hdrf,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_PREFACE);
 
         /* header guard */
         fprintf(hdrf, "\n#ifndef %s_%s_h\n", DLPFX, name);
@@ -161,9 +161,9 @@ static int close_header(struct ir *ir,
         fprintf(hdrf, "\n#endif\n");
 
         /* binding postface */
-        output_cdata(hdrf,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_POSTFACE);
+        output_method_cdata(hdrf,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_POSTFACE);
 
         genb_fclose_tmp(hdrf, fname);
         free(fname);
@@ -401,17 +401,17 @@ output_binding_src(struct ir *ir)
         output_tool_preface(bindf);
 
         /* binding preface */
-        output_cdata(bindf,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_PREFACE);
+        output_method_cdata(bindf,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_PREFACE);
 
+        /* tool prologue */
         output_tool_prologue(bindf);
 
         /* binding prologue */
-        output_cdata(bindf,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_PROLOGUE);
-
+        output_method_cdata(bindf,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_PROLOGUE);
 
         fprintf(bindf, "\n");
 
@@ -582,9 +582,9 @@ output_binding_src(struct ir *ir)
         fprintf(bindf, "}\n");
 
         /* binding postface */
-        output_cdata(bindf,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_POSTFACE);
+        output_method_cdata(bindf,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_POSTFACE);
 
         genb_fclose_tmp(bindf, "binding.c");
 

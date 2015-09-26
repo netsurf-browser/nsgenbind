@@ -323,23 +323,27 @@ int output_dictionary(struct ir *ir, struct ir_entry *dictionarye)
         output_tool_preface(ifacef);
 
         /* binding preface */
-        output_cdata(ifacef,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_PREFACE);
+        output_method_cdata(ifacef,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_PREFACE);
 
         /* class preface */
-        output_cdata(ifacef, dictionarye->class, GENBIND_NODE_TYPE_PREFACE);
+        output_method_cdata(ifacef,
+                            dictionarye->class,
+                            GENBIND_METHOD_TYPE_PREFACE);
 
         /* tool prologue */
         output_tool_prologue(ifacef);
 
         /* binding prologue */
-        output_cdata(ifacef,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_PROLOGUE);
+        output_method_cdata(ifacef,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_PROLOGUE);
 
         /* class prologue */
-        output_cdata(ifacef, dictionarye->class, GENBIND_NODE_TYPE_PROLOGUE);
+        output_method_cdata(ifacef,
+                            dictionarye->class,
+                            GENBIND_METHOD_TYPE_PROLOGUE);
 
         fprintf(ifacef, "\n");
 
@@ -352,20 +356,24 @@ int output_dictionary(struct ir *ir, struct ir_entry *dictionarye)
         fprintf(ifacef, "\n");
 
         /* class epilogue */
-        output_cdata(ifacef, dictionarye->class, GENBIND_NODE_TYPE_EPILOGUE);
+        output_method_cdata(ifacef,
+                            dictionarye->class,
+                            GENBIND_METHOD_TYPE_EPILOGUE);
 
         /* binding epilogue */
-        output_cdata(ifacef,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_EPILOGUE);
+        output_method_cdata(ifacef,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_EPILOGUE);
 
         /* class postface */
-        output_cdata(ifacef, dictionarye->class, GENBIND_NODE_TYPE_POSTFACE);
+        output_method_cdata(ifacef,
+                            dictionarye->class,
+                            GENBIND_METHOD_TYPE_POSTFACE);
 
         /* binding postface */
-        output_cdata(ifacef,
-                     ir->binding_node,
-                     GENBIND_NODE_TYPE_POSTFACE);
+        output_method_cdata(ifacef,
+                            ir->binding_node,
+                            GENBIND_METHOD_TYPE_POSTFACE);
 
 op_error:
         genb_fclose_tmp(ifacef, dictionarye->filename);

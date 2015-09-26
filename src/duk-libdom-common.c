@@ -115,3 +115,35 @@ int output_ctype(FILE *outf, struct genbind_node *node, bool identifier)
 
         return 0;
 }
+
+/* exported interface documented in duk-libdom.h */
+int output_method_cdata(FILE* outf,
+                        struct genbind_node *node,
+                        enum genbind_method_type sel_method_type)
+{
+        struct genbind_node *method;
+
+        method = genbind_node_find_type(genbind_node_getnode(node),
+                                        NULL,
+                                        GENBIND_NODE_TYPE_METHOD);
+
+        while (method != NULL) {
+                enum genbind_method_type *method_type;
+
+                method_type = (enum genbind_method_type *)genbind_node_getint(
+                        genbind_node_find_type(
+                                genbind_node_getnode(method),
+                                NULL,
+                                GENBIND_NODE_TYPE_METHOD_TYPE));
+                if ((method_type != NULL) &&
+                    (*method_type == sel_method_type)) {
+                        output_cdata(outf, method, GENBIND_NODE_TYPE_CDATA);
+                }
+
+                method = genbind_node_find_type(genbind_node_getnode(node),
+                                                method,
+                                                GENBIND_NODE_TYPE_METHOD);
+        }
+
+        return 0;
+}

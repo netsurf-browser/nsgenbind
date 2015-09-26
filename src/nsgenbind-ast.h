@@ -17,12 +17,8 @@ enum genbind_node_type {
         GENBIND_NODE_TYPE_CDATA, /**< verbatim block of character data */
         GENBIND_NODE_TYPE_STRING, /**< text string */
 
-        GENBIND_NODE_TYPE_BINDING,
+        GENBIND_NODE_TYPE_BINDING, /**< Binding */
         GENBIND_NODE_TYPE_WEBIDL,
-        GENBIND_NODE_TYPE_PREFACE,
-        GENBIND_NODE_TYPE_PROLOGUE,
-        GENBIND_NODE_TYPE_EPILOGUE,
-        GENBIND_NODE_TYPE_POSTFACE,
 
         GENBIND_NODE_TYPE_CLASS, /**< class definition */
         GENBIND_NODE_TYPE_PRIVATE,
@@ -45,12 +41,16 @@ enum genbind_type_modifier {
 
 /* binding method types */
 enum genbind_method_type {
-        GENBIND_METHOD_TYPE_INIT = 0, /**< binding method is initialiser */
-        GENBIND_METHOD_TYPE_FINI, /**< binding method is finalizer */
-        GENBIND_METHOD_TYPE_METHOD, /**< binding method is a method */
-        GENBIND_METHOD_TYPE_GETTER, /**< binding method is a getter */
-        GENBIND_METHOD_TYPE_SETTER, /**< binding method is a setter */
-        GENBIND_METHOD_TYPE_PROTOTYPE, /**< binding method is a prototype */
+        GENBIND_METHOD_TYPE_INIT = 0, /**< method is initialiser */
+        GENBIND_METHOD_TYPE_FINI, /**< method is finalizer */
+        GENBIND_METHOD_TYPE_METHOD, /**< method is a method */
+        GENBIND_METHOD_TYPE_GETTER, /**< method is a getter */
+        GENBIND_METHOD_TYPE_SETTER, /**< method is a setter */
+        GENBIND_METHOD_TYPE_PROTOTYPE, /**< method is a prototype */
+        GENBIND_METHOD_TYPE_PREFACE, /**< method is a preface */
+        GENBIND_METHOD_TYPE_PROLOGUE, /**< method is a prologue */
+        GENBIND_METHOD_TYPE_EPILOGUE, /**< method is a epilogue */
+        GENBIND_METHOD_TYPE_POSTFACE, /**< method is a postface */
 };
 
 struct genbind_node;

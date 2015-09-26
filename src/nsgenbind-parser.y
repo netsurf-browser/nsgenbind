@@ -80,7 +80,6 @@ add_method(struct genbind_node **genbind_ast,
                                       genbind_new_node(GENBIND_NODE_TYPE_IDENT,
                                                        method_node,
                                                        class_name));
-
         } else {
                 /* update the existing class */
 
@@ -156,21 +155,14 @@ add_method(struct genbind_node **genbind_ast,
 %type <node> Class
 %type <node> ClassArgs
 %type <node> ClassArg
-%type <node> ClassFlag
 %type <node> ClassFlags
 
 %type <node> Method
 %type <node> MethodDeclarator
 %type <value> MethodType
+%type <value> BindingAndMethodType
 
 %type <node> WebIDL
-%type <node> Preface
-%type <node> Prologue
-%type <node> Epilogue
-%type <node> Postface
-%type <node> Private
-%type <node> Internal
-%type <node> Property
 
 %type <node> ParameterList
 %type <node> CTypeIdent
@@ -188,7 +180,7 @@ Input:
         
 Statements:
         Statement
-        | 
+        |
         Statements Statement
         {
                 $$ = *genbind_ast = genbind_node_prepend($2, $1);
@@ -225,23 +217,26 @@ BindingArgs:
         |
         BindingArgs BindingArg
         {
-          $$ = genbind_node_link($2, $1);
+                $$ = genbind_node_link($2, $1);
         }
         ;
 
 BindingArg:
         WebIDL
         |
-        Preface
-        |
-        Prologue
-        |
-        Epilogue
-        |
-        Postface
+        BindingAndMethodType CBlock ';'
+        {
+                $$ = genbind_new_node(GENBIND_NODE_TYPE_METHOD,
+                        NULL,
+                        genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
+                                genbind_new_node(GENBIND_NODE_TYPE_CDATA,
+                                                 NULL,
+                                                 $2),
+                                (void *)$1));
+        }
         ;
 
- /* a web IDL file specifier */
+/* a web IDL file specifier */
 WebIDL:
         TOK_WEBIDL TOK_STRING_LITERAL ';'
         {
@@ -308,33 +303,6 @@ CTypeIdent:
         }
         ;
 
-Preface:
-        TOK_PREFACE CBlock ';'
-        {
-                $$ = genbind_new_node(GENBIND_NODE_TYPE_PREFACE, NULL, $2);
-        }
-        ;
-
-Prologue:
-        TOK_PROLOGUE CBlock ';'
-        {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_PROLOGUE, NULL, $2);
-        }
-        ;
-
-Epilogue:
-        TOK_EPILOGUE CBlock ';'
-        {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_EPILOGUE, NULL, $2);
-        }
-        ;
-
-Postface:
-        TOK_POSTFACE CBlock ';'
-        {
-          $$ = genbind_new_node(GENBIND_NODE_TYPE_POSTFACE, NULL, $2);
-        }
-        ;
 
 CBlock:
         TOK_CCODE_LITERAL
@@ -342,6 +310,35 @@ CBlock:
         CBlock TOK_CCODE_LITERAL
         {
           $$ = genbind_strapp($1, $2);
+        }
+        ;
+
+
+ParameterList:
+        CTypeIdent
+        {
+                $$ = genbind_new_node(GENBIND_NODE_TYPE_PARAMETER, NULL, $1);
+        }
+        |
+        ParameterList ',' CTypeIdent
+        {
+                $$ = genbind_node_prepend($1,
+                                          genbind_new_node(
+                                                  GENBIND_NODE_TYPE_PARAMETER,
+                                                  NULL,
+                                                  $3));
+        }
+        ;
+
+Method:
+        MethodType MethodDeclarator CBlock
+        {
+                $$ = add_method(genbind_ast, $1, $2, $3);
+        }
+        |
+        MethodType MethodDeclarator ';'
+        {
+                $$ = add_method(genbind_ast, $1, $2, NULL);
         }
         ;
 
@@ -375,21 +372,29 @@ MethodType:
         {
                 $$ = GENBIND_METHOD_TYPE_PROTOTYPE;
         }
+        |
+        BindingAndMethodType
         ;
 
-ParameterList:
-        CTypeIdent
+BindingAndMethodType:
+        TOK_PREFACE
         {
-                $$ = genbind_new_node(GENBIND_NODE_TYPE_PARAMETER, NULL, $1);
+                $$ = GENBIND_METHOD_TYPE_PREFACE;
         }
         |
-        ParameterList ',' CTypeIdent
+        TOK_PROLOGUE
         {
-                $$ = genbind_node_prepend($1,
-                                          genbind_new_node(
-                                                  GENBIND_NODE_TYPE_PARAMETER,
-                                                  NULL,
-                                                  $3));
+                $$ = GENBIND_METHOD_TYPE_PROLOGUE;
+        }
+        |
+        TOK_EPILOGUE
+        {
+                $$ = GENBIND_METHOD_TYPE_EPILOGUE;
+        }
+        |
+        TOK_POSTFACE
+        {
+                $$ = GENBIND_METHOD_TYPE_POSTFACE;
         }
         ;
 
@@ -434,17 +439,6 @@ MethodDeclarator:
         }
         ;
 
-Method:
-        MethodType MethodDeclarator CBlock
-        {
-                $$ = add_method(genbind_ast, $1, $2, $3);
-        }
-        |
-        MethodType MethodDeclarator ';'
-        {
-                $$ = add_method(genbind_ast, $1, $2, NULL);
-        }
-        ;
 
 Class:
         TOK_CLASS TOK_IDENTIFIER '{' ClassArgs '}' ';'
@@ -464,42 +458,40 @@ ClassArgs:
         ;
 
 ClassArg:
-        Private
-        | 
-        Internal
-        | 
-        Property
-        |
-        ClassFlag
-        |
-        Preface
-        |
-        Prologue
-        |
-        Epilogue
-        |
-        Postface
-        ;
-
-
-Private:
         TOK_PRIVATE CTypeIdent ';'
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_PRIVATE, NULL, $2);
         }
-        ;
-
-Internal:
+        |
         TOK_INTERNAL CTypeIdent ';'
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_INTERNAL, NULL, $2);
         }
-        ;
-
-ClassFlag:
+        |
+        TOK_PROPERTY Modifiers TOK_IDENTIFIER ';'
+        {
+                $$ = genbind_new_node(GENBIND_NODE_TYPE_PROPERTY, NULL,
+                        genbind_new_node(GENBIND_NODE_TYPE_MODIFIER,
+                                genbind_new_node(GENBIND_NODE_TYPE_IDENT,
+                                                 NULL,
+                                                 $3),
+                                         (void *)$2));
+        }
+        |
         TOK_FLAGS ClassFlags ';'
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_FLAGS, NULL, $2);
+        }
+        |
+        BindingAndMethodType CBlock ';'
+        {
+                $$ = genbind_new_node(GENBIND_NODE_TYPE_METHOD,
+                        NULL,
+                        genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
+                                genbind_new_node(GENBIND_NODE_TYPE_CDATA,
+                                                 NULL,
+                                                 $2),
+                                (void *)$1));
         }
         ;
 
@@ -512,18 +504,6 @@ ClassFlags:
         ClassFlags ',' TOK_IDENTIFIER
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_IDENT, $1, $3);
-        }
-        ;
-
-Property:
-        TOK_PROPERTY Modifiers TOK_IDENTIFIER ';'
-        {
-                $$ = genbind_new_node(GENBIND_NODE_TYPE_PROPERTY, NULL,
-                        genbind_new_node(GENBIND_NODE_TYPE_MODIFIER,
-                                genbind_new_node(GENBIND_NODE_TYPE_IDENT,
-                                                 NULL,
-                                                 $3),
-                                         (void *)$2));
         }
         ;
 
