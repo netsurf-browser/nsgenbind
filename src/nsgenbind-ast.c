@@ -29,7 +29,7 @@ static FILE *genbind_parsetracef;
 extern int nsgenbind_debug;
 extern int nsgenbind__flex_debug;
 extern void nsgenbind_restart(FILE*);
-extern int nsgenbind_parse(struct genbind_node **genbind_ast);
+extern int nsgenbind_parse(char *filename, struct genbind_node **genbind_ast);
 
 /* terminal nodes have a value only */
 struct genbind_node {
@@ -515,12 +515,6 @@ FILE *genbindopen(const char *filename)
                         }
                         prevfilepath = strndup(filename,fulllen);
                 }
-#if 0
-                if (options->depfilehandle != NULL) {
-                        fprintf(options->depfilehandle, " \\\n\t%s",
-                                filename);
-                }
-#endif
                 return genfile;
         }
 
@@ -529,7 +523,7 @@ FILE *genbindopen(const char *filename)
                 fulllen = strlen(prevfilepath) + strlen(filename) + 2;
                 fullname = malloc(fulllen);
                 snprintf(fullname, fulllen, "%s/%s", prevfilepath, filename);
-                if (options->debug) {
+                if (options->verbose) {
                         printf("Attempting to open Genbind file %s\n", fullname);
                 }
                 genfile = fopen(fullname, "r");
@@ -537,12 +531,6 @@ FILE *genbindopen(const char *filename)
                         if (options->verbose) {
                                 printf("Opened Genbind file %s\n", fullname);
                         }
-#if 0
-                        if (options->depfilehandle != NULL) {
-                                fprintf(options->depfilehandle, " \\\n\t%s",
-                                        fullname);
-                        }
-#endif
                         free(fullname);
                         return genfile;
                 }
@@ -599,7 +587,7 @@ int genbind_parsefile(char *infilename, struct genbind_node **ast)
         nsgenbind_restart(infile);
 
         /* process binding */
-        ret = nsgenbind_parse(ast);
+        ret = nsgenbind_parse(infilename, ast);
 
         /* close tracefile if open */
         if (genbind_parsetracef != NULL) {

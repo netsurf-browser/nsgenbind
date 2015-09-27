@@ -15,9 +15,10 @@
 #include "nsgenbind-parser.h"
 #include "nsgenbind-ast.h"
 
-#define YY_USER_ACTION yylloc->first_line = yylloc->last_line; \
-    yylloc->first_column = yylloc->last_column + 1; \
-    yylloc->last_column += yyleng;
+#define YY_USER_ACTION                                             \
+        yylloc->first_line = yylloc->last_line = yylineno;         \
+        yylloc->first_column = yylloc->last_column + 1;            \
+        yylloc->last_column += yyleng;
 
 
 /* Ensure compatability with bison 2.6 and later */
@@ -28,6 +29,43 @@
 #if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED && defined NSGENBIND_LTYPE_IS_DECLARED
 #define YYLTYPE NSGENBIND_LTYPE
 #endif
+
+static struct YYLTYPE *locations = NULL;
+
+static struct YYLTYPE *push_location(struct YYLTYPE *head,
+                                     struct YYLTYPE *loc,
+                                     const char *filename)
+{
+        struct YYLTYPE *res;
+        res = calloc(1, sizeof(struct YYLTYPE));
+        /* copy current location and line number */
+        *res = *loc;
+        res->start_line = yylineno;
+        res->next = head;
+
+        /* reset current location */
+        loc->first_line = loc->last_line = 1;
+        loc->first_column = loc->last_column = 1;
+        loc->filename = strdup(filename);
+        yylineno = 1;
+
+        return res;
+}
+
+static struct YYLTYPE *pop_location(struct YYLTYPE *head, struct YYLTYPE *loc)
+{
+        struct YYLTYPE *res = NULL;
+
+        if (head != NULL) {
+                res = head->next;
+                *loc = *head;
+                free(head);
+
+                yylineno = loc->start_line;
+        }
+        return res;
+}
+
 
 %}
 
@@ -165,8 +203,10 @@ unsigned                return TOK_UNSIGNED;
                             fprintf(stderr, "Unable to open include %s\n", yytext);
                             exit(3);
                         }
-     			yypush_buffer_state(yy_create_buffer( yyin, YY_BUF_SIZE ));
-     
+
+                        locations = push_location(locations, yylloc, yytext);
+
+                        yypush_buffer_state(yy_create_buffer(yyin, YY_BUF_SIZE));
                         BEGIN(INITIAL);
                     }
 
@@ -178,9 +218,10 @@ unsigned                return TOK_UNSIGNED;
      			yypop_buffer_state();
      
                         if ( !YY_CURRENT_BUFFER ) {
-                            yyterminate();
+                                yyterminate();
                         } else {
-                            BEGIN(incl);
+                                locations = pop_location(locations, yylloc);
+                                BEGIN(incl);
                         }
 
                     }

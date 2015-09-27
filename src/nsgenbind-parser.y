@@ -1,4 +1,66 @@
-%{
+/* binding parser
+ *
+ * This file is part of nsgenbind.
+ * Licensed under the MIT License,
+ *                http://www.opensource.org/licenses/mit-license.php
+ * Copyright 2012 Vincent Sanders <vince@netsurf-browser.org>
+ */
+
+ /* bison prior to 2.4 cannot cope with %define api.pure so we use the
+  *  deprecated directive
+  */
+%pure-parser
+
+%locations
+
+%error-verbose
+ /* would use api.prefix but it needs to be different between bison
+  *  2.5 and 2.6
+  */
+
+%code requires {
+
+#define YYLTYPE YYLTYPE
+typedef struct YYLTYPE {
+        struct YYLTYPE *next;
+        int start_line;
+        char *filename;
+
+        int first_line;
+        int first_column;
+        int last_line;
+        int last_column;
+} YYLTYPE;
+
+
+#define YYLLOC_DEFAULT(Current, Rhs, N)                                \
+        do                                                             \
+                if (N) {                                               \
+          (Current).first_line   = YYRHSLOC (Rhs, 1).first_line;       \
+          (Current).first_column = YYRHSLOC (Rhs, 1).first_column;     \
+          (Current).last_line    = YYRHSLOC (Rhs, N).last_line;        \
+          (Current).last_column  = YYRHSLOC (Rhs, N).last_column;      \
+          (Current).filename     = YYRHSLOC (Rhs, 1).filename;         \
+          (Current).start_line   = YYRHSLOC (Rhs, 1).start_line;       \
+                } else { /* empty RHS */                               \
+          (Current).first_line   = (Current).last_line   =             \
+            YYRHSLOC (Rhs, 0).last_line;                               \
+          (Current).first_column = (Current).last_column =             \
+            YYRHSLOC (Rhs, 0).last_column;                             \
+          (Current).filename  = YYRHSLOC (Rhs, 0).filename;            \
+          (Current).start_line  = YYRHSLOC (Rhs, 0).start_line;        \
+                }                                                      \
+        while (0)
+
+}
+
+%initial-action {
+  yylloc.first_line   = yylloc.last_line   = 1;
+  yylloc.first_column = yylloc.last_column = 1;
+  yylloc.filename = filename;
+}
+
+%code {
 /* parser for the binding generation config file 
  *
  * This file is part of nsgenbind.
@@ -16,7 +78,6 @@
                   (Loc).first_line, (Loc).first_column,         \
                   (Loc).last_line,  (Loc).last_column)
 
-#include "nsgenbind-parser.h"
 #include "nsgenbind-lexer.h"
 #include "webidl-ast.h"
 #include "nsgenbind-ast.h"
@@ -24,12 +85,19 @@
 char *errtxt;
 
 static void nsgenbind_error(YYLTYPE *locp,
+                            char *filename,
                             struct genbind_node **genbind_ast,
                             const char *str)
 {
-        locp = locp;
+        int errlen;
+        errlen = snprintf(NULL, 0, "%s:%d:%s",
+                          locp->filename, locp->first_line, str);
+        errtxt = malloc(errlen + 1);
+        snprintf(errtxt, errlen + 1, "%s:%d:%s",
+                          locp->filename, locp->first_line, str);
+
         genbind_ast = genbind_ast;
-        errtxt = strdup(str);
+        filename = filename;
 }
 
 static struct genbind_node *
@@ -91,14 +159,9 @@ add_method(struct genbind_node **genbind_ast,
         return res_node;
 }
 
-%}
+}
 
-%locations
- /* bison prior to 2.4 cannot cope with %define api.pure so we use the
-  *  deprecated directive 
-  */
-%pure-parser
-%error-verbose
+%parse-param { char *filename }
 %parse-param { struct genbind_node **genbind_ast }
 
 %union
@@ -188,7 +251,7 @@ Statements:
         |
         error ';'
         {
-                fprintf(stderr, "%d: %s\n", yylloc.first_line, errtxt);
+                fprintf(stderr, "%s\n", errtxt);
                 free(errtxt);
                 YYABORT ;
         }
