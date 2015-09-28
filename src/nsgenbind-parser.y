@@ -55,9 +55,9 @@ typedef struct YYLTYPE {
 }
 
 %initial-action {
-  yylloc.first_line   = yylloc.last_line   = 1;
-  yylloc.first_column = yylloc.last_column = 1;
-  yylloc.filename = filename;
+        yylloc.first_line   = yylloc.last_line   = 1;
+        yylloc.first_column = yylloc.last_column = 1;
+        yylloc.filename = filename;
 }
 
 %code {
@@ -105,7 +105,7 @@ add_method(struct genbind_node **genbind_ast,
            long methodtype,
            struct genbind_node *declarator,
            char *cdata,
-           int lineno,
+           long lineno,
            char *filename)
 {
         struct genbind_node *res_node;
@@ -133,7 +133,6 @@ add_method(struct genbind_node **genbind_ast,
                                               declarator,
                                               cdata);
         }
-
 
         location_node = genbind_new_node(GENBIND_NODE_TYPE_FILE,
                                 genbind_new_node(GENBIND_NODE_TYPE_LINE,
@@ -522,6 +521,11 @@ Class:
         ;
 
 ClassArgs:
+        /* empty */
+        {
+                $$ = NULL;
+        }
+        |
         ClassArg
         |
         ClassArgs ClassArg

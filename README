@@ -118,7 +118,7 @@ The binding file consists of three types of element:
            but without at least one the binding is not very useful as
            it will generate no output.
 
-       preface
+      preface
 
           This takes a cdata block. There may only be one of these per
            binding, subsequent directives will be ignored.
@@ -159,6 +159,10 @@ The binding file consists of three types of element:
       The class controls the generation of source for an IDL interface
        private member variables are declared here and header and
        footer elements specific to this class.
+
+      Although not generally useful, because methods that reference a
+       class cause it to be implicitly created, empty definitions are
+       permitted.
 
       private
 
@@ -218,6 +222,54 @@ The binding file consists of three types of element:
       Note: the class names must match the IDL interface names in the
        binding but they will almost certainly have to be translated
        into more suitable class names for generated output.
+
+
+      preface
+
+          The declarator for this method type need only identify the
+           class (an identifier may be provided but will be ignored).
+
+          This takes a cdata block. There may only be one of these per
+           class, subsequent directives will be ignored.
+
+          The preface is emitted in every generated source file after
+           the binding preface and tool preamble.
+
+
+      prologue
+
+          The declarator for this method type need only identify the
+           class (an identifier may be provided but will be ignored).
+
+          This takes a cdata block. There may only be one of these per
+           class, subsequent directives will be ignored.
+
+          The prologue is emitted in every generated source file after
+           the binding prologue has been generated.
+
+
+      epilogue
+
+          The declarator for this method type need only identify the
+           class (an identifier may be provided but will be ignored).
+
+          This takes a cdata block. There may only be one of these per
+           class, subsequent directives will be ignored.
+
+          The epilogue is emitted after the generated code and before
+           the binding epilogue
+
+
+      postface
+
+          The declarator for this method type need only identify the
+           class (an identifier may be provided but will be ignored).
+
+          This takes a cdata block. There may only be one of these per
+           class, subsequent directives will be ignored.
+
+          The postface is emitted after the binding epilogue.
+
 
       init
 

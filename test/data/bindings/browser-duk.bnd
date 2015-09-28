@@ -39,6 +39,10 @@ binding duk_libdom {
 		%};	
 };
 
+class empty_class {
+};
+
+
 #include "HTMLUnknownElement.bnd"
 
 /* specialisations of html_element */
