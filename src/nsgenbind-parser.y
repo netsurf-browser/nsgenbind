@@ -104,12 +104,15 @@ static struct genbind_node *
 add_method(struct genbind_node **genbind_ast,
            long methodtype,
            struct genbind_node *declarator,
-           char *cdata)
+           char *cdata,
+           int lineno,
+           char *filename)
 {
         struct genbind_node *res_node;
         struct genbind_node *method_node;
         struct genbind_node *class_node;
         struct genbind_node *cdata_node;
+        struct genbind_node *location_node;
         char *class_name;
 
         /* extract the class name from the declarator */
@@ -131,11 +134,18 @@ add_method(struct genbind_node **genbind_ast,
                                               cdata);
         }
 
+
+        location_node = genbind_new_node(GENBIND_NODE_TYPE_FILE,
+                                genbind_new_node(GENBIND_NODE_TYPE_LINE,
+                                                 cdata_node,
+                                                 (void *)lineno),
+                                         strdup(filename));
+
         /* generate method node */
         method_node = genbind_new_node(GENBIND_NODE_TYPE_METHOD,
                                  NULL,
                                  genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
-                                                  cdata_node,
+                                                  location_node,
                                                   (void *)methodtype));
 
         class_node = genbind_node_find_type_ident(*genbind_ast,
@@ -396,12 +406,12 @@ ParameterList:
 Method:
         MethodType MethodDeclarator CBlock
         {
-                $$ = add_method(genbind_ast, $1, $2, $3);
+                $$ = add_method(genbind_ast, $1, $2, $3, @1.first_line, @1.filename);
         }
         |
         MethodType MethodDeclarator ';'
         {
-                $$ = add_method(genbind_ast, $1, $2, NULL);
+                $$ = add_method(genbind_ast, $1, $2, NULL, @1.first_line, @1.filename);
         }
         ;
 

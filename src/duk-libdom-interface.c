@@ -517,7 +517,7 @@ output_interface_init(FILE* outf,
         }
 
         /* output the initaliser code from the binding */
-        output_cdata(outf, init_node, GENBIND_NODE_TYPE_CDATA);
+        output_ccode(outf, init_node);
 
         fprintf(outf, "}\n\n");
 
@@ -1157,10 +1157,7 @@ output_interface_operation(FILE* outf,
 
         output_get_method_private(outf, interfacee->class_name);
 
-        cdatac = output_cdata(outf,
-                              operatione->method,
-                              GENBIND_NODE_TYPE_CDATA);
-
+        cdatac = output_ccode(outf, operatione->method);
         if (cdatac == 0) {
                 /* no implementation so generate default */
                 WARN(WARNING_UNIMPLEMENTED,
@@ -1214,8 +1211,7 @@ output_interface_attribute(FILE* outf,
 
         output_get_method_private(outf, interfacee->class_name);
 
-        cdatac = output_cdata(outf, atributee->getter, GENBIND_NODE_TYPE_CDATA);
-
+        cdatac = output_ccode(outf, atributee->getter);
         if (cdatac == 0) {
                 WARN(WARNING_UNIMPLEMENTED,
                      "Unimplemented: getter %s::%s();",
@@ -1240,8 +1236,7 @@ output_interface_attribute(FILE* outf,
 
         output_get_method_private(outf, interfacee->class_name);
 
-        cdatac = output_cdata(outf, atributee->setter, GENBIND_NODE_TYPE_CDATA);
-
+        cdatac = output_ccode(outf, atributee->setter);
         if (cdatac == 0) {
                 WARN(WARNING_UNIMPLEMENTED,
                      "Unimplemented: setter %s::%s();",
@@ -1250,7 +1245,6 @@ output_interface_attribute(FILE* outf,
                 /* no implementation so generate default */
                 fprintf(outf,"\treturn 0;\n");
         }
-
 
         fprintf(outf, "}\n\n");
 

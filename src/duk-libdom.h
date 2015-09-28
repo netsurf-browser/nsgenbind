@@ -56,6 +56,19 @@ int output_tool_prologue(FILE* outf);
  */
 int output_cdata(FILE* outf, struct genbind_node *node, enum genbind_node_type nodetype);
 
+
+/**
+ * output c code with line directives if possible.
+ *
+ * used for any cdata sections
+ *
+ * \param outf The file handle to write output.
+ * \param node The node to search.
+ * \param nodetype the type of child node to search for.
+ * \return The number of nodes written or 0 for none.
+ */
+int output_ccode(FILE* outf, struct genbind_node *node);
+
 /**
  * output character data of method node of given type.
  *

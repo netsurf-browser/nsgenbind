@@ -16,6 +16,8 @@ enum genbind_node_type {
         GENBIND_NODE_TYPE_MODIFIER, /**< node modifier */
         GENBIND_NODE_TYPE_CDATA, /**< verbatim block of character data */
         GENBIND_NODE_TYPE_STRING, /**< text string */
+        GENBIND_NODE_TYPE_LINE, /**< linenumber */
+        GENBIND_NODE_TYPE_FILE, /**< file name */
 
         GENBIND_NODE_TYPE_BINDING, /**< Binding */
         GENBIND_NODE_TYPE_WEBIDL,
@@ -28,6 +30,7 @@ enum genbind_node_type {
 
         GENBIND_NODE_TYPE_METHOD, /**< binding method */
         GENBIND_NODE_TYPE_METHOD_TYPE, /**< binding method type */
+
         GENBIND_NODE_TYPE_PARAMETER, /**< method parameter */
 };
 

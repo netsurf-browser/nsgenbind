@@ -58,6 +58,29 @@ int output_cdata(FILE* outf,
 }
 
 /* exported interface documented in duk-libdom.h */
+int output_ccode(FILE* outf, struct genbind_node *node)
+{
+        int *line;
+        char *filename;
+
+        line = genbind_node_getint(
+                genbind_node_find_type(
+                        genbind_node_getnode(node),
+                        NULL, GENBIND_NODE_TYPE_LINE));
+
+        filename = genbind_node_gettext(
+                genbind_node_find_type(
+                        genbind_node_getnode(node),
+                        NULL, GENBIND_NODE_TYPE_FILE));
+
+        if ((line != NULL) && (filename != NULL)) {
+                fprintf(outf, "#line %d \"%s\"\n", *line, filename);
+        }
+
+        return output_cdata(outf, node, GENBIND_NODE_TYPE_CDATA);
+}
+
+/* exported interface documented in duk-libdom.h */
 int output_tool_prologue(FILE* outf)
 {
         char *fpath;

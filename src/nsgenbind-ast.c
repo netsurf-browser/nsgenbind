@@ -341,6 +341,7 @@ char *genbind_node_gettext(struct genbind_node *node)
                 case GENBIND_NODE_TYPE_IDENT:
                 case GENBIND_NODE_TYPE_NAME:
                 case GENBIND_NODE_TYPE_CDATA:
+                case GENBIND_NODE_TYPE_FILE:
                         return node->r.text;
 
                 default:
@@ -377,6 +378,7 @@ int *genbind_node_getint(struct genbind_node *node)
         if (node != NULL) {
                 switch(node->type) {
                 case GENBIND_NODE_TYPE_METHOD_TYPE:
+                case GENBIND_NODE_TYPE_LINE:
                 case GENBIND_NODE_TYPE_MODIFIER:
                         return &node->r.number;
 
@@ -407,6 +409,12 @@ static const char *genbind_node_type_to_str(enum genbind_node_type type)
 
         case GENBIND_NODE_TYPE_NAME:
                 return "TypeName";
+
+        case GENBIND_NODE_TYPE_LINE:
+                return "Linenumber";
+
+        case GENBIND_NODE_TYPE_FILE:
+                return "Filename";
 
         case GENBIND_NODE_TYPE_PRIVATE:
                 return "Private";
