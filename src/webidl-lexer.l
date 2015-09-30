@@ -215,6 +215,10 @@ legacyiterable      return TOK_LEGACYITERABLE;
 
 required            return TOK_REQUIRED;
 
+Constructor         return TOK_CONSTRUCTOR;
+
+NamedConstructor    return TOK_NAMEDCONSTRUCTOR;
+
 {identifier}        {
                         /* A leading "_" is used to escape an identifier from 
                          *   looking like a reserved word terminal. */

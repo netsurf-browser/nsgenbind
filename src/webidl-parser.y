@@ -67,6 +67,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_BYTE
 %token TOK_CALLBACK
 %token TOK_CONST
+%token TOK_CONSTRUCTOR
 %token TOK_CREATOR
 %token TOK_DATE
 %token TOK_DELETER
@@ -92,6 +93,7 @@ webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 %token TOK_MODULE
 %token TOK_NAN
 %token TOK_NATIVE
+%token TOK_NAMEDCONSTRUCTOR
 %token TOK_NULL_LITERAL
 %token TOK_OBJECT
 %token TOK_OCTET
@@ -580,12 +582,12 @@ PartialDictionary:
 Default:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         '=' DefaultValue
         {
-            $$ = $2;
+                $$ = $2;
         }
         ;
 
@@ -619,12 +621,12 @@ ExceptionMembers:
 Inheritance:
         /* empty */
         {
-          $$ = NULL;
+                $$ = NULL;
         }
         |
         ':' TOK_IDENTIFIER
         {
-          $$ = $2;
+                $$ = $2;
         }
         ;
 
@@ -632,7 +634,7 @@ Inheritance:
 Enum:
         TOK_ENUM TOK_IDENTIFIER '{' EnumValueList '}' ';'
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         ;
 
@@ -662,7 +664,7 @@ EnumValueListString:
 CallbackRest:
         TOK_IDENTIFIER '=' ReturnType '(' ArgumentList ')' ';'
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         ;
 
@@ -670,7 +672,7 @@ CallbackRest:
 Typedef:
         TOK_TYPEDEF ExtendedAttributeList Type TOK_IDENTIFIER ';'
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         ;
 
@@ -732,12 +734,14 @@ ConstValue:
         |
         TOK_INT_LITERAL
         {
-          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_INT, NULL, (void *)$1);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_INT,
+                                     NULL,
+                                     (void *)$1);
         }
         |
         TOK_NULL_LITERAL
         {
-          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_NULL, NULL, NULL);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_NULL, NULL, NULL);
         }
         ;
 
@@ -745,12 +749,16 @@ ConstValue:
 BooleanLiteral:
         TOK_TRUE
         {
-          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_BOOL, NULL, (void *)true);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_BOOL,
+                                     NULL,
+                                     (void *)true);
         }
         |
         TOK_FALSE
         {
-          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_BOOL, NULL, (void *)false);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_BOOL,
+                                     NULL,
+                                     (void *)false);
         }
         ;
 
@@ -758,34 +766,42 @@ BooleanLiteral:
 FloatLiteral:
         TOK_FLOAT_LITERAL
         {
-          float *value;
-          value = malloc(sizeof(float));
-          *value = strtof($1, NULL);
-          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT, NULL, value);
+                float *value;
+                value = malloc(sizeof(float));
+                *value = strtof($1, NULL);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT,
+                                     NULL,
+                                     value);
         }
         |
         '-' TOK_INFINITY
         {
-          float *value;
-          value = malloc(sizeof(float));
-          *value = -INFINITY;
-          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT, NULL, value);
+                float *value;
+                value = malloc(sizeof(float));
+                *value = -INFINITY;
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT,
+                                     NULL,
+                                     value);
         }
         |
         TOK_INFINITY
         {
-          float *value;
-          value = malloc(sizeof(float));
-          *value = INFINITY;
-          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT, NULL, value);
+                float *value;
+                value = malloc(sizeof(float));
+                *value = INFINITY;
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT,
+                                     NULL,
+                                     value);
         }
         |
         TOK_NAN
         {
-          float *value;
-          value = malloc(sizeof(float));
-          *value = NAN;
-          $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT, NULL, value);
+                float *value;
+                value = malloc(sizeof(float));
+                *value = NAN;
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LITERAL_FLOAT,
+                                     NULL,
+                                     value);
         }
         ;
 
@@ -793,7 +809,7 @@ FloatLiteral:
 AttributeOrOperation:
         TOK_STRINGIFIER StringifierAttributeOrOperation
         {
-            $$ = $2;
+                $$ = $2;
         }
         |
         Attribute
@@ -807,13 +823,13 @@ StringifierAttributeOrOperation:
         |
         OperationRest
         {
-            /* @todo deal with stringifier */
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $1);
+                /* @todo deal with stringifier */
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION, NULL, $1);
         }
         |
         ';'
         {
-          $$=NULL;
+                $$=NULL;
         }
         ;
 
@@ -915,7 +931,7 @@ AttributeName:
 AttributeNameKeyword:
         TOK_REQUIRED
         {
-            $$ = strdup("required");
+                $$ = strdup("required");
         }
 
 /* [33]
@@ -924,12 +940,12 @@ AttributeNameKeyword:
 Inherit:
         /* empty */
         {
-            $$ = false;
+                $$ = false;
         }
         |
         TOK_INHERIT
         {
-            $$ = true;
+                $$ = true;
         }
         ;
 
@@ -940,12 +956,12 @@ Inherit:
 ReadOnly:
         /* empty */
         {
-            $$ = false;
+                $$ = false;
         }
         |
         TOK_READONLY
         {
-            $$ = true;
+                $$ = true;
         }
         ;
 
@@ -999,34 +1015,39 @@ Special:
         TOK_GETTER
         {
                 $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
-                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_GETTER);
+                                     NULL,
+                                     (void *)WEBIDL_TYPE_SPECIAL_GETTER);
         }
         |
         TOK_SETTER
         {
                 $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
-                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_SETTER);
+                                     NULL,
+                                     (void *)WEBIDL_TYPE_SPECIAL_SETTER);
         }
         |
         TOK_CREATOR
         {
-                /* second edition removed this special but teh
-                   specifications still use it!
-                */
+                /* second edition removed this special but the
+                 * specifications still use it!
+                 */
                 $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
-                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_CREATOR);
+                                     NULL,
+                                     (void *)WEBIDL_TYPE_SPECIAL_CREATOR);
         }
         |
         TOK_DELETER
         {
                 $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
-                                     NULL, (void *)WEBIDL_TYPE_SPECIAL_DELETER);
+                                     NULL,
+                                     (void *)WEBIDL_TYPE_SPECIAL_DELETER);
         }
         |
         TOK_LEGACYCALLER
         {
                 $$ = webidl_node_new(WEBIDL_NODE_TYPE_SPECIAL,
-                                NULL, (void *)WEBIDL_TYPE_SPECIAL_LEGACYCALLER);
+                                     NULL,
+                                     (void *)WEBIDL_TYPE_SPECIAL_LEGACYCALLER);
         }
         ;
 
@@ -1034,10 +1055,10 @@ Special:
 OperationRest:
         OptionalIdentifier '(' ArgumentList ')' ';'
         {
-            /* argument list */
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, $3);
+                /* argument list */
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_LIST, NULL, $3);
 
-            $$ = webidl_node_prepend($1, $$); /* identifier */
+                $$ = webidl_node_prepend($1, $$); /* identifier */
         }
         ;
 
@@ -1045,12 +1066,12 @@ OperationRest:
 OptionalIdentifier:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         TOK_IDENTIFIER
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $1);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $1);
         }
         ;
 
@@ -1061,12 +1082,12 @@ OptionalIdentifier:
 ArgumentList:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         Argument Arguments
         {
-            $$ = webidl_node_append($2, $1);
+                $$ = webidl_node_append($2, $1);
         }
         ;
 
@@ -1074,12 +1095,12 @@ ArgumentList:
 Arguments:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         ',' Argument Arguments
         {
-            $$ = webidl_node_append($3, $2);
+                $$ = webidl_node_append($3, $2);
         }
         ;
 
@@ -1088,7 +1109,7 @@ Arguments:
 Argument:
         ExtendedAttributeList OptionalOrRequiredArgument
         {
-            $$ = $2;
+                $$ = $2;
         }
         ;
 
@@ -1124,12 +1145,12 @@ ArgumentName:
 Ellipsis:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         TOK_ELLIPSIS
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_ELLIPSIS, NULL, NULL);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_ELLIPSIS, NULL, NULL);
         }
         ;
 
@@ -1137,12 +1158,12 @@ Ellipsis:
 Iterable:
         TOK_ITERABLE '<' Type OptionalType '>' ';'
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         TOK_LEGACYITERABLE '<' Type '>' ';'
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         ;
 
@@ -1150,12 +1171,12 @@ Iterable:
 OptionalType:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         ',' Type
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         ;
 
@@ -1175,12 +1196,14 @@ ExceptionField:
 ExtendedAttributeList:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         '[' ExtendedAttribute ExtendedAttributes ']'
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE, $3, $2);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+                                     $3,
+                                     $2);
         }
         ;
 
@@ -1188,12 +1211,14 @@ ExtendedAttributeList:
 ExtendedAttributes:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         ',' ExtendedAttribute ExtendedAttributes
         {
-            $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE, $3, $2);
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+                                     $3,
+                                     $2);
         }
         ;
 
@@ -1218,10 +1243,46 @@ ExtendedAttribute:
             $$ = webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE, $4, $2);
         }
         |
+        TOK_CONSTRUCTOR
+        {
+                /* Constructor */
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                     NULL,
+                                     strdup("Constructor"));
+        }
+        |
+        TOK_CONSTRUCTOR '(' ArgumentList ')'
+        {
+                /* Constructor */
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION,
+                                     webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                                     NULL,
+                                                     strdup("Constructor")),
+                                     webidl_node_new(WEBIDL_NODE_TYPE_LIST,
+                                                     NULL,
+                                                     $3));
+        }
+        |
+        TOK_NAMEDCONSTRUCTOR '=' TOK_IDENTIFIER '(' ArgumentList ')'
+        {
+                /* Constructor */
+                $$ = webidl_node_new(WEBIDL_NODE_TYPE_OPERATION,
+                                     webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                                     NULL,
+                                                     strdup("NamedConstructor")),
+                                     webidl_node_new(WEBIDL_NODE_TYPE_LIST,
+                                                     webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                                                     NULL,
+                                                                     $3),
+                                                     $5));
+        }
+        |
         Other ExtendedAttributeRest
         {
-            $$ = webidl_node_append($2,
-                             webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $1));
+                $$ = webidl_node_append($2,
+                                        webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                                        NULL,
+                                                        $1));
         }
         ;
 
@@ -1229,12 +1290,12 @@ ExtendedAttribute:
 ExtendedAttributeRest:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         ExtendedAttribute
         {
-            $$ = $1;
+                $$ = $1;
         }
         ;
 
@@ -1242,16 +1303,16 @@ ExtendedAttributeRest:
 ExtendedAttributeInner:
         /* empty */
         {
-            $$ = NULL;
+                $$ = NULL;
         }
         |
         '(' ExtendedAttributeInner ')' ExtendedAttributeInner
         {
-            $$ = webidl_node_prepend(
-                     webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
-                                     NULL,
-                                     $2),
-                     $4);
+                $$ = webidl_node_prepend(
+                        webidl_node_new(WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE,
+                                        NULL,
+                                        $2),
+                        $4);
         }
         |
         '[' ExtendedAttributeInner ']' ExtendedAttributeInner
@@ -1276,8 +1337,10 @@ ExtendedAttributeInner:
         |
         OtherOrComma ExtendedAttributeInner
         {
-            $$ = webidl_node_append($2,
-                             webidl_node_new(WEBIDL_NODE_TYPE_IDENT, NULL, $1));
+                $$ = webidl_node_append($2,
+                                        webidl_node_new(WEBIDL_NODE_TYPE_IDENT,
+                                                        NULL,
+                                                        $1));
         }
         ;
 
@@ -1285,119 +1348,119 @@ ExtendedAttributeInner:
 Other:
         TOK_INT_LITERAL
         {
-            /* @todo loosing base info here might break the attribute */
-            $$ = calloc(1, 32);
-            snprintf($$, 32, "%ld", $1);
+                /* @todo loosing base info here might break the attribute */
+                $$ = calloc(1, 32);
+                snprintf($$, 32, "%ld", $1);
         }
         |
         TOK_FLOAT_LITERAL
         {
-            $$ = $1;
+                $$ = $1;
         }
         |
         TOK_IDENTIFIER
         {
-            $$ = $1;
+                $$ = $1;
         }
         |
         TOK_STRING_LITERAL
         {
-            $$ = $1;
+                $$ = $1;
         }
         |
         TOK_OTHER_LITERAL
         {
-            $$ = $1;
+                $$ = $1;
         }
         |
         '-'
         {
-            $$ = strdup("-");
+                $$ = strdup("-");
         }
         |
         '.'
         {
-            $$ = strdup(".");
+                $$ = strdup(".");
         }
         |
         TOK_ELLIPSIS
         {
-            $$ = strdup("...");
+                $$ = strdup("...");
         }
         |
         ':'
         {
-            $$ = strdup(":");
+                $$ = strdup(":");
         }
         |
         ';'
         {
-            $$ = strdup(";");
+                $$ = strdup(";");
         }
         |
         '<'
         {
-            $$ = strdup("<");
+                $$ = strdup("<");
         }
         |
         '='
         {
-            $$ = strdup("=");
+                $$ = strdup("=");
         }
         |
         '>'
         {
-            $$ = strdup(">");
+                $$ = strdup(">");
         }
         |
         '?'
         {
-            $$ = strdup("?");
+                $$ = strdup("?");
         }
         |
         TOK_DATE
         {
-            $$ = strdup("Date");
+                $$ = strdup("Date");
         }
         |
         TOK_STRING
         {
-            $$ = strdup("DOMString");
+                $$ = strdup("DOMString");
         }
         |
         TOK_INFINITY
         {
-            $$ = strdup("Infinity");
+                $$ = strdup("Infinity");
         }
         |
         TOK_NAN
         {
-            $$ = strdup("NaN");
+                $$ = strdup("NaN");
         }
         |
         TOK_ANY
         {
-            $$ = strdup("any");
+                $$ = strdup("any");
         }
         |
         TOK_BOOLEAN
         {
-            $$ = strdup("boolean");
+                $$ = strdup("boolean");
         }
         |
         TOK_BYTE
         {
-            $$ = strdup("byte");
+                $$ = strdup("byte");
         }
         |
         TOK_DOUBLE
         {
-            $$ = strdup("double");
+                $$ = strdup("double");
         }
         |
         TOK_FALSE
         {
-            $$ = strdup("false");
+                $$ = strdup("false");
         }
         |
         TOK_FLOAT
