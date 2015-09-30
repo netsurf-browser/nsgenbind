@@ -267,7 +267,7 @@ output_member_acessor(FILE* outf,
 
         default:
                 WARN(WARNING_UNIMPLEMENTED,
-                        "Dictionary %s:%s unhandled type (%d)\n",
+                        "Dictionary %s:%s unhandled type (%d)",
                         dictionarye->name,
                         membere->name,
                         *argument_type);

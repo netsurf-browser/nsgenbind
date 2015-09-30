@@ -53,6 +53,8 @@ struct ir_attribute_entry {
         struct webidl_node *node; /**< AST attribute node */
 
         enum webidl_type_modifier modifier;
+        const char *putforwards;
+
         struct genbind_node *getter; /**< getter from binding */
         struct genbind_node *setter; /**< getter from binding */
 };

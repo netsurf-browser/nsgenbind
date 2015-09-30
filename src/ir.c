@@ -377,6 +377,56 @@ operation_map_new(struct webidl_node *interface,
         return 0;
 }
 
+/**
+ * get the value of an extended attribute key/value item
+ */
+static char *
+get_extended_value(struct webidl_node *node, const char *key)
+{
+        char *ident;
+        struct webidl_node *ext_attr;
+        struct webidl_node *elem;
+
+        /* walk each extended attribute */
+        ext_attr = webidl_node_find_type(
+                webidl_node_getnode(node),
+                NULL,
+                WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE);
+        while (ext_attr != NULL) {
+
+                elem = webidl_node_find_type(
+                        webidl_node_getnode(ext_attr),
+                        NULL,
+                        WEBIDL_NODE_TYPE_IDENT);
+                ident = webidl_node_gettext(elem);
+
+                if ((ident != NULL) && (strcmp(ident, key) == 0)) {
+                        /* first identifier matches */
+
+                        elem = webidl_node_find_type(
+                                webidl_node_getnode(ext_attr),
+                                elem,
+                                WEBIDL_NODE_TYPE_IDENT);
+                        ident = webidl_node_gettext(elem);
+
+                        if ((ident != NULL) && (*ident == '=')) {
+                                return webidl_node_gettext(
+                                        webidl_node_find_type(
+                                                webidl_node_getnode(ext_attr),
+                                                elem,
+                                                WEBIDL_NODE_TYPE_IDENT));
+                        }
+                }
+
+                ext_attr = webidl_node_find_type(
+                        webidl_node_getnode(node),
+                        ext_attr,
+                        WEBIDL_NODE_TYPE_EXTENDED_ATTRIBUTE);
+        }
+
+        return NULL;
+}
+
 static int
 attribute_map_new(struct webidl_node *interface,
                   struct genbind_node *class,
@@ -399,8 +449,7 @@ attribute_map_new(struct webidl_node *interface,
                 return 0;
         }
 
-        attributev = calloc(attributec,
-                            sizeof(struct ir_attribute_entry));
+        attributev = calloc(attributec, sizeof(struct ir_attribute_entry));
         if (attributev == NULL) {
                 return -1;
         };
@@ -436,7 +485,7 @@ attribute_map_new(struct webidl_node *interface,
                                                GENBIND_METHOD_TYPE_GETTER,
                                                cure->name);
 
-                        /* check fo readonly attributes */
+                        /* check for readonly attributes */
                         modifier = (enum webidl_type_modifier *)webidl_node_getint(
                                 webidl_node_find_type(
                                         webidl_node_getnode(at_node),
@@ -454,9 +503,20 @@ attribute_map_new(struct webidl_node *interface,
                                                      cure->name);
                         }
 
-                        cure++;
+                        /* check for putforwards extended attribute */
+                        cure->putforwards = get_extended_value(at_node,
+                                                               "PutForwards");
+
+                        if ((cure->putforwards != NULL) &&
+                            (cure->modifier != WEBIDL_TYPE_MODIFIER_READONLY)) {
+                                WARN(WARNING_WEBIDL,
+                                     "putforwards on a writable attribute (%s) is prohibited",
+                                     cure->name);
+                        }
 
                         /* move to next attribute */
+                        cure++;
+
                         at_node = webidl_node_find_type(
                                 webidl_node_getnode(list_node),
                                 at_node,
