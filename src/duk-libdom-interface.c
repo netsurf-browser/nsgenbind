@@ -822,10 +822,7 @@ output_interface_elipsis_operation(FILE* outf,
 
         output_get_method_private(outf, interfacee->class_name);
 
-        cdatac = output_cdata(outf,
-                              operatione->method,
-                              GENBIND_NODE_TYPE_CDATA);
-
+        cdatac = output_ccode(outf, operatione->method);
         if (cdatac == 0) {
                 /* no implementation so generate default */
                 WARN(WARNING_UNIMPLEMENTED,
