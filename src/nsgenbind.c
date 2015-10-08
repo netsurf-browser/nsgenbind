@@ -70,9 +70,12 @@ static struct options* process_cmdline(int argc, char **argv)
                                 options->warnings |= WARNING_UNIMPLEMENTED;
                         } else if (strcmp(optarg, "duplicated") == 0) {
                                 options->warnings |= WARNING_DUPLICATED;
+                        } else if (strcmp(optarg, "generated") == 0) {
+                                options->warnings |= WARNING_GENERATED;
                         } else {
                                 fprintf(stderr,
-                                        "Unknown warning option \"%s\" valid options are: all, unimplemented\n",
+                                        "Unknown warning option \"%s\" valid options are: all, unimplemented,\n"
+                                        "                                                 duplicated, generated\n",
                                         optarg);
                                 free(options);
                                 return NULL;
