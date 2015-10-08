@@ -49,70 +49,7 @@ static char *get_prototype_name(const char *interface_name)
 }
 
 
-/**
- * Generate a C class name for the interface.
- *
- * The IDL interface names are camelcase and not similar to libdom naming so it
- *  is necessary to convert them to a libdom compatible class name. This
- *  implementation is simple ASCII capable only and cannot cope with multibyte
- *  codepoints.
- *
- * The algorithm is:
- *  - copy characters to output lowering their case
- *  - if the previous character in the input name was uppercase and the current
- *    one is lowercase insert an underscore before the *previous* character.
- */
-static char *gen_class_name(struct ir_entry *interfacee)
-{
-        const char *inc;
-        char *outc;
-        char *name;
-        int wasupper;
 
-        /* enpty strings are a bad idea */
-        if ((interfacee->name == NULL) ||
-            (interfacee->name[0] == 0)) {
-                return NULL;
-        }
-
-        /* allocate result buffer as twice the input length as thats the
-         * absolute worst case.
-         */
-        name = calloc(2, strlen(interfacee->name));
-
-        outc = name;
-        inc = interfacee->name;
-        wasupper = 0;
-
-        /* first character handled separately as inserting a leading underscore
-         * is undesirable
-         */
-        *outc++ = tolower(*inc++);
-        /* copy input to output */
-        while (*inc != 0) {
-                /* ugly hack as html IDL is always prefixed uppercase and needs
-                 * an underscore there
-                 */
-                if ((inc == (interfacee->name + 4)) &&
-                    (interfacee->name[0] == 'H') &&
-                    (interfacee->name[1] == 'T') &&
-                    (interfacee->name[2] == 'M') &&
-                    (interfacee->name[3] == 'L') &&
-                    (islower(inc[1]) == 0)) {
-                        *outc++ = '_';
-                }
-                if ((islower(*inc) != 0) && (wasupper != 0)) {
-                        *outc = *(outc - 1);
-                        *(outc - 1) = '_';
-                        outc++;
-                        wasupper = 0;
-                } else {
-                        wasupper = isupper(*inc);
-                }
-                *outc++ = tolower(*inc++);
-        }
-        return name;
-}
 
 
 static FILE *open_header(struct ir *ir, const char *name)
@@ -641,7 +578,7 @@ int duk_libdom_output(struct ir *ir)
                 irentry = ir->entries + idx;
 
                 /* compute class name */
-                irentry->class_name = gen_class_name(irentry);
+                irentry->class_name = gen_idl2c_name(irentry->name);
 
                 if (irentry->class_name != NULL) {
                         int ifacenamelen;

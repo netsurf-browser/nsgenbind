@@ -170,3 +170,56 @@ int output_method_cdata(FILE* outf,
 
         return 0;
 }
+
+/* exported interface documented in duk-libdom.h */
+char *gen_idl2c_name(const char *idlname)
+{
+        const char *inc;
+        char *outc;
+        char *name;
+        int wasupper;
+
+        /* enpty strings are a bad idea */
+        if ((idlname == NULL) || (idlname[0] == 0)) {
+                return NULL;
+        }
+
+        /* allocate result buffer as twice the input length as thats the
+         * absolute worst case.
+         */
+        name = calloc(2, strlen(idlname));
+
+        outc = name;
+        inc = idlname;
+        wasupper = 0;
+
+        /* first character handled separately as inserting a leading underscore
+         * is undesirable
+         */
+        *outc++ = tolower(*inc++);
+
+        /* copy input to output */
+        while (*inc != 0) {
+                /* ugly hack as html IDL is always prefixed uppercase and needs
+                 * an underscore there
+                 */
+                if ((inc == (idlname + 4)) &&
+                    (idlname[0] == 'H') &&
+                    (idlname[1] == 'T') &&
+                    (idlname[2] == 'M') &&
+                    (idlname[3] == 'L') &&
+                    (islower(inc[1]) == 0)) {
+                        *outc++ = '_';
+                }
+                if ((islower(*inc) != 0) && (wasupper != 0)) {
+                        *outc = *(outc - 1);
+                        *(outc - 1) = '_';
+                        outc++;
+                        wasupper = 0;
+                } else {
+                        wasupper = isupper(*inc);
+                }
+                *outc++ = tolower(*inc++);
+        }
+        return name;
+}

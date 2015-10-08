@@ -96,4 +96,19 @@ int output_method_cdata(FILE* outf, struct genbind_node *node, enum genbind_meth
  */
 int output_ctype(FILE *outf, struct genbind_node *node, bool identifier);
 
+/**
+ * Generate a C name from an IDL name.
+ *
+ * The IDL interface names are camelcase and not similar to libdom naming so it
+ *  is necessary to convert them to a libdom compatible class name. This
+ *  implementation is simple ASCII capable only and cannot cope with multibyte
+ *  codepoints.
+ *
+ * The algorithm is:
+ *  - copy characters to output lowering their case
+ *  - if the previous character in the input name was uppercase and the current
+ *    one is lowercase insert an underscore before the *previous* character.
+ */
+char *gen_idl2c_name(const char *idlname);
+
 #endif
