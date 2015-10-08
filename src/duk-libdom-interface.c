@@ -1193,34 +1193,181 @@ output_interface_operations(FILE* outf, struct ir_entry *ife)
 
 
 /**
- * Generate class property setter for a single attribute
+ * Generate class property getter for a single attribute
  */
 static int
-output_attribute_setter(FILE* outf,
+output_generated_attribute_getter(FILE* outf,
+                                  struct ir_entry *interfacee,
+                                  struct ir_attribute_entry *atributee)
+{
+        switch (atributee->base_type) {
+        case WEBIDL_TYPE_STRING:
+                fprintf(outf,
+                        "\tdom_exception exc;\n"
+                        "\tdom_string *str;\n"
+                        "\n");
+                fprintf(outf,
+                        "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &str);\n",
+                        interfacee->class_name,
+                        atributee->property_name,
+                        interfacee->class_name);
+                fprintf(outf,
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n"
+                        "\tduk_push_lstring(ctx,\n"
+                        "\t\tdom_string_data(str),\n"
+                        "\t\tdom_string_length(str));\n"
+                        "\tdom_string_unref(str);\n"
+                        "\n"
+                        "\treturn 1;\n");
+                break;
+
+        case WEBIDL_TYPE_BOOL:
+                fprintf(outf,
+                        "\tdom_exception exc;\n"
+                        "\tbool b;\n"
+                        "\n");
+                fprintf(outf,
+                        "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &b);\n",
+                        interfacee->class_name,
+                        atributee->property_name,
+                        interfacee->class_name);
+                fprintf(outf,
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n"
+                        "\tduk_push_boolean(ctx, b);\n"
+                        "\n"
+                        "\treturn 1;\n");
+                break;
+
+        default:
+                return -1;
+
+        }
+
+        WARN(WARNING_GENERATED,
+             "Generated: getter %s::%s();",
+             interfacee->name, atributee->name);
+
+        return 0;
+}
+
+/**
+ * Output class property getter for a single attribute
+ */
+static int
+output_attribute_getter(FILE* outf,
                         struct ir_entry *interfacee,
                         struct ir_attribute_entry *atributee)
 {
-        int cdatac;
-
-       /* setter definition */
+        /* getter definition */
         fprintf(outf,
-                "static duk_ret_t %s_%s_%s_setter(duk_context *ctx)\n",
+                "static duk_ret_t %s_%s_%s_getter(duk_context *ctx)\n",
                 DLPFX, interfacee->class_name, atributee->name);
         fprintf(outf,"{\n");
 
         output_get_method_private(outf, interfacee->class_name);
 
-        cdatac = output_ccode(outf, atributee->setter);
-        if (cdatac == 0) {
-                WARN(WARNING_UNIMPLEMENTED,
-                     "Unimplemented: setter %s::%s();",
-                     interfacee->name, atributee->name);
-
-                /* no implementation so generate default */
-                fprintf(outf,"\treturn 0;\n");
+        /* if binding available for this attribute getter process it */
+        if (atributee->getter != NULL) {
+                int res;
+                res = output_ccode(outf, atributee->getter);
+                if (res == 0) {
+                        /* no code provided for this getter so generate */
+                        res = output_generated_attribute_getter(outf,
+                                                                interfacee,
+                                                                atributee);
+                }
+                if (res >= 0) {
+                        fprintf(outf, "}\n\n");
+                        return res;
+                }
         }
 
-        fprintf(outf, "}\n\n");
+        WARN(WARNING_UNIMPLEMENTED,
+             "Unimplemented: getter %s::%s();",
+             interfacee->name, atributee->name);
+
+        if (options->dbglog) {
+                fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
+        }
+
+        /* no implementation so generate default */
+        fprintf(outf,
+                "\treturn 0;\n"
+                "}\n\n");
+
+        return 0;
+}
+
+/**
+ * Generate class property setter for a single attribute
+ */
+static int
+output_generated_attribute_setter(FILE* outf,
+                                  struct ir_entry *interfacee,
+                                  struct ir_attribute_entry *atributee)
+{
+        switch (atributee->base_type) {
+        case WEBIDL_TYPE_STRING:
+                fprintf(outf,
+                        "\tdom_exception exc;\n"
+                        "\tdom_string *str;\n"
+                        "\tduk_size_t slen;\n"
+                        "\tconst char *s;\n"
+                        "\ts = duk_safe_to_lstring(ctx, 0, &slen);\n"
+                        "\n"
+                        "\texc = dom_string_create((const uint8_t *)s, slen, &str);\n"
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n");
+                fprintf(outf,
+                        "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, str);\n",
+                        interfacee->class_name,
+                        atributee->property_name,
+                        interfacee->class_name);
+                fprintf(outf,
+                        "\tdom_string_unref(str);\n"
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n"
+                        "\treturn 0;\n");
+                break;
+
+        case WEBIDL_TYPE_BOOL:
+                fprintf(outf,
+                        "\tdom_exception exc;\n"
+                        "\tbool b;\n"
+                        "\n"
+                        "\tb = duk_get_boolean(ctx, 0);\n"
+                        "\n");
+                fprintf(outf,
+                        "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, b);\n",
+                        interfacee->class_name,
+                        atributee->property_name,
+                        interfacee->class_name);
+                fprintf(outf,
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n"
+                        "\treturn 0;\n");
+                break;
+
+        default:
+                return -1;
+
+        }
+
+        WARN(WARNING_GENERATED,
+             "Generated: getter %s::%s();",
+             interfacee->name, atributee->name);
 
         return 0;
 }
@@ -1233,17 +1380,7 @@ output_putforwards_setter(FILE* outf,
                         struct ir_entry *interfacee,
                         struct ir_attribute_entry *atributee)
 {
-        /* use explicit implementation in bindings if present */
-        if (atributee->setter != NULL) {
-                return output_attribute_setter(outf, interfacee, atributee);
-        }
-
         /* generate autogenerated putforwards */
-
-        fprintf(outf,
-                "static duk_ret_t %s_%s_%s_setter(duk_context *ctx)\n",
-                DLPFX, interfacee->class_name, atributee->name);
-        fprintf(outf,"{\n");
 
         fprintf(outf,"\tduk_ret_t get_ret;\n\n");
 
@@ -1268,10 +1405,61 @@ output_putforwards_setter(FILE* outf,
                 "\tduk_pop(ctx);\n\n"
                 "\treturn 0;\n");
 
-        fprintf(outf, "}\n\n");
-
         return 0;
 }
+
+/**
+ * Generate class property setter for a single attribute
+ */
+static int
+output_attribute_setter(FILE* outf,
+                        struct ir_entry *interfacee,
+                        struct ir_attribute_entry *atributee)
+{
+        int res = -1;
+
+       /* setter definition */
+        fprintf(outf,
+                "static duk_ret_t %s_%s_%s_setter(duk_context *ctx)\n",
+                DLPFX, interfacee->class_name, atributee->name);
+        fprintf(outf,"{\n");
+
+        output_get_method_private(outf, interfacee->class_name);
+
+        /* if binding available for this attribute getter process it */
+        if (atributee->setter != NULL) {
+                res = output_ccode(outf, atributee->setter);
+                if (res == 0) {
+                        /* no code provided for this setter so generate */
+                        res = output_generated_attribute_setter(outf,
+                                                                interfacee,
+                                                                atributee);
+                }
+        } else if (atributee->putforwards != NULL) {
+                res = output_putforwards_setter(outf,
+                                                interfacee,
+                                                atributee);
+        }
+
+        /* implementation not generated from any other source */
+        if (res < 0) {
+                WARN(WARNING_UNIMPLEMENTED,
+                     "Unimplemented: setter %s::%s();",
+                     interfacee->name, atributee->name);
+
+                if (options->dbglog) {
+                        fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
+                }
+
+                /* no implementation so generate default */
+                fprintf(outf, "\treturn 0;\n");
+        }
+
+        fprintf(outf, "}\n\n");
+
+        return res;
+}
+
 
 /**
  * Generate class property getter/setter for a single attribute
@@ -1281,38 +1469,18 @@ output_interface_attribute(FILE* outf,
                            struct ir_entry *interfacee,
                            struct ir_attribute_entry *atributee)
 {
-        int cdatac;
-        int res = 0;
+        int res;
 
-        /* getter definition */
-        fprintf(outf,
-                "static duk_ret_t %s_%s_%s_getter(duk_context *ctx)\n",
-                DLPFX, interfacee->class_name, atributee->name);
-        fprintf(outf,"{\n");
-
-        output_get_method_private(outf, interfacee->class_name);
-
-        cdatac = output_ccode(outf, atributee->getter);
-        if (cdatac == 0) {
-                WARN(WARNING_UNIMPLEMENTED,
-                     "Unimplemented: getter %s::%s();",
-                     interfacee->name, atributee->name);
-
-                /* no implementation so generate default */
-                fprintf(outf,"\treturn 0;\n");
+        if (atributee->property_name == NULL) {
+            atributee->property_name = gen_idl2c_name(atributee->name);
         }
 
-        fprintf(outf, "}\n\n");
+        res = output_attribute_getter(outf, interfacee, atributee);
 
-        if (atributee->putforwards != NULL) {
-                res = output_putforwards_setter(outf, interfacee, atributee);
-        } else {
-                /* readonly attributes have no setter */
-                if (atributee->modifier != WEBIDL_TYPE_MODIFIER_READONLY) {
-                        res = output_attribute_setter(outf,
-                                                      interfacee,
-                                                      atributee);
-                }
+        /* only read/write and putforward attributes have a setter */
+        if ((atributee->modifier != WEBIDL_TYPE_MODIFIER_READONLY) ||
+            (atributee->putforwards != NULL)) {
+                res = output_attribute_setter(outf, interfacee, atributee);
         }
 
         return res;

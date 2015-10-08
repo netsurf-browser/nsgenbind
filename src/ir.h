@@ -52,11 +52,18 @@ struct ir_attribute_entry {
         const char *name; /** attribute name */
         struct webidl_node *node; /**< AST attribute node */
 
-        enum webidl_type_modifier modifier;
+        enum webidl_type base_type; /* type of attribute */
+        enum webidl_type_modifier modifier; /* type modifier */
         const char *putforwards;
 
         struct genbind_node *getter; /**< getter from binding */
         struct genbind_node *setter; /**< getter from binding */
+
+        char *property_name; /**< the attribute name converted to output
+                              * appropriate value. e.g. generators targetting c
+                              * might lowercase the name or add underscores
+                              * instead of caps
+                              */
 };
 
 /** map entry for constants on an interface */
@@ -101,8 +108,8 @@ enum ir_entry_type {
 
 /** top level entry info common to interfaces and dictionaries */
 struct ir_entry {
-        const char *name; /** dictionary name */
-        struct webidl_node *node; /**< AST dictionary node */
+        const char *name; /** IDL name */
+        struct webidl_node *node; /**< AST node */
         const char *inherit_name; /**< Name of interface inhertited from */
         struct genbind_node *class; /**< class from binding (if any) */
 
