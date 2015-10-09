@@ -163,5 +163,9 @@ int webidl_intercalate_implements(struct webidl_node *node);
  */
 int webidl_fprintf(FILE *stream, const char *format, ...);
 
+/**
+ * get string of argument type
+ */
+const char *webidl_type_to_str(enum webidl_type t);
 
 #endif

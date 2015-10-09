@@ -683,3 +683,55 @@ int webidl_intercalate_implements(struct webidl_node *webidl_ast)
 					 intercalate_implements,
 					 webidl_ast);
 }
+
+/* exported interface defined in webidl-ast.h */
+const char *webidl_type_to_str(enum webidl_type t)
+{
+        switch (t) {
+        case WEBIDL_TYPE_ANY: /**< 0 - The type is unconstrained */
+                return "any";
+
+        case WEBIDL_TYPE_USER: /**< 1 - The type is a dictionary or interface */
+                return "user";
+
+        case WEBIDL_TYPE_BOOL: /**< 2 - The type is boolean */
+                return "boolean";
+
+        case WEBIDL_TYPE_BYTE: /**< 3 - The type is a byte */
+                return "byte";
+
+        case WEBIDL_TYPE_OCTET: /**< 4 - The type is a octet */
+                return "octet";
+
+        case WEBIDL_TYPE_FLOAT: /**< 5 - The type is a float point number */
+                return "float";
+
+        case WEBIDL_TYPE_DOUBLE: /**< 6 - The type is a double */
+                return "double";
+
+        case WEBIDL_TYPE_SHORT: /**< 7 - The type is a signed 16bit */
+                return "short";
+
+        case WEBIDL_TYPE_LONG: /**< 8 - The type is a signed 32bit */
+                return "long";
+
+        case WEBIDL_TYPE_LONGLONG: /**< 9 - The type is a signed 64bit */
+                return "long long";
+
+        case WEBIDL_TYPE_STRING: /**< 10 - The type is a string */
+                return "string";
+
+        case WEBIDL_TYPE_SEQUENCE: /**< 11 - The type is a sequence */
+                return "sequence";
+
+        case WEBIDL_TYPE_OBJECT: /**< 12 - The type is a object */
+                return "object";
+
+        case WEBIDL_TYPE_DATE: /**< 13 - The type is a date */
+                return "date";
+
+        case WEBIDL_TYPE_VOID: /**< 14 - The type is void */
+                return "void";
+        }
+        return "Unknown";
+}

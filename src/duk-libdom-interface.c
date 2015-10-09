@@ -1444,8 +1444,10 @@ output_attribute_setter(FILE* outf,
         /* implementation not generated from any other source */
         if (res < 0) {
                 WARN(WARNING_UNIMPLEMENTED,
-                     "Unimplemented: setter %s::%s();",
-                     interfacee->name, atributee->name);
+                     "Unimplemented: setter %s::%s(%s);",
+                     interfacee->name,
+                     atributee->name,
+                     webidl_type_to_str(atributee->base_type));
 
                 if (options->dbglog) {
                         fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
