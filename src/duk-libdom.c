@@ -302,7 +302,7 @@ output_binding_header(struct ir *ir)
                 DLPFX, DLPFX, DLPFX, DLPFX, DLPFX);
 
         fprintf(bindf,
-                "duk_bool_t %s_instanceof(duk_context *ctx, const char *klass);\n",
+                "duk_bool_t %s_instanceof(duk_context *ctx, duk_idx_t index, const char *klass);\n",
                 DLPFX);
 
         fprintf(bindf,
@@ -370,40 +370,40 @@ output_binding_src(struct ir *ir)
         fprintf(bindf, "\n");
 
 
-        /* instance of helper */
+        /* instanceof helper */
         fprintf(bindf,
                 "duk_bool_t\n"
-                "%s_instanceof(duk_context *ctx, const char *klass)\n",
-                DLPFX);
-        fprintf(bindf,
+                "%s_instanceof(duk_context *ctx, duk_idx_t _idx, const char *klass)\n"
                 "{\n"
-                "\t/* ... ??? */\n"
-                "\tif (!duk_check_type(ctx, -1, DUK_TYPE_OBJECT)) {\n"
+                "\tduk_idx_t idx = duk_normalize_index(ctx, _idx);\n"
+                "\t/* ... ??? ... */\n"
+                "\tif (!duk_check_type(ctx, idx, DUK_TYPE_OBJECT)) {\n"
                 "\t\treturn false;\n"
                 "\t}\n"
-                "\t/* ... obj */\n"
+                "\t/* ... obj ... */\n"
                 "\tduk_get_global_string(ctx, %s_magic_string_prototypes);\n"
-                "\t/* ... obj protos */\n"
+                "\t/* ... obj ... protos */\n"
                 "\tduk_get_prop_string(ctx, -1, klass);\n"
-                "\t/* ... obj protos goalproto */\n"
-                "\tduk_get_prototype(ctx, -3);\n"
-                "\t/* ... obj protos goalproto proto? */\n"
+                "\t/* ... obj ... protos goalproto */\n"
+                "\tduk_get_prototype(ctx, idx);\n"
+                "\t/* ... obj ... protos goalproto proto? */\n"
                 "\twhile (!duk_is_undefined(ctx, -1)) {\n"
                 "\t\tif (duk_strict_equals(ctx, -1, -2)) {\n"
                 "\t\t\tduk_pop_3(ctx);\n"
+                "\t\t\t/* ... obj ... */\n"
                 "\t\t\treturn true;\n"
                 "\t\t}\n"
                 "\t\tduk_get_prototype(ctx, -1);\n"
-                "\t\t/* ... obj protos goalproto proto proto? */\n"
+                "\t\t/* ... obj ... protos goalproto proto proto? */\n"
                 "\t\tduk_replace(ctx, -2);\n"
-                "\t\t/* ... obj protos goalproto proto? */\n"
+                "\t\t/* ... obj ... protos goalproto proto? */\n"
                 "\t}\n"
                 "\tduk_pop_3(ctx);\n"
-                "\t/* ... obj */\n"
+                "\t/* ... obj ... */\n"
                 "\treturn false;\n"
                 "}\n"
                 "\n",
-                DLPFX);
+                DLPFX, DLPFX);
 
         /* prototype creation helper function */
         fprintf(bindf,
