@@ -1289,8 +1289,10 @@ output_attribute_getter(FILE* outf,
         }
 
         WARN(WARNING_UNIMPLEMENTED,
-             "Unimplemented: getter %s::%s();",
-             interfacee->name, atributee->name);
+             "Unimplemented: getter %s::%s(%s);",
+             interfacee->name,
+             atributee->name,
+             webidl_type_to_str(atributee->base_type));
 
         if (options->dbglog) {
                 fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
