@@ -230,6 +230,7 @@ add_method(struct genbind_node **genbind_ast,
 %type <node> ClassFlags
 
 %type <node> Method
+%type <text> MethodName
 %type <node> MethodDeclarator
 %type <value> MethodType
 %type <value> BindingAndMethodType
@@ -470,8 +471,26 @@ BindingAndMethodType:
         }
         ;
 
+MethodName:
+        TOK_IDENTIFIER
+        {
+                $$ = $1;
+        }
+        |
+        TOK_METHOD
+        {
+                $$ = strdup("method");
+        }
+        |
+        TOK_TYPE
+        {
+                $$ = strdup("type");
+        }
+        ;
+
+/* declarator of a binding method */
 MethodDeclarator:
-        TOK_IDENTIFIER TOK_DBLCOLON TOK_IDENTIFIER '(' ParameterList ')'
+        TOK_IDENTIFIER TOK_DBLCOLON MethodName '(' ParameterList ')'
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_CLASS,
                                       genbind_new_node(GENBIND_NODE_TYPE_IDENT,
@@ -482,7 +501,7 @@ MethodDeclarator:
                                                        $1));
         }
         |
-        TOK_IDENTIFIER TOK_DBLCOLON TOK_IDENTIFIER '(' ')'
+        TOK_IDENTIFIER TOK_DBLCOLON MethodName '(' ')'
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_CLASS,
                                       genbind_new_node(GENBIND_NODE_TYPE_IDENT,
