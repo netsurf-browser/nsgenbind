@@ -177,7 +177,7 @@ char *gen_idl2c_name(const char *idlname)
         const char *inc;
         char *outc;
         char *name;
-        int wasupper;
+        int waslower;
 
         /* enpty strings are a bad idea */
         if ((idlname == NULL) || (idlname[0] == 0)) {
@@ -191,7 +191,7 @@ char *gen_idl2c_name(const char *idlname)
 
         outc = name;
         inc = idlname;
-        wasupper = 0;
+        waslower = 1;
 
         /* first character handled separately as inserting a leading underscore
          * is undesirable
@@ -211,13 +211,19 @@ char *gen_idl2c_name(const char *idlname)
                     (islower(inc[1]) == 0)) {
                         *outc++ = '_';
                 }
-                if ((islower(*inc) != 0) && (wasupper != 0)) {
-                        *outc = *(outc - 1);
-                        *(outc - 1) = '_';
-                        outc++;
-                        wasupper = 0;
+                if (islower(*inc) != 0) {
+                        if (waslower == 0) {
+                                /* high to lower case transition */
+                                if (((outc - name) <= 3) ||
+                                    (*(outc - 3) != '_')) {
+                                        *outc = *(outc - 1);
+                                        *(outc - 1) = '_';
+                                        outc++;
+                                }
+                        }
+                        waslower = 1;
                 } else {
-                        wasupper = isupper(*inc);
+                        waslower = 0;
                 }
                 *outc++ = tolower(*inc++);
         }
