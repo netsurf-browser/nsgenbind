@@ -1394,17 +1394,16 @@ output_putforwards_setter(FILE* outf,
                 "\tif (get_ret != 1) {\n"
                 "\t\treturn 0;\n"
                 "\t}\n\n"
-                "\t/* parameter attribute */\n\n"
-                "\tduk_swap(ctx, 0, 1);\n"
-                "\t/* attribute parameter */\n\n"
+                "\t/* parameter ... attribute */\n\n"
+                "\tduk_dup(ctx, 0);\n"
+                "\t/* ... attribute parameter */\n\n"
                 "\t/* call the putforward */\n");
 
         fprintf(outf,
-                "\tduk_put_prop_string(ctx, 0, \"%s\");\n\n",
+                "\tduk_put_prop_string(ctx, -2, \"%s\");\n\n",
                 atributee->putforwards);
 
         fprintf(outf,
-                "\tduk_pop(ctx);\n\n"
                 "\treturn 0;\n");
 
         return 0;
