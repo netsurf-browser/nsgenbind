@@ -47,14 +47,18 @@ struct ir_operation_entry {
         struct ir_operation_overload_entry *overloadv;
 };
 
-/** map entry for attributes on an interface */
+/**
+ * ir entry for attributes on an interface
+ */
 struct ir_attribute_entry {
-        const char *name; /** attribute name */
+        const char *name; /**< attribute name */
         struct webidl_node *node; /**< AST attribute node */
 
-        enum webidl_type base_type; /* type of attribute */
-        enum webidl_type_modifier modifier; /* type modifier */
-        const char *putforwards;
+        enum webidl_type base_type; /**< type of attribute */
+        enum webidl_type_modifier type_modifier; /**< modifier for the type */
+
+        enum webidl_type_modifier modifier; /**< modifier for the attribute intself */
+        const char *putforwards; /**< putforwards attribute */
 
         struct genbind_node *getter; /**< getter from binding */
         struct genbind_node *setter; /**< getter from binding */
@@ -66,7 +70,9 @@ struct ir_attribute_entry {
                               */
 };
 
-/** map entry for constants on an interface */
+/**
+ * map entry for constants on an interface
+ */
 struct ir_constant_entry {
         const char *name; /** attribute name */
         struct webidl_node *node; /**< AST constant node */

@@ -427,6 +427,9 @@ get_extended_value(struct webidl_node *node, const char *key)
         return NULL;
 }
 
+/**
+ * Create a new ir entry for an attribute
+ */
 static int
 attribute_map_new(struct webidl_node *interface,
                   struct genbind_node *class,
@@ -469,8 +472,12 @@ attribute_map_new(struct webidl_node *interface,
                         WEBIDL_NODE_TYPE_ATTRIBUTE);
 
                 while (at_node != NULL) {
-                        enum webidl_type *base_type;
+                        struct webidl_node *type_node; /* type of attribute */
+                        enum webidl_type *type_base;
+
                         enum webidl_type_modifier *modifier;
+
+                        /* process attribute node into an entry */
 
                         cure->node = at_node;
 
@@ -486,22 +493,35 @@ attribute_map_new(struct webidl_node *interface,
                                                GENBIND_METHOD_TYPE_GETTER,
                                                cure->name);
 
-                        /* find attributes base type */
-                        base_type = (enum webidl_type *)webidl_node_getint(
+                        /* find attributes first base type */
+                        type_node = webidl_node_find_type(
+                                webidl_node_getnode(at_node),
+                                NULL,
+                                WEBIDL_NODE_TYPE_TYPE);
+                        type_base = (enum webidl_type *)webidl_node_getint(
                                 webidl_node_find_type(
-                                        webidl_node_getnode(
-                                                webidl_node_find_type(
-                                                        webidl_node_getnode(at_node),
-                                                        NULL,
-                                                        WEBIDL_NODE_TYPE_TYPE)),
+                                        webidl_node_getnode(type_node),
                                         NULL,
                                         WEBIDL_NODE_TYPE_TYPE_BASE));
-                        if (base_type != NULL) {
-                                cure->base_type = *base_type;
+                        if (type_base != NULL) {
+                                enum webidl_type_modifier *type_modifier;
+
+                                cure->base_type = *type_base;
+
+                                type_modifier = (enum webidl_type_modifier *)webidl_node_getint(
+                                        webidl_node_find_type(
+                                                webidl_node_getnode(type_node),
+                                                NULL,
+                                                WEBIDL_NODE_TYPE_MODIFIER));
+                                if (type_modifier != NULL) {
+                                        cure->type_modifier = *type_modifier;
+                                } else {
+                                        cure->type_modifier = WEBIDL_TYPE_MODIFIER_NONE;
+                                }
                         }
 
 
-                        /* check for readonly attributes */
+                        /* get binding node for read/write attributes */
                         modifier = (enum webidl_type_modifier *)webidl_node_getint(
                                 webidl_node_find_type(
                                         webidl_node_getnode(at_node),
