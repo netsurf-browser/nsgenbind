@@ -1224,6 +1224,30 @@ output_generated_attribute_getter(FILE* outf,
                         "\treturn 1;\n");
                 break;
 
+        case WEBIDL_TYPE_LONG:
+                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                        fprintf(outf, "\tdom_ulong l;\n");
+                } else {
+                        fprintf(outf, "\tdom_long l;\n");
+                }
+                fprintf(outf,
+                        "\tdom_exception exc;\n"
+                        "\n");
+                fprintf(outf,
+                        "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &l);\n",
+                        interfacee->class_name,
+                        atributee->property_name,
+                        interfacee->class_name);
+                fprintf(outf,
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n"
+                        "\tduk_push_number(ctx, (duk_double_t)l);\n"
+                        "\n"
+                        "\treturn 1;\n");
+                break;
+
         case WEBIDL_TYPE_BOOL:
                 fprintf(outf,
                         "\tdom_exception exc;\n"
