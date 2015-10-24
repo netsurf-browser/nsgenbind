@@ -685,7 +685,7 @@ int webidl_intercalate_implements(struct webidl_node *webidl_ast)
 }
 
 /* exported interface defined in webidl-ast.h */
-const char *webidl_type_to_str(enum webidl_type t)
+const char *webidl_type_to_str(enum webidl_type_modifier m, enum webidl_type t)
 {
         switch (t) {
         case WEBIDL_TYPE_ANY: /**< 0 - The type is unconstrained */
@@ -710,10 +710,18 @@ const char *webidl_type_to_str(enum webidl_type t)
                 return "double";
 
         case WEBIDL_TYPE_SHORT: /**< 7 - The type is a signed 16bit */
-                return "short";
+                if (m == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                        return "unsigned short";
+                } else {
+                        return "short";
+                }
 
         case WEBIDL_TYPE_LONG: /**< 8 - The type is a signed 32bit */
-                return "long";
+                if (m == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                        return "unsigned long";
+                } else {
+                        return "long";
+                }
 
         case WEBIDL_TYPE_LONGLONG: /**< 9 - The type is a signed 64bit */
                 return "long long";

@@ -1316,7 +1316,8 @@ output_attribute_getter(FILE* outf,
              "Unimplemented: getter %s::%s(%s);",
              interfacee->name,
              atributee->name,
-             webidl_type_to_str(atributee->base_type));
+             webidl_type_to_str(atributee->type_modifier,
+                                atributee->base_type));
 
         if (options->dbglog) {
                 fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
@@ -1472,8 +1473,8 @@ output_attribute_setter(FILE* outf,
                      "Unimplemented: setter %s::%s(%s);",
                      interfacee->name,
                      atributee->name,
-                     webidl_type_to_str(atributee->base_type));
-
+                     webidl_type_to_str(atributee->type_modifier,
+                                        atributee->base_type));
                 if (options->dbglog) {
                         fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
                 }
