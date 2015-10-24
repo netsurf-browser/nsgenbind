@@ -1367,6 +1367,35 @@ output_generated_attribute_setter(FILE* outf,
                         "\treturn 0;\n");
                 break;
 
+        case WEBIDL_TYPE_LONG:
+                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                        fprintf(outf,
+                                "\tdom_exception exc;\n"
+                                "\tdom_ulong l;\n"
+                                "\n"
+                                "\tl = duk_get_uint(ctx, 0);\n"
+                                "\n");
+                } else {
+                        fprintf(outf,
+                                "\tdom_exception exc;\n"
+                                "\tdom_long l;\n"
+                                "\n"
+                                "\tl = duk_get_int(ctx, 0);\n"
+                                "\n");
+                }
+                fprintf(outf,
+                        "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, l);\n",
+                        interfacee->class_name,
+                        atributee->property_name,
+                        interfacee->class_name);
+                fprintf(outf,
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n"
+                        "\treturn 0;\n");
+                break;
+
         case WEBIDL_TYPE_BOOL:
                 fprintf(outf,
                         "\tdom_exception exc;\n"
