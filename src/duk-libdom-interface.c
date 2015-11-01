@@ -1161,6 +1161,11 @@ output_interface_operation(FILE* outf,
                 WARN(WARNING_UNIMPLEMENTED,
                      "Unimplemented: method %s::%s();",
                      interfacee->name, operatione->name);
+
+                if (options->dbglog) {
+                        fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
+                }
+
                 fprintf(outf,"\treturn 0;\n");
         }
 
@@ -1192,93 +1197,6 @@ output_interface_operations(FILE* outf, struct ir_entry *ife)
 }
 
 
-/**
- * Generate class property getter for a single attribute
- */
-static int
-output_generated_attribute_getter(FILE* outf,
-                                  struct ir_entry *interfacee,
-                                  struct ir_attribute_entry *atributee)
-{
-        switch (atributee->base_type) {
-        case WEBIDL_TYPE_STRING:
-                fprintf(outf,
-                        "\tdom_exception exc;\n"
-                        "\tdom_string *str;\n"
-                        "\n");
-                fprintf(outf,
-                        "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &str);\n",
-                        interfacee->class_name,
-                        atributee->property_name,
-                        interfacee->class_name);
-                fprintf(outf,
-                        "\tif (exc != DOM_NO_ERR) {\n"
-                        "\t\treturn 0;\n"
-                        "\t}\n"
-                        "\n"
-                        "\tduk_push_lstring(ctx,\n"
-                        "\t\tdom_string_data(str),\n"
-                        "\t\tdom_string_length(str));\n"
-                        "\tdom_string_unref(str);\n"
-                        "\n"
-                        "\treturn 1;\n");
-                break;
-
-        case WEBIDL_TYPE_LONG:
-                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
-                        fprintf(outf, "\tdom_ulong l;\n");
-                } else {
-                        fprintf(outf, "\tdom_long l;\n");
-                }
-                fprintf(outf,
-                        "\tdom_exception exc;\n"
-                        "\n");
-                fprintf(outf,
-                        "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &l);\n",
-                        interfacee->class_name,
-                        atributee->property_name,
-                        interfacee->class_name);
-                fprintf(outf,
-                        "\tif (exc != DOM_NO_ERR) {\n"
-                        "\t\treturn 0;\n"
-                        "\t}\n"
-                        "\n"
-                        "\tduk_push_number(ctx, (duk_double_t)l);\n"
-                        "\n"
-                        "\treturn 1;\n");
-                break;
-
-        case WEBIDL_TYPE_BOOL:
-                fprintf(outf,
-                        "\tdom_exception exc;\n"
-                        "\tbool b;\n"
-                        "\n");
-                fprintf(outf,
-                        "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &b);\n",
-                        interfacee->class_name,
-                        atributee->property_name,
-                        interfacee->class_name);
-                fprintf(outf,
-                        "\tif (exc != DOM_NO_ERR) {\n"
-                        "\t\treturn 0;\n"
-                        "\t}\n"
-                        "\n"
-                        "\tduk_push_boolean(ctx, b);\n"
-                        "\n"
-                        "\treturn 1;\n");
-                break;
-
-        default:
-                return -1;
-
-        }
-
-        WARN(WARNING_GENERATED,
-             "Generated: getter %s::%s();",
-             interfacee->name, atributee->name);
-
-        return 0;
-}
 
 /**
  * Output class property getter for a single attribute
@@ -1312,6 +1230,8 @@ output_attribute_getter(FILE* outf,
                 }
         }
 
+        /* no implementation so generate default and warnings if required */
+
         WARN(WARNING_UNIMPLEMENTED,
              "Unimplemented: getter %s::%s(%s);",
              interfacee->name,
@@ -1323,7 +1243,6 @@ output_attribute_getter(FILE* outf,
                 fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
         }
 
-        /* no implementation so generate default */
         fprintf(outf,
                 "\treturn 0;\n"
                 "}\n\n");
@@ -1331,102 +1250,6 @@ output_attribute_getter(FILE* outf,
         return 0;
 }
 
-/**
- * Generate class property setter for a single attribute
- */
-static int
-output_generated_attribute_setter(FILE* outf,
-                                  struct ir_entry *interfacee,
-                                  struct ir_attribute_entry *atributee)
-{
-        switch (atributee->base_type) {
-        case WEBIDL_TYPE_STRING:
-                fprintf(outf,
-                        "\tdom_exception exc;\n"
-                        "\tdom_string *str;\n"
-                        "\tduk_size_t slen;\n"
-                        "\tconst char *s;\n"
-                        "\ts = duk_safe_to_lstring(ctx, 0, &slen);\n"
-                        "\n"
-                        "\texc = dom_string_create((const uint8_t *)s, slen, &str);\n"
-                        "\tif (exc != DOM_NO_ERR) {\n"
-                        "\t\treturn 0;\n"
-                        "\t}\n"
-                        "\n");
-                fprintf(outf,
-                        "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, str);\n",
-                        interfacee->class_name,
-                        atributee->property_name,
-                        interfacee->class_name);
-                fprintf(outf,
-                        "\tdom_string_unref(str);\n"
-                        "\tif (exc != DOM_NO_ERR) {\n"
-                        "\t\treturn 0;\n"
-                        "\t}\n"
-                        "\n"
-                        "\treturn 0;\n");
-                break;
-
-        case WEBIDL_TYPE_LONG:
-                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
-                        fprintf(outf,
-                                "\tdom_exception exc;\n"
-                                "\tdom_ulong l;\n"
-                                "\n"
-                                "\tl = duk_get_uint(ctx, 0);\n"
-                                "\n");
-                } else {
-                        fprintf(outf,
-                                "\tdom_exception exc;\n"
-                                "\tdom_long l;\n"
-                                "\n"
-                                "\tl = duk_get_int(ctx, 0);\n"
-                                "\n");
-                }
-                fprintf(outf,
-                        "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, l);\n",
-                        interfacee->class_name,
-                        atributee->property_name,
-                        interfacee->class_name);
-                fprintf(outf,
-                        "\tif (exc != DOM_NO_ERR) {\n"
-                        "\t\treturn 0;\n"
-                        "\t}\n"
-                        "\n"
-                        "\treturn 0;\n");
-                break;
-
-        case WEBIDL_TYPE_BOOL:
-                fprintf(outf,
-                        "\tdom_exception exc;\n"
-                        "\tbool b;\n"
-                        "\n"
-                        "\tb = duk_get_boolean(ctx, 0);\n"
-                        "\n");
-                fprintf(outf,
-                        "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, b);\n",
-                        interfacee->class_name,
-                        atributee->property_name,
-                        interfacee->class_name);
-                fprintf(outf,
-                        "\tif (exc != DOM_NO_ERR) {\n"
-                        "\t\treturn 0;\n"
-                        "\t}\n"
-                        "\n"
-                        "\treturn 0;\n");
-                break;
-
-        default:
-                return -1;
-
-        }
-
-        WARN(WARNING_GENERATED,
-             "Generated: getter %s::%s();",
-             interfacee->name, atributee->name);
-
-        return 0;
-}
 
 /**
  * Generate class property setter for a putforwards attribute

@@ -111,4 +111,15 @@ int output_ctype(FILE *outf, struct genbind_node *node, bool identifier);
  */
 char *gen_idl2c_name(const char *idlname);
 
+/**
+ * Generate class property setter for a single attribute.
+ */
+int output_generated_attribute_setter(FILE* outf, struct ir_entry *interfacee, struct ir_attribute_entry *atributee);
+
+/**
+ * Generate class property getter for a single attribute.
+ */
+int output_generated_attribute_getter(FILE* outf, struct ir_entry *interfacee, struct ir_attribute_entry *atributee);
+
+
 #endif
