@@ -82,6 +82,30 @@ output_generated_attribute_getter(FILE* outf,
                         "\treturn 1;\n");
                 break;
 
+        case WEBIDL_TYPE_SHORT:
+                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                        fprintf(outf, "\tdom_ushort s;\n");
+                } else {
+                        fprintf(outf, "\tdom_short s;\n");
+                }
+                fprintf(outf,
+                        "\tdom_exception exc;\n"
+                        "\n");
+                fprintf(outf,
+                        "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &s);\n",
+                        interfacee->class_name,
+                        atributee->property_name,
+                        interfacee->class_name);
+                fprintf(outf,
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n"
+                        "\tduk_push_number(ctx, (duk_double_t)s);\n"
+                        "\n"
+                        "\treturn 1;\n");
+                break;
+
         case WEBIDL_TYPE_BOOL:
                 fprintf(outf,
                         "\tdom_exception exc;\n"
@@ -166,6 +190,35 @@ output_generated_attribute_setter(FILE* outf,
                 }
                 fprintf(outf,
                         "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, l);\n",
+                        interfacee->class_name,
+                        atributee->property_name,
+                        interfacee->class_name);
+                fprintf(outf,
+                        "\tif (exc != DOM_NO_ERR) {\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\n"
+                        "\treturn 0;\n");
+                break;
+
+        case WEBIDL_TYPE_SHORT:
+                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                        fprintf(outf,
+                                "\tdom_exception exc;\n"
+                                "\tdom_ushort s;\n"
+                                "\n"
+                                "\ts = duk_get_uint(ctx, 0);\n"
+                                "\n");
+                } else {
+                        fprintf(outf,
+                                "\tdom_exception exc;\n"
+                                "\tdom_short s;\n"
+                                "\n"
+                                "\ts = duk_get_int(ctx, 0);\n"
+                                "\n");
+                }
+                fprintf(outf,
+                        "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, s);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
