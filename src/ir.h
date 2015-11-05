@@ -48,14 +48,23 @@ struct ir_operation_entry {
 };
 
 /**
+ * ir entry for type of attributes or arguments.
+ */
+struct ir_type_entry {
+        enum webidl_type base; /**< base of the type (long, short, user etc.) */
+        enum webidl_type_modifier modifier; /**< modifier for the type */
+        const char *name; /**< name of type for user types */
+};
+
+/**
  * ir entry for attributes on an interface
  */
 struct ir_attribute_entry {
         const char *name; /**< attribute name */
         struct webidl_node *node; /**< AST attribute node */
 
-        enum webidl_type base_type; /**< type of attribute */
-        enum webidl_type_modifier type_modifier; /**< modifier for the type */
+        int typec; /**< number of types for attribute  */
+        struct ir_type_entry *typev; /**< types on attribute */
 
         enum webidl_type_modifier modifier; /**< modifier for the attribute intself */
         const char *putforwards; /**< putforwards attribute */
