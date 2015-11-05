@@ -28,13 +28,60 @@
 #include "ir.h"
 #include "duk-libdom.h"
 
+static int
+output_generated_attribute_user_getter(FILE* outf,
+                                  struct ir_entry *interfacee,
+                                  struct ir_attribute_entry *atributee)
+{
+        interfacee = interfacee;
+
+        if ((atributee->typev[0].name != NULL) &&
+            strcmp(atributee->typev[0].name, "EventHandler") == 0) {
+
+                /* this can generate for onxxx event handlers */
+                if ((atributee->name[0] != 'o') ||
+                    (atributee->name[1] != 'n')) {
+                        return -1; /* not onxxx */
+                }
+
+                fprintf(outf,
+                        "\tdom_event_target *et = (dom_event_target *)(((node_private_t *)priv)->node);\n"
+                        "\tdom_string *name;\n"
+                        "\tdom_exception exc;\n\n"
+                        "\texc = dom_string_create((const uint8_t *)\"%s\", %ld, &name);\n"
+                        "\tif (exc != DOM_NO_ERR) return 0;\n\n"
+                        "\tduk_push_this(ctx);\n"
+                        "\t/* ... node */\n"
+                        "\tif (dukky_get_current_value_of_event_handler(ctx, name, et) == false) {\n"
+                        "\t\tdom_string_unref(name);\n"
+                        "\t\treturn 0;\n"
+                        "\t}\n"
+                        "\tdom_string_unref(name);\n"
+                        "\t/* ... handler node */\n"
+                        "\tduk_pop(ctx);\n"
+                        "\t/* ... handler */\n"
+                        "\treturn 1;\n",
+                        atributee->name + 2,
+                        strlen(atributee->name + 2));
+                return 0;
+        }
+        return -1;
+}
+
 /* exported function documented in duk-libdom.h */
 int
 output_generated_attribute_getter(FILE* outf,
                                   struct ir_entry *interfacee,
                                   struct ir_attribute_entry *atributee)
 {
-        switch (atributee->base_type) {
+        int res = 0;
+
+        /* generation can only cope with a single type on the attribute */
+        if (atributee->typec != 1) {
+                return -1;
+        }
+
+        switch (atributee->typev[0].base) {
         case WEBIDL_TYPE_STRING:
                 fprintf(outf,
                         "\tdom_exception exc;\n"
@@ -59,7 +106,7 @@ output_generated_attribute_getter(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_LONG:
-                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                if (atributee->typev[0].modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
                         fprintf(outf, "\tdom_ulong l;\n");
                 } else {
                         fprintf(outf, "\tdom_long l;\n");
@@ -83,7 +130,7 @@ output_generated_attribute_getter(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_SHORT:
-                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                if (atributee->typev[0].modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
                         fprintf(outf, "\tdom_ushort s;\n");
                 } else {
                         fprintf(outf, "\tdom_short s;\n");
@@ -126,17 +173,66 @@ output_generated_attribute_getter(FILE* outf,
                         "\treturn 1;\n");
                 break;
 
+        case WEBIDL_TYPE_USER:
+                res = output_generated_attribute_user_getter(outf,
+                                                             interfacee,
+                                                             atributee);
+                break;
+
         default:
-                return -1;
+                res = -1;
+                break;
 
         }
 
-        WARN(WARNING_GENERATED,
-             "Generated: getter %s::%s();",
-             interfacee->name, atributee->name);
+        if (res >= 0) {
+                WARN(WARNING_GENERATED,
+                     "Generated: getter %s::%s();",
+                     interfacee->name, atributee->name);
+        }
 
-        return 0;
+        return res;
 }
+
+static int
+output_generated_attribute_user_setter(FILE* outf,
+                                       struct ir_entry *interfacee,
+                                       struct ir_attribute_entry *atributee)
+{
+        interfacee = interfacee;
+
+        if ((atributee->typev[0].name != NULL) &&
+            strcmp(atributee->typev[0].name, "EventHandler") == 0) {
+
+                /* this can generate for onxxx event handlers */
+                if ((atributee->name[0] != 'o') ||
+                    (atributee->name[1] != 'n')) {
+                        return -1; /* not onxxx */
+                }
+
+                fprintf(outf,
+                        "\t/* handlerfn */\n"
+                        "\tduk_push_this(ctx);\n"
+                        "\t/* handlerfn this */\n"
+                        "\tduk_get_prop_string(ctx, -1, HANDLER_MAGIC);\n"
+                        "\t/* handlerfn this handlers */\n"
+                        "\tduk_push_lstring(ctx, \"%s\", %ld);\n"
+                        "\t/* handlerfn this handlers click */\n"
+                        "\tduk_dup(ctx, -4);\n"
+                        "\t/* handlerfn this handlers click handlerfn */\n"
+                        "\tduk_put_prop(ctx, -3);\n"
+                        "\t/* handlerfn this handlers */\n"
+                        "\tdukky_register_event_listener_for(ctx,\n"
+                        "\t\t(dom_element *)((node_private_t *)priv)->node,\n"
+                        "\t\tcorestring_dom_click);\n"
+                        "\treturn 0;\n",
+                        atributee->name + 2,
+                        strlen(atributee->name + 2));
+                return 0;
+        }
+        return -1;
+}
+
 
 /* exported function documented in duk-libdom.h */
 int
@@ -144,7 +240,14 @@ output_generated_attribute_setter(FILE* outf,
                                   struct ir_entry *interfacee,
                                   struct ir_attribute_entry *atributee)
 {
-        switch (atributee->base_type) {
+        int res = 0;
+
+        /* generation can only cope with a single type on the attribute */
+        if (atributee->typec != 1) {
+                return -1;
+        }
+
+        switch (atributee->typev[0].base) {
         case WEBIDL_TYPE_STRING:
                 fprintf(outf,
                         "\tdom_exception exc;\n"
@@ -173,7 +276,7 @@ output_generated_attribute_setter(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_LONG:
-                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                if (atributee->typev[0].modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
                         fprintf(outf,
                                 "\tdom_exception exc;\n"
                                 "\tdom_ulong l;\n"
@@ -202,7 +305,7 @@ output_generated_attribute_setter(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_SHORT:
-                if (atributee->type_modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
+                if (atributee->typev[0].modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
                         fprintf(outf,
                                 "\tdom_exception exc;\n"
                                 "\tdom_ushort s;\n"
@@ -250,14 +353,23 @@ output_generated_attribute_setter(FILE* outf,
                         "\treturn 0;\n");
                 break;
 
+        case WEBIDL_TYPE_USER:
+                res = output_generated_attribute_user_setter(outf,
+                                                             interfacee,
+                                                             atributee);
+                break;
+
         default:
-                return -1;
+                res = -1;
+                break;
 
         }
 
-        WARN(WARNING_GENERATED,
-             "Generated: getter %s::%s();",
-             interfacee->name, atributee->name);
+        if (res >= 0) {
+                WARN(WARNING_GENERATED,
+                     "Generated: getter %s::%s();",
+                     interfacee->name, atributee->name);
+        }
 
-        return 0;
+        return res;
 }

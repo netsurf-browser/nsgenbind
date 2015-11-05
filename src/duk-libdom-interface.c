@@ -1231,13 +1231,21 @@ output_attribute_getter(FILE* outf,
         }
 
         /* no implementation so generate default and warnings if required */
+        const char *type_str;
+        if (atributee->typec == 0) {
+                type_str = "";
+        } else if (atributee->typec == 1) {
+                type_str = webidl_type_to_str(atributee->typev[0].modifier,
+                                              atributee->typev[0].base);
+        } else {
+                type_str = "multiple";
+        }
 
         WARN(WARNING_UNIMPLEMENTED,
              "Unimplemented: getter %s::%s(%s);",
              interfacee->name,
              atributee->name,
-             webidl_type_to_str(atributee->type_modifier,
-                                atributee->base_type));
+             type_str);
 
         if (options->dbglog) {
                 fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
@@ -1321,12 +1329,21 @@ output_attribute_setter(FILE* outf,
 
         /* implementation not generated from any other source */
         if (res < 0) {
+                const char *type_str;
+                if (atributee->typec == 0) {
+                        type_str = "";
+                } else if (atributee->typec == 1) {
+                        type_str = webidl_type_to_str(
+                                atributee->typev[0].modifier,
+                                atributee->typev[0].base);
+                } else {
+                        type_str = "multiple";
+                }
                 WARN(WARNING_UNIMPLEMENTED,
                      "Unimplemented: setter %s::%s(%s);",
                      interfacee->name,
                      atributee->name,
-                     webidl_type_to_str(atributee->type_modifier,
-                                        atributee->base_type));
+                     type_str);
                 if (options->dbglog) {
                         fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
                 }
