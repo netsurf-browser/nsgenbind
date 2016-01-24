@@ -36,9 +36,7 @@ FILE *genb_fopen_tmp(const char *fname);
  */
 int genb_fclose_tmp(FILE *filef, const char *fname);
 
-#if (defined(_GNU_SOURCE) && !defined(__APPLE__) && !defined(_WIN32) || defined(__amigaos4__) || defined(__HAIKU__) || (defined(_POSIX_C_SOURCE) && ((_POSIX_C_SOURCE - 0) >= 200809L)))
-#undef NEED_STRNDUP
-#else
+#if defined(__APPLE__) || defined(_WIN32)
 #define NEED_STRNDUP 1
 char *strndup(const char *s, size_t n);
 #endif
