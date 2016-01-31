@@ -97,10 +97,14 @@ output_generated_attribute_getter(FILE* outf,
                         "\t\treturn 0;\n"
                         "\t}\n"
                         "\n"
-                        "\tduk_push_lstring(ctx,\n"
-                        "\t\tdom_string_data(str),\n"
-                        "\t\tdom_string_length(str));\n"
-                        "\tdom_string_unref(str);\n"
+                        "\tif (str != NULL) {\n"
+                        "\t\tduk_push_lstring(ctx,\n"
+                        "\t\t\tdom_string_data(str),\n"
+                        "\t\t\tdom_string_length(str));\n"
+                        "\t\tdom_string_unref(str);\n"
+                        "\t} else {\n"
+                        "\t\tduk_push_lstring(ctx, NULL, 0);\n"
+                        "\t}\n"
                         "\n"
                         "\treturn 1;\n");
                 break;
