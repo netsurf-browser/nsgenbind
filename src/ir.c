@@ -607,6 +607,10 @@ attribute_map_new(struct webidl_node *interface,
                                      cure->name);
                         }
 
+                        /* check for treatnullas extended attribute */
+                        cure->treatnullas = get_extended_value(at_node,
+                                                               "TreatNullAs");
+
                         /* move to next attribute */
                         cure++;
 

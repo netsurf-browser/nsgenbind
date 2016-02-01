@@ -262,8 +262,21 @@ output_generated_attribute_setter(FILE* outf,
                         "\tdom_exception exc;\n"
                         "\tdom_string *str;\n"
                         "\tduk_size_t slen;\n"
-                        "\tconst char *s;\n"
-                        "\ts = duk_safe_to_lstring(ctx, 0, &slen);\n"
+                        "\tconst char *s;\n");
+                if ((atributee->treatnullas != NULL) &&
+                    (strcmp(atributee->treatnullas, "EmptyString") == 0)) {
+                        fprintf(outf,
+                                "\tif (duk_is_null(ctx, 0)) {\n"
+                                "\t\ts = \"\";\n"
+                                "\t\tslen = 0;\n"
+                                "\t} else {\n"
+                                "\t\ts = duk_safe_to_lstring(ctx, 0, &slen);\n"
+                                "\t}\n");
+                } else {
+                        fprintf(outf,
+                                "\ts = duk_safe_to_lstring(ctx, 0, &slen);\n");
+                }
+                fprintf(outf,
                         "\n"
                         "\texc = dom_string_create((const uint8_t *)s, slen, &str);\n"
                         "\tif (exc != DOM_NO_ERR) {\n"

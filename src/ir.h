@@ -69,6 +69,7 @@ struct ir_attribute_entry {
 
         enum webidl_type_modifier modifier; /**< modifier for the attribute intself */
         const char *putforwards; /**< putforwards attribute */
+        const char *treatnullas; /**< treatnullas attribute */
 
         struct genbind_node *getter; /**< getter from binding */
         struct genbind_node *setter; /**< getter from binding */
