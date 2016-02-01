@@ -102,8 +102,13 @@ output_generated_attribute_getter(FILE* outf,
                         "\t\t\tdom_string_data(str),\n"
                         "\t\t\tdom_string_length(str));\n"
                         "\t\tdom_string_unref(str);\n"
-                        "\t} else {\n"
-                        "\t\tduk_push_lstring(ctx, NULL, 0);\n"
+                        "\t} else {\n");
+                if (atributee->typev[0].nullable) {
+                        fprintf(outf, "\t\tduk_push_null(ctx);\n");
+                } else {
+                        fprintf(outf, "\t\tduk_push_lstring(ctx, NULL, 0);\n");
+                }
+                fprintf(outf,
                         "\t}\n"
                         "\n"
                         "\treturn 1;\n");

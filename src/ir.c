@@ -483,6 +483,12 @@ type_map_new(struct webidl_node *node,
                         cure->modifier = WEBIDL_TYPE_MODIFIER_NONE;
                 }
 
+                /* type nullability */
+                cure->nullable = (webidl_node_find_type(
+                        webidl_node_getnode(type_node),
+                        NULL,
+                        WEBIDL_NODE_TYPE_TYPE_NULLABLE) != NULL);
+
                 /* type name */
                 cure->name = webidl_node_gettext(
                         webidl_node_find_type(

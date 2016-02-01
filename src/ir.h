@@ -53,6 +53,7 @@ struct ir_operation_entry {
 struct ir_type_entry {
         enum webidl_type base; /**< base of the type (long, short, user etc.) */
         enum webidl_type_modifier modifier; /**< modifier for the type */
+        bool nullable; /**< the type is nullable */
         const char *name; /**< name of type for user types */
 };
 
