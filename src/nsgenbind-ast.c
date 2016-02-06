@@ -160,7 +160,7 @@ genbind_node_foreach_type(struct genbind_node *node,
 
 static int genbind_enumerate_node(struct genbind_node *node, void *ctx)
 {
-        node = node;
+	UNUSED(node);
         (*((int *)ctx))++;
         return 0;
 }

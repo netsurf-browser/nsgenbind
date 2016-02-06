@@ -78,6 +78,7 @@ typedef struct YYLTYPE {
                   (Loc).first_line, (Loc).first_column,         \
                   (Loc).last_line,  (Loc).last_column)
 
+#include "utils.h"
 #include "nsgenbind-lexer.h"
 #include "webidl-ast.h"
 #include "nsgenbind-ast.h"
@@ -90,14 +91,16 @@ static void nsgenbind_error(YYLTYPE *locp,
                             const char *str)
 {
         int errlen;
+
+        UNUSED(genbind_ast);
+        UNUSED(filename);
+
         errlen = snprintf(NULL, 0, "%s:%d:%s",
                           locp->filename, locp->first_line, str);
         errtxt = malloc(errlen + 1);
         snprintf(errtxt, errlen + 1, "%s:%d:%s",
                           locp->filename, locp->first_line, str);
 
-        genbind_ast = genbind_ast;
-        filename = filename;
 }
 
 static struct genbind_node *

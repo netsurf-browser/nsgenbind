@@ -173,7 +173,7 @@ int webidl_cmp_node_type(struct webidl_node *node, void *ctx)
 
 static int webidl_enumerate_node(struct webidl_node *node, void *ctx)
 {
-	node = node;
+	UNUSED(node);
 	(*((int *)ctx))++;
 	return 0;
 }

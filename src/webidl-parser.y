@@ -26,6 +26,7 @@
                  (Loc).first_line, (Loc).first_column,          \
                  (Loc).last_line,  (Loc).last_column)
 
+#include "utils.h"
 #include "webidl-parser.h"
 #include "webidl-lexer.h"
 
@@ -36,8 +37,8 @@ char *errtxt;
 static void
 webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)
 {
-  locp = locp;
-  winbind_ast = winbind_ast;
+    UNUSED(locp);
+    UNUSED(winbind_ast);
     errtxt = strdup(str);
 }
 

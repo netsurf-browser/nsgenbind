@@ -41,6 +41,13 @@ int genb_fclose_tmp(FILE *filef, const char *fname);
 char *strndup(const char *s, size_t n);
 #endif
 
-#define SLEN(x) (sizeof((x)) - 1)
+#ifndef SLEN
+/* Calculate length of a string constant */
+#define SLEN(s) (sizeof((s)) - 1) /* -1 for '\0' */
+#endif
+
+#ifndef UNUSED
+#define UNUSED(x) ((void)(x))
+#endif
 
 #endif
