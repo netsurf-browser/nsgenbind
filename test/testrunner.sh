@@ -7,32 +7,46 @@ echo >>${LOGFILE}
 }
 
 BUILDDIR=$1
-TESTDIR=$2
+TESTSRCDIR=$2
 
 # locations
-LOGFILE=${BUILDDIR}/testlog
-RESFILE=${BUILDDIR}/testres
-ERRFILE=${BUILDDIR}/testerr
+# test output
+TESTOUTDIR=${BUILDDIR}/test
+# test overall output
+LOGFILE=${TESTOUTDIR}/testlog
 
-GENJSBIND=${BUILDDIR}/nsgenbind
+# genbind tool
+NSGENBIND=${BUILDDIR}/nsgenbind
 
-BINDINGDIR=${TESTDIR}/data/bindings
+#bindings
+BINDINGDIR=${TESTSRCDIR}/data/bindings
 BINDINGTESTS=$(ls ${BINDINGDIR}/*.bnd)
 
-IDLDIR=${TESTDIR}/data/idl
+IDLDIR=${TESTSRCDIR}/data/idl
+
+mkdir -p ${TESTOUTDIR}
 
 echo "$*" >${LOGFILE}
 
 for TEST in ${BINDINGTESTS};do
 
-  TESTNAME=$(basename ${TEST} .bnd)
-
-  echo -n "    TEST: ${TESTNAME}......"
   outline
 
-  echo  ${GENJSBIND} -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c -h ${BUILDDIR}/test_${TESTNAME}.h ${TEST} >>${LOGFILE} 2>&1   
+  TESTNAME=$(basename ${TEST} .bnd)
+  TESTDIR=${TESTOUTDIR}/${TESTNAME}
 
-  ${GENJSBIND} -v -I ${IDLDIR} -o ${BUILDDIR}/test_${TESTNAME}.c -h ${BUILDDIR}/test_${TESTNAME}.h ${TEST} >${RESFILE} 2>${ERRFILE}
+  echo -n "    TEST: ${TESTNAME}......"
+  echo "    TEST: ${TESTNAME}......" >>${LOGFILE}
+
+  mkdir -p ${TESTDIR}
+  # per test results
+  RESFILE=${TESTDIR}/testres
+  # per test errors
+  ERRFILE=${TESTDIR}/testerr
+
+  echo  ${NSGENBIND} -v -D -g -I ${IDLDIR} ${TEST} ${TESTOUTDIR}/${TESTNAME} >>${LOGFILE} 2>&1
+
+  ${NSGENBIND} -v -D -g -I ${IDLDIR} ${TEST} ${TESTOUTDIR}/${TESTNAME} >${RESFILE} 2>${ERRFILE}
 
   RESULT=$?
 
