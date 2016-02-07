@@ -672,16 +672,20 @@ intercalate_implements(struct webidl_node *interface_node, void *ctx)
 /* exported interface defined in webidl-ast.h */
 int webidl_intercalate_implements(struct webidl_node *webidl_ast)
 {
-	/* for each interface:
-	 *   for each implements entry:
-	 *     find interface from implemets
-	 *     recusrse into that interface
-	 *     copy the interface into this one
-	 */
-	return webidl_node_for_each_type(webidl_ast,
-					 WEBIDL_NODE_TYPE_INTERFACE,
-					 intercalate_implements,
-					 webidl_ast);
+        int res = 0;
+        if (webidl_ast != NULL) {
+                /* for each interface:
+                 *   for each implements entry:
+                 *     find interface from implemets
+                 *     recusrse into that interface
+                 *     copy the interface into this one
+                 */
+                res = webidl_node_for_each_type(webidl_ast,
+                                                WEBIDL_NODE_TYPE_INTERFACE,
+                                                intercalate_implements,
+                                                webidl_ast);
+        }
+        return res;
 }
 
 /* exported interface defined in webidl-ast.h */
