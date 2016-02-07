@@ -33,7 +33,7 @@ output_generated_attribute_user_getter(FILE* outf,
                                   struct ir_entry *interfacee,
                                   struct ir_attribute_entry *atributee)
 {
-        interfacee = interfacee;
+        UNUSED(interfacee);
 
         if ((atributee->typev[0].name != NULL) &&
             strcmp(atributee->typev[0].name, "EventHandler") == 0) {
@@ -208,7 +208,7 @@ output_generated_attribute_user_setter(FILE* outf,
                                        struct ir_entry *interfacee,
                                        struct ir_attribute_entry *atributee)
 {
-        interfacee = interfacee;
+        UNUSED(interfacee);
 
         if ((atributee->typev[0].name != NULL) &&
             strcmp(atributee->typev[0].name, "EventHandler") == 0) {
