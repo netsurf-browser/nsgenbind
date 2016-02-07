@@ -548,11 +548,9 @@ ClassArgs:
                 $$ = NULL;
         }
         |
-        ClassArg
-        |
-        ClassArgs ClassArg
+        ClassArg ClassArgs
         {
-                $$ = genbind_node_link($2, $1);
+                $$ = genbind_node_prepend($2, $1);
         }
         ;
 
