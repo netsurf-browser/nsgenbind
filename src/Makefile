@@ -15,7 +15,9 @@ $(BUILDDIR)/%-lexer.c $(BUILDDIR)/%-lexer.h: src/%-lexer.l
 
 $(BUILDDIR)/%-lexer.c: $(BUILDDIR)/%-parser.h
 
-# Bison 2.6 and later require api.prefix, but this breaks Bison 2.5 and earlier.
+# Bison 3.0 and later require api.prefix in curly braces
+# Bison 2.6 and later require api.prefix
+# Bison 2.5 and earlier require name-prefix switch
 bisonvsn := $(word 4,$(shell $(BISON) --version))
 bisonmaj := $(word 1,$(subst ., ,$(bisonvsn)))
 bisonmin := $(word 2,$(subst ., ,$(bisonvsn)))
@@ -29,7 +31,7 @@ else
       BISON_DEFINES = --define=api.prefix=$(*F)_
     endif
   else
-    BISON_DEFINES = --define=api.prefix=$(*F)_
+    BISON_DEFINES = --define=api.prefix={$(*F)_}
   endif
 endif
 
