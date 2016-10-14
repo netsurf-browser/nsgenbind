@@ -83,13 +83,13 @@ get_member_default_str(struct ir_entry *dictionarye,
         case WEBIDL_NODE_TYPE_LITERAL_INT:
                 lit_int = webidl_node_getint(lit_node);
                 *defl_out = malloc(128);
-                sprintf(*defl_out, "%d", *lit_int);
+                snprintf(*defl_out, 128, "%d", *lit_int);
                 break;
 
         case WEBIDL_NODE_TYPE_LITERAL_FLOAT:
                 lit_flt = webidl_node_getfloat(lit_node);
                 *defl_out = malloc(128);
-                sprintf(*defl_out, "%f", *lit_flt);
+                snprintf(*defl_out, 128, "%f", *lit_flt);
                 break;
 
         default:
