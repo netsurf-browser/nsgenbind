@@ -92,7 +92,16 @@ typedef int (webidl_callback_t)(struct webidl_node *node, void *ctx);
 
 int webidl_cmp_node_type(struct webidl_node *node, void *ctx);
 
+/**
+ * create a new node with a pointer value
+ */
 struct webidl_node *webidl_node_new(enum webidl_node_type, struct webidl_node *l, void *r);
+
+/**
+ * create a new node with an integer value
+ */
+struct webidl_node *webidl_new_number_node(enum webidl_node_type type, struct webidl_node *l, int number);
+
 
 void webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void *r);
 

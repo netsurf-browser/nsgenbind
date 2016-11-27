@@ -120,6 +120,7 @@ webidl_node_add(struct webidl_node *node, struct webidl_node *list)
 
 
 struct webidl_node *
+/* exported interface documented in webidl-ast.h */
 webidl_node_new(enum webidl_node_type type,
 		struct webidl_node *l,
 		void *r)
@@ -128,7 +129,21 @@ webidl_node_new(enum webidl_node_type type,
 	nn = calloc(1, sizeof(struct webidl_node));
 	nn->type = type;
 	nn->l = l;
-	nn->r.text = r;
+	nn->r.value = r;
+	return nn;
+}
+
+/* exported interface documented in webidl-ast.h */
+struct webidl_node *
+webidl_new_number_node(enum webidl_node_type type,
+                       struct webidl_node *l,
+                       int number)
+{
+	struct webidl_node *nn;
+	nn = calloc(1, sizeof(struct webidl_node));
+	nn->type = type;
+	nn->l = l;
+	nn->r.number = number;
 	return nn;
 }
 

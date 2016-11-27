@@ -132,6 +132,19 @@ genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r)
         return nn;
 }
 
+struct genbind_node *
+genbind_new_number_node(enum genbind_node_type type,
+                        struct genbind_node *l,
+                        int number)
+{
+        struct genbind_node *nn;
+        nn = calloc(1, sizeof(struct genbind_node));
+        nn->type = type;
+        nn->l = l;
+        nn->r.number = number;
+        return nn;
+}
+
 
 /* exported interface defined in nsgenbind-ast.h */
 int

@@ -71,7 +71,18 @@ int genbind_parsefile(char *infilename, struct genbind_node **ast);
 
 char *genbind_strapp(char *a, char *b);
 
+/**
+ * create a new node with value from pointer
+ */
 struct genbind_node *genbind_new_node(enum genbind_node_type type, struct genbind_node *l, void *r);
+
+/**
+ * create a new number node
+ *
+ * Create a node with of number type
+ */
+struct genbind_node *genbind_new_number_node(enum genbind_node_type type, struct genbind_node *l, int number);
+
 struct genbind_node *genbind_node_link(struct genbind_node *tgt, struct genbind_node *src);
 
 struct genbind_node *genbind_node_prepend(struct genbind_node *list, struct genbind_node *inst);

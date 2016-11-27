@@ -138,17 +138,17 @@ add_method(struct genbind_node **genbind_ast,
         }
 
         location_node = genbind_new_node(GENBIND_NODE_TYPE_FILE,
-                                genbind_new_node(GENBIND_NODE_TYPE_LINE,
-                                                 cdata_node,
-                                                 (void *)lineno),
+                                genbind_new_number_node(GENBIND_NODE_TYPE_LINE,
+                                                        cdata_node,
+                                                        lineno),
                                          strdup(filename));
 
         /* generate method node */
         method_node = genbind_new_node(GENBIND_NODE_TYPE_METHOD,
                                  NULL,
-                                 genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
+                                 genbind_new_number_node(GENBIND_NODE_TYPE_METHOD_TYPE,
                                                   location_node,
-                                                  (void *)methodtype));
+                                                  methodtype));
 
         class_node = genbind_node_find_type_ident(*genbind_ast,
                                                   NULL,
@@ -304,11 +304,11 @@ BindingArg:
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_METHOD,
                         NULL,
-                        genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
+                        genbind_new_number_node(GENBIND_NODE_TYPE_METHOD_TYPE,
                                 genbind_new_node(GENBIND_NODE_TYPE_CDATA,
                                                  NULL,
                                                  $2),
-                                (void *)$1));
+                                $1));
         }
         ;
 
@@ -568,11 +568,11 @@ ClassArg:
         TOK_PROPERTY Modifiers TOK_IDENTIFIER ';'
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_PROPERTY, NULL,
-                        genbind_new_node(GENBIND_NODE_TYPE_MODIFIER,
+                        genbind_new_number_node(GENBIND_NODE_TYPE_MODIFIER,
                                 genbind_new_node(GENBIND_NODE_TYPE_IDENT,
                                                  NULL,
                                                  $3),
-                                         (void *)$2));
+                                         $2));
         }
         |
         TOK_FLAGS ClassFlags ';'
@@ -584,11 +584,11 @@ ClassArg:
         {
                 $$ = genbind_new_node(GENBIND_NODE_TYPE_METHOD,
                         NULL,
-                        genbind_new_node(GENBIND_NODE_TYPE_METHOD_TYPE,
+                        genbind_new_number_node(GENBIND_NODE_TYPE_METHOD_TYPE,
                                 genbind_new_node(GENBIND_NODE_TYPE_CDATA,
                                                  NULL,
                                                  $2),
-                                (void *)$1));
+                                $1));
         }
         ;
 
