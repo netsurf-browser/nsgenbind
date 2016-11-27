@@ -147,12 +147,6 @@ webidl_new_number_node(enum webidl_node_type type,
 	return nn;
 }
 
-void
-webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void *r)
-{
-	node->type = type;
-	node->r.value = r;
-}
 
 int
 webidl_node_for_each_type(struct webidl_node *node,

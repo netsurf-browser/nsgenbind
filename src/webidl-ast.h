@@ -103,8 +103,6 @@ struct webidl_node *webidl_node_new(enum webidl_node_type, struct webidl_node *l
 struct webidl_node *webidl_new_number_node(enum webidl_node_type type, struct webidl_node *l, int number);
 
 
-void webidl_node_set(struct webidl_node *node, enum webidl_node_type type, void *r);
-
 struct webidl_node *webidl_node_prepend(struct webidl_node *list, struct webidl_node *node);
 struct webidl_node *webidl_node_append(struct webidl_node *list, struct webidl_node *node);
 
