@@ -442,13 +442,106 @@ static const char *webidl_node_type_to_str(enum webidl_node_type type)
 }
 
 /**
+ * dump an integer node type
+ */
+static int
+webidl_ast_dump_int(FILE *dumpf, struct webidl_node *node)
+{
+        switch(node->type) {
+        case WEBIDL_NODE_TYPE_MODIFIER:
+                switch (node->r.number) {
+                case WEBIDL_TYPE_MODIFIER_NONE:
+                        fprintf(dumpf, ": none\n");
+                        break;
+
+                case WEBIDL_TYPE_MODIFIER_UNSIGNED:
+                        fprintf(dumpf, ": unsigned\n");
+                        break;
+
+                case WEBIDL_TYPE_MODIFIER_UNRESTRICTED:
+                        fprintf(dumpf, ": unrestricted\n");
+                        break;
+
+                case WEBIDL_TYPE_MODIFIER_READONLY:
+                        fprintf(dumpf, ": readonly\n");
+                        break;
+
+                case WEBIDL_TYPE_MODIFIER_STATIC:
+                        fprintf(dumpf, ": static\n");
+                        break;
+
+                case WEBIDL_TYPE_MODIFIER_INHERIT:
+                        fprintf(dumpf, ": inherit\n");
+                        break;
+
+                default:
+                        fprintf(dumpf, ": %d\n", node->r.number);
+                        break;
+                }
+                break;
+
+        case WEBIDL_NODE_TYPE_TYPE_BASE:
+                fprintf(dumpf, ": %s\n",
+                        webidl_type_to_str(WEBIDL_TYPE_MODIFIER_NONE,
+                                           node->r.number));
+                break;
+
+        case WEBIDL_NODE_TYPE_SPECIAL:
+                switch (node->r.number) {
+                case WEBIDL_TYPE_SPECIAL_GETTER:
+                        fprintf(dumpf, ": getter\n");
+                        break;
+
+                case WEBIDL_TYPE_SPECIAL_SETTER:
+                        fprintf(dumpf, ": setter\n");
+                        break;
+
+                case WEBIDL_TYPE_SPECIAL_CREATOR:
+                        fprintf(dumpf, ": creator\n");
+                        break;
+
+                case WEBIDL_TYPE_SPECIAL_DELETER:
+                        fprintf(dumpf, ": deleter\n");
+                        break;
+
+                case WEBIDL_TYPE_SPECIAL_LEGACYCALLER:
+                        fprintf(dumpf, ": legacy caller\n");
+                        break;
+
+                default:
+                        fprintf(dumpf, ": %d\n", node->r.number);
+                        break;
+                }
+                break;
+
+        case WEBIDL_NODE_TYPE_LITERAL_BOOL:
+                if (node->r.number == 0) {
+                        fprintf(dumpf, ": false\n");
+                } else {
+                        fprintf(dumpf, ": true\n");
+                }
+                break;
+
+        case WEBIDL_NODE_TYPE_LITERAL_INT:
+                fprintf(dumpf, ": %d\n", node->r.number);
+                break;
+
+        default:
+                /* no value */
+                fprintf(dumpf, "\n");
+                break;
+        }
+
+        return 0;
+}
+
+/**
  * Recursively dump the AST nodes increasing indent as appropriate
  */
 static int webidl_ast_dump(FILE *dumpf, struct webidl_node *node, int indent)
 {
 	const char *SPACES="                                                                               ";
 	char *txt;
-        int *value;
 	while (node != NULL) {
                 fprintf(dumpf, "%.*s%s", indent, SPACES,
                         webidl_node_type_to_str(node->type));
@@ -464,14 +557,8 @@ static int webidl_ast_dump(FILE *dumpf, struct webidl_node *node, int indent)
 				webidl_ast_dump(dumpf, next, indent + 2);
 			} else {
 				/* not txt or node try an int */
-                                value = webidl_node_getint(node);
-                                if (value != NULL) {
-                                        fprintf(dumpf, ": %d\n", *value);
-                                } else {
-                                        /* no value */
-                                        fprintf(dumpf, "\n");
-                                }
-			}
+                                webidl_ast_dump_int(dumpf, node);
+                        }
 		} else {
 			fprintf(dumpf, ": \"%s\"\n", txt);
 		}
