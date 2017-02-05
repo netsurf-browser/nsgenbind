@@ -226,17 +226,20 @@ output_generated_attribute_user_setter(FILE* outf,
                         "\tduk_get_prop_string(ctx, -1, HANDLER_MAGIC);\n"
                         "\t/* handlerfn this handlers */\n"
                         "\tduk_push_lstring(ctx, \"%s\", %ld);\n"
-                        "\t/* handlerfn this handlers click */\n"
+                        "\t/* handlerfn this handlers %s */\n"
                         "\tduk_dup(ctx, -4);\n"
-                        "\t/* handlerfn this handlers click handlerfn */\n"
+                        "\t/* handlerfn this handlers %s handlerfn */\n"
                         "\tduk_put_prop(ctx, -3);\n"
                         "\t/* handlerfn this handlers */\n"
                         "\tdukky_register_event_listener_for(ctx,\n"
                         "\t\t(dom_element *)((node_private_t *)priv)->node,\n"
-                        "\t\tcorestring_dom_click);\n"
+                        "\t\tcorestring_dom_%s, false);\n"
                         "\treturn 0;\n",
                         atributee->name + 2,
-                        strlen(atributee->name + 2));
+                        strlen(atributee->name + 2),
+                        atributee->name + 2,
+                        atributee->name + 2,
+                        atributee->name + 2);
                 return 0;
         }
         return -1;
