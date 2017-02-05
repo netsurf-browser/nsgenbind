@@ -177,7 +177,7 @@ output_private_header(struct ir *ir)
                                 GENBIND_NODE_TYPE_PRIVATE);
                 }
 
-                fprintf(privf, "} %s_private_t;\n\n", interfacee->class_name);
+                fprintf(privf, "} __attribute__((aligned)) %s_private_t;\n\n", interfacee->class_name);
 
         }
 
