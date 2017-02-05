@@ -74,7 +74,7 @@ int output_ccode(FILE* outf, struct genbind_node *node)
                         NULL, GENBIND_NODE_TYPE_FILE));
 
         if ((line != NULL) && (filename != NULL)) {
-                fprintf(outf, "#line %d \"%s\"\n", *line, filename);
+                fprintf(outf, "/* #line %d \"%s\" */\n", *line, filename);
         }
 
         return output_cdata(outf, node, GENBIND_NODE_TYPE_CDATA);
