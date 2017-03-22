@@ -1025,7 +1025,7 @@ output_operation_argument_type_check(
         case WEBIDL_TYPE_BOOL:
                 fprintf(outf,
                         "\t\tif (!duk_is_boolean(ctx, %d)) {\n"
-                        "\t\t\tduk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_bool_type, %d, \"%s\");\n"
+                        "\t\t\t(void) duk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_bool_type, %d, \"%s\");\n"
                         "\t\t}\n", argidx, DLPFX, argidx, argumente->name);
                 break;
 
@@ -1036,7 +1036,7 @@ output_operation_argument_type_check(
         case WEBIDL_TYPE_LONGLONG:
                 fprintf(outf,
                         "\t\tif (!duk_is_number(ctx, %d)) {\n"
-                        "\t\t\tduk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_number_type, %d, \"%s\");\n"
+                        "\t\t\t(void) duk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_number_type, %d, \"%s\");\n"
                         "\t\t}\n", argidx, DLPFX, argidx, argumente->name);
                 break;
 
@@ -1106,7 +1106,7 @@ output_interface_operation(FILE* outf,
                 fprintf(outf,
                         "if (%s_argc < %d) {\n"
                         "\t\t/* not enough arguments */\n"
-                        "\t\tduk_error(ctx, DUK_RET_TYPE_ERROR, %s_error_fmt_argument, %d, %s_argc);\n"
+                        "\t\t(void) duk_error(ctx, DUK_RET_TYPE_ERROR, %s_error_fmt_argument, %d, %s_argc);\n"
                         "\t} else ",
                         DLPFX,
                         fixedargc,
