@@ -747,7 +747,7 @@ output_interface_prototype(FILE* outf,
                                              GENBIND_METHOD_TYPE_PROTOTYPE);
 
         /* prototype definition */
-        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx)\n",
+        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx, void *udata)\n",
                 DLPFX, interfacee->class_name);
         fprintf(outf,"{\n");
 
@@ -1511,7 +1511,7 @@ int output_interface_declaration(FILE* outf, struct ir_entry *interfacee)
         }
 
         /* prototype declaration */
-        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx);\n",
+        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx, void *udata);\n",
                 DLPFX, interfacee->class_name);
 
         /* if the interface has no references (no other interface inherits from

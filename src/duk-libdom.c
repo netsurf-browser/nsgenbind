@@ -441,7 +441,7 @@ output_binding_src(struct ir *ir)
                 "{\n"
                 "\tduk_int_t ret;\n"
                 "\tduk_push_object(ctx);\n"
-                "\tif ((ret = duk_safe_call(ctx, genproto, 1, 1)) != DUK_EXEC_SUCCESS) {\n"
+                "\tif ((ret = duk_safe_call(ctx, genproto, NULL, 1, 1)) != DUK_EXEC_SUCCESS) {\n"
                 "\t\tduk_pop(ctx);\n"
                 "\t\tLOG(\"Failed to register prototype for %%s\", proto_name + 2);\n"
                 "\t\treturn ret;\n"
