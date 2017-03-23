@@ -747,7 +747,7 @@ output_interface_prototype(FILE* outf,
                                              GENBIND_METHOD_TYPE_PROTOTYPE);
 
         /* prototype definition */
-        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx)\n",
+        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx, void *udata)\n",
                 DLPFX, interfacee->class_name);
         fprintf(outf,"{\n");
 
@@ -1025,7 +1025,7 @@ output_operation_argument_type_check(
         case WEBIDL_TYPE_BOOL:
                 fprintf(outf,
                         "\t\tif (!duk_is_boolean(ctx, %d)) {\n"
-                        "\t\t\tduk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_bool_type, %d, \"%s\");\n"
+                        "\t\t\treturn duk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_bool_type, %d, \"%s\");\n"
                         "\t\t}\n", argidx, DLPFX, argidx, argumente->name);
                 break;
 
@@ -1036,7 +1036,7 @@ output_operation_argument_type_check(
         case WEBIDL_TYPE_LONGLONG:
                 fprintf(outf,
                         "\t\tif (!duk_is_number(ctx, %d)) {\n"
-                        "\t\t\tduk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_number_type, %d, \"%s\");\n"
+                        "\t\t\treturn duk_error(ctx, DUK_ERR_ERROR, %s_error_fmt_number_type, %d, \"%s\");\n"
                         "\t\t}\n", argidx, DLPFX, argidx, argumente->name);
                 break;
 
@@ -1106,7 +1106,7 @@ output_interface_operation(FILE* outf,
                 fprintf(outf,
                         "if (%s_argc < %d) {\n"
                         "\t\t/* not enough arguments */\n"
-                        "\t\tduk_error(ctx, DUK_RET_TYPE_ERROR, %s_error_fmt_argument, %d, %s_argc);\n"
+                        "\t\treturn duk_error(ctx, DUK_RET_TYPE_ERROR, %s_error_fmt_argument, %d, %s_argc);\n"
                         "\t} else ",
                         DLPFX,
                         fixedargc,
@@ -1511,7 +1511,7 @@ int output_interface_declaration(FILE* outf, struct ir_entry *interfacee)
         }
 
         /* prototype declaration */
-        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx);\n",
+        fprintf(outf, "duk_ret_t %s_%s___proto(duk_context *ctx, void *udata);\n",
                 DLPFX, interfacee->class_name);
 
         /* if the interface has no references (no other interface inherits from
