@@ -20,7 +20,15 @@
 
 %code requires {
 
+#ifndef YYLTYPE
+/* Bison <3.0 */
 #define YYLTYPE YYLTYPE
+#else
+/* Bison 3.0 or later */
+/* Keep in sync with the defined API prefix */
+#define NSGENBIND_LTYPE_IS_DECLARED 1
+#endif
+
 typedef struct YYLTYPE {
         struct YYLTYPE *next;
         int start_line;
