@@ -32,7 +32,7 @@
 
 #include "webidl-ast.h"
 
-char *errtxt;
+static char *errtxt;
 
 static void
 webidl_error(YYLTYPE *locp, struct webidl_node **winbind_ast, const char *str)

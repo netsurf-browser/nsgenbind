@@ -91,7 +91,7 @@ typedef struct YYLTYPE {
 #include "webidl-ast.h"
 #include "nsgenbind-ast.h"
 
-char *errtxt;
+static char *errtxt;
 
 static void nsgenbind_error(YYLTYPE *locp,
                             char *filename,
