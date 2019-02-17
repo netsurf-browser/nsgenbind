@@ -151,7 +151,7 @@ output_dump_stack(FILE* outf)
         if (options->dbglog) {
                 /* dump stack */
                 fprintf(outf, "\tduk_push_context_dump(ctx);\n");
-                fprintf(outf, "\tLOG(\"Stack: %%s\", duk_to_string(ctx, -1));\n");
+                fprintf(outf, "\tNSLOG(dukky, INFO, \"Stack: %%s\", duk_to_string(ctx, -1));\n");
                 fprintf(outf, "\tduk_pop(ctx);\n");
         }
         return 0;
@@ -255,7 +255,7 @@ output_get_method_private(FILE* outf, char *class_name)
         fprintf(outf, "\tduk_pop_2(ctx);\n");
         fprintf(outf, "\tif (priv == NULL) {\n");
         if (options->dbglog) {
-                fprintf(outf, "\t\tLOG(\"priv failed\");\n");
+                fprintf(outf, "\t\tNSLOG(dukky, INFO, \"priv failed\");\n");
         }
         fprintf(outf, "\t\treturn 0; /* can do? No can do. */\n");
         fprintf(outf, "\t}\n\n");
@@ -513,7 +513,7 @@ output_interface_init(FILE* outf,
         /* generate log statement */
         if (options->dbglog) {
                 fprintf(outf,
-                        "\tLOG(\"Initialise %%p (priv=%%p)\", duk_get_heapptr(ctx, 0), priv);\n" );
+                        "\tNSLOG(dukky, INFO, \"Initialise %%p (priv=%%p)\", duk_get_heapptr(ctx, 0), priv);\n" );
         }
 
         /* output the initaliser code from the binding */
@@ -550,7 +550,7 @@ output_interface_fini(FILE* outf,
         /* generate log statement */
         if (options->dbglog) {
                 fprintf(outf,
-                        "\tLOG(\"Finalise %%p\", duk_get_heapptr(ctx, 0));\n" );
+                        "\tNSLOG(dukky, INFO, \"Finalise %%p\", duk_get_heapptr(ctx, 0));\n" );
         }
 
         /* output the finialisor code from the binding */
@@ -1163,7 +1163,7 @@ output_interface_operation(FILE* outf,
                      interfacee->name, operatione->name);
 
                 if (options->dbglog) {
-                        fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
+                        fprintf(outf, "\tNSLOG(dukky, WARNING, \"Unimplemented\");\n" );
                 }
 
                 fprintf(outf,"\treturn 0;\n");
@@ -1248,7 +1248,7 @@ output_attribute_getter(FILE* outf,
              type_str);
 
         if (options->dbglog) {
-                fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
+                fprintf(outf, "\tNSLOG(dukky, WARNING, \"Unimplemented\");\n" );
         }
 
         fprintf(outf,
@@ -1345,7 +1345,7 @@ output_attribute_setter(FILE* outf,
                      atributee->name,
                      type_str);
                 if (options->dbglog) {
-                        fprintf(outf, "\tLOG(\"Unimplemented\");\n" );
+                        fprintf(outf, "\tNSLOG(dukky, WARNING, \"Unimplemented\");\n" );
                 }
 
                 /* no implementation so generate default */
