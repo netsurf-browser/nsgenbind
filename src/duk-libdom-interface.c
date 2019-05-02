@@ -244,11 +244,15 @@ output_prototype_constant_int(FILE *outf, const char *constant_name, int value)
  * generate code that gets a private pointer for a method
  */
 static int
-output_get_method_private(FILE* outf, char *class_name)
+output_get_method_private(FILE* outf, char *class_name, bool is_global)
 {
         fprintf(outf, "\t/* Get private data for method */\n");
         fprintf(outf, "\t%s_private_t *priv = NULL;\n", class_name);
-        fprintf(outf, "\tduk_push_this(ctx);\n");
+        if (is_global) {
+                fprintf(outf, "\tduk_push_global_object(ctx);\n");
+        } else {
+                fprintf(outf, "\tduk_push_this(ctx);\n");
+        }
         fprintf(outf, "\tduk_get_prop_string(ctx, -1, %s_magic_string_private);\n",
                 DLPFX);
         fprintf(outf, "\tpriv = duk_get_pointer(ctx, -1);\n");
@@ -820,7 +824,8 @@ output_interface_elipsis_operation(FILE* outf,
              "Elipsis parameters not checked: method %s::%s();",
                      interfacee->name, operatione->name);
 
-        output_get_method_private(outf, interfacee->class_name);
+        output_get_method_private(outf, interfacee->class_name,
+                                  interfacee->u.interface.primary_global);
 
         cdatac = output_ccode(outf, operatione->method);
         if (cdatac == 0) {
@@ -856,7 +861,8 @@ output_interface_overloaded_operation(FILE* outf,
          * overloaded operation should go
          */
 
-        output_get_method_private(outf, interfacee->class_name);
+        output_get_method_private(outf, interfacee->class_name,
+                                  interfacee->u.interface.primary_global);
 
         cdatac = output_cdata(outf,
                               operatione->method,
@@ -1153,7 +1159,8 @@ output_interface_operation(FILE* outf,
                                                      argidx);
        }
 
-        output_get_method_private(outf, interfacee->class_name);
+        output_get_method_private(outf, interfacee->class_name,
+                                  interfacee->u.interface.primary_global);
 
         cdatac = output_ccode(outf, operatione->method);
         if (cdatac == 0) {
@@ -1212,7 +1219,8 @@ output_attribute_getter(FILE* outf,
                 DLPFX, interfacee->class_name, atributee->name);
         fprintf(outf,"{\n");
 
-        output_get_method_private(outf, interfacee->class_name);
+        output_get_method_private(outf, interfacee->class_name,
+                                  interfacee->u.interface.primary_global);
 
         /* if binding available for this attribute getter process it */
         if (atributee->getter != NULL) {
@@ -1310,7 +1318,8 @@ output_attribute_setter(FILE* outf,
                 DLPFX, interfacee->class_name, atributee->name);
         fprintf(outf,"{\n");
 
-        output_get_method_private(outf, interfacee->class_name);
+        output_get_method_private(outf, interfacee->class_name,
+                                  interfacee->u.interface.primary_global);
 
         /* if binding available for this attribute getter process it */
         if (atributee->setter != NULL) {
