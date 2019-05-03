@@ -20,6 +20,7 @@
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
 #include "ir.h"
+#include "output.h"
 #include "duk-libdom.h"
 
 /** prefix for all generated functions */
@@ -100,11 +101,12 @@ get_member_default_str(struct ir_entry *dictionarye,
         return 0;
 }
 
+
 /**
  * generate a single class method for an interface operation
  */
 static int
-output_member_acessor(FILE* outf,
+output_member_acessor(struct opctx *outc,
                       struct ir_entry *dictionarye,
                       struct ir_operation_argument_entry *membere)
 {
@@ -148,22 +150,22 @@ output_member_acessor(FILE* outf,
         switch (*argument_type) {
 
         case WEBIDL_TYPE_STRING:
-                fprintf(outf,
+                outputf(outc,
                         "const char *\n"
                         "%s_%s_get_%s(duk_context *ctx, duk_idx_t idx)\n"
                         "{\n",
                         DLPFX, dictionarye->class_name, membere->name);
 
                 if (defl == NULL) {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tconst char *ret = NULL; /* No default */\n");
                 } else {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tconst char *ret = \"%s\"; /* Default value of %s */\n",
                                 defl, membere->name);
                 }
 
-                fprintf(outf,
+                outputf(outc,
                         "\t/* ... obj@idx ... */\n"
                         "\tduk_get_prop_string(ctx, idx, \"%s\");\n"
                         "\t/* ... obj@idx ... value/undefined */\n"
@@ -179,22 +181,22 @@ output_member_acessor(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_BOOL:
-                fprintf(outf,
+                outputf(outc,
                         "duk_bool_t\n"
                         "%s_%s_get_%s(duk_context *ctx, duk_idx_t idx)\n"
                         "{\n",
                         DLPFX, dictionarye->class_name, membere->name);
 
                 if (defl == NULL) {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tduk_bool_t ret = false; /* No default */\n");
                 } else {
-                fprintf(outf,
+                outputf(outc,
                         "\tduk_bool_t ret = %s; /* Default value of %s */\n",
                         defl, membere->name);
                 }
 
-                fprintf(outf,
+                outputf(outc,
                         "\t/* ... obj@idx ... */\n"
                         "\tduk_get_prop_string(ctx, idx, \"%s\");\n"
                         "\t/* ... obj@idx ... value/undefined */\n"
@@ -212,21 +214,22 @@ output_member_acessor(FILE* outf,
         case WEBIDL_TYPE_SHORT:
         case WEBIDL_TYPE_LONG:
         case WEBIDL_TYPE_LONGLONG:
-                fprintf(outf,
+                outputf(outc,
                         "duk_int_t\n"
                         "%s_%s_get_%s(duk_context *ctx, duk_idx_t idx)\n"
                         "{\n",
                         DLPFX, dictionarye->class_name, membere->name);
 
                 if (defl == NULL) {
-                        fprintf(outf, "\tduk_int_t ret = 0; /* No default */\n");
+                        outputf(outc,
+                                "\tduk_int_t ret = 0; /* No default */\n");
                 } else {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tduk_int_t ret = %s; /* Default value of %s */\n",
                                 defl, membere->name);
                 }
 
-                fprintf(outf,
+                outputf(outc,
                         "\t/* ... obj@idx ... */\n"
                         "\tduk_get_prop_string(ctx, idx, \"%s\");\n"
                         "\t/* ... obj@idx ... value/undefined */\n"
@@ -242,19 +245,19 @@ output_member_acessor(FILE* outf,
 
         case WEBIDL_TYPE_FLOAT:
         case WEBIDL_TYPE_DOUBLE:
-                fprintf(outf,
+                outputf(outc,
                         "duk_double_t\n"
                         "%s_%s_get_%s(duk_context *ctx, duk_idx_t idx)\n",
                         DLPFX, dictionarye->class_name, membere->name);
 
-                fprintf(outf,
+                outputf(outc,
                         "{\n"
                         "\tduk_double_t ret = %s; /* Default value of %s */\n"
                         "\t/* ... obj@idx ... */\n"
                         "\tduk_get_prop_string(ctx, idx, \"%s\");\n",
                         defl, membere->name, membere->name);
 
-                fprintf(outf,
+                outputf(outc,
                         "\t/* ... obj@idx ... value/undefined */\n"
                         "\tif (!duk_is_undefined(ctx, -1)) {\n"
                         "\t\t/* Note, this throws a duk_error if it's not a number */\n"
@@ -271,7 +274,7 @@ output_member_acessor(FILE* outf,
                         dictionarye->name,
                         membere->name,
                         *argument_type);
-                fprintf(outf,
+                outputf(outc,
                         "/* Dictionary %s:%s unhandled type (%d) */\n\n",
                         dictionarye->name,
                         membere->name,
@@ -286,7 +289,7 @@ output_member_acessor(FILE* outf,
 }
 
 static int
-output_member_acessors(FILE* outf, struct ir_entry *dictionarye)
+output_member_acessors(struct opctx *outc, struct ir_entry *dictionarye)
 {
         int memberc;
         int res = 0;
@@ -295,7 +298,7 @@ output_member_acessors(FILE* outf, struct ir_entry *dictionarye)
              memberc < dictionarye->u.dictionary.memberc;
              memberc++) {
                 res = output_member_acessor(
-                        outf,
+                        outc,
                         dictionarye,
                         dictionarye->u.dictionary.memberv + memberc);
                 if (res != 0) {
@@ -310,73 +313,72 @@ output_member_acessors(FILE* outf, struct ir_entry *dictionarye)
 /* exported function documented in duk-libdom.h */
 int output_dictionary(struct ir *ir, struct ir_entry *dictionarye)
 {
-        FILE *ifacef;
+        struct opctx *dyop;
         int res = 0;
 
-        /* open output file */
-        ifacef = genb_fopen_tmp(dictionarye->filename);
-        if (ifacef == NULL) {
-                return -1;
+        /* open the output */
+        res = output_open(dictionarye->filename, &dyop);
+        if (res != 0) {
+                return res;
         }
 
         /* tool preface */
-        output_tool_preface(ifacef);
+        output_tool_preface(dyop);
 
         /* binding preface */
-        output_method_cdata(ifacef,
+        output_method_cdata(dyop,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_PREFACE);
 
         /* class preface */
-        output_method_cdata(ifacef,
+        output_method_cdata(dyop,
                             dictionarye->class,
                             GENBIND_METHOD_TYPE_PREFACE);
 
         /* tool prologue */
-        output_tool_prologue(ifacef);
+        output_tool_prologue(dyop);
 
         /* binding prologue */
-        output_method_cdata(ifacef,
+        output_method_cdata(dyop,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_PROLOGUE);
 
         /* class prologue */
-        output_method_cdata(ifacef,
+        output_method_cdata(dyop,
                             dictionarye->class,
                             GENBIND_METHOD_TYPE_PROLOGUE);
 
-        fprintf(ifacef, "\n");
+        outputf(dyop, "\n");
 
-
-        res = output_member_acessors(ifacef, dictionarye);
+        res = output_member_acessors(dyop, dictionarye);
         if (res != 0) {
                 goto op_error;
         }
 
-        fprintf(ifacef, "\n");
+        outputf(dyop, "\n");
 
         /* class epilogue */
-        output_method_cdata(ifacef,
+        output_method_cdata(dyop,
                             dictionarye->class,
                             GENBIND_METHOD_TYPE_EPILOGUE);
 
         /* binding epilogue */
-        output_method_cdata(ifacef,
+        output_method_cdata(dyop,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_EPILOGUE);
 
         /* class postface */
-        output_method_cdata(ifacef,
+        output_method_cdata(dyop,
                             dictionarye->class,
                             GENBIND_METHOD_TYPE_POSTFACE);
 
         /* binding postface */
-        output_method_cdata(ifacef,
+        output_method_cdata(dyop,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_POSTFACE);
 
 op_error:
-        genb_fclose_tmp(ifacef, dictionarye->filename);
+        output_close(dyop);
 
         return res;
 }
@@ -385,9 +387,9 @@ op_error:
  * generate a single class method declaration for an interface operation
  */
 static int
-output_member_declaration(FILE* outf,
-                      struct ir_entry *dictionarye,
-                      struct ir_operation_argument_entry *membere)
+output_member_declaration(struct opctx *outc,
+                          struct ir_entry *dictionarye,
+                          struct ir_operation_argument_entry *membere)
 {
         struct webidl_node *type_node;
         enum webidl_type *argument_type;
@@ -422,13 +424,13 @@ output_member_declaration(FILE* outf,
         switch (*argument_type) {
 
         case WEBIDL_TYPE_STRING:
-                fprintf(outf,
+                outputf(outc,
                         "const char *%s_%s_get_%s(duk_context *ctx, duk_idx_t idx);\n",
                         DLPFX, dictionarye->class_name, membere->name);
                 break;
 
         case WEBIDL_TYPE_BOOL:
-                fprintf(outf,
+                outputf(outc,
                         "duk_bool_t %s_%s_get_%s(duk_context *ctx, duk_idx_t idx);\n",
                         DLPFX, dictionarye->class_name, membere->name);
                 break;
@@ -436,20 +438,20 @@ output_member_declaration(FILE* outf,
         case WEBIDL_TYPE_SHORT:
         case WEBIDL_TYPE_LONG:
         case WEBIDL_TYPE_LONGLONG:
-                fprintf(outf,
+                outputf(outc,
                         "duk_int_t %s_%s_get_%s(duk_context *ctx, duk_idx_t idx);\n",
                         DLPFX, dictionarye->class_name, membere->name);
                 break;
 
         case WEBIDL_TYPE_FLOAT:
         case WEBIDL_TYPE_DOUBLE:
-                fprintf(outf,
+                outputf(outc,
                         "duk_double_t %s_%s_get_%s(duk_context *ctx, duk_idx_t idx);\n",
                         DLPFX, dictionarye->class_name, membere->name);
                 break;
 
         default:
-                fprintf(outf,
+                outputf(outc,
                         "/* Dictionary %s:%s unhandled type (%d) */\n",
                         dictionarye->name,
                         membere->name,
@@ -460,7 +462,8 @@ output_member_declaration(FILE* outf,
 }
 
 /* exported function documented in duk-libdom.h */
-int output_dictionary_declaration(FILE* outf, struct ir_entry *dictionarye)
+int
+output_dictionary_declaration(struct opctx *outc, struct ir_entry *dictionarye)
 {
         int memberc;
         int res = 0;
@@ -469,7 +472,7 @@ int output_dictionary_declaration(FILE* outf, struct ir_entry *dictionarye)
              memberc < dictionarye->u.dictionary.memberc;
              memberc++) {
                 res = output_member_declaration(
-                        outf,
+                        outc,
                         dictionarye,
                         dictionarye->u.dictionary.memberv + memberc);
                 if (res != 0) {

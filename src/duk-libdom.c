@@ -20,6 +20,7 @@
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
 #include "ir.h"
+#include "output.h"
 #include "duk-libdom.h"
 
 /** prefix for all generated functions */
@@ -52,58 +53,53 @@ static char *get_prototype_name(const char *interface_name)
 
 
 
-static FILE *open_header(struct ir *ir, const char *name)
+static struct opctx *open_header(struct ir *ir, const char *name)
 {
-        FILE *hdrf;
         char *fname;
         int fnamel;
+        struct opctx *hdrc;
+        int res;
 
         fnamel = strlen(name) + 4;
         fname = malloc(fnamel);
         snprintf(fname, fnamel, "%s.h", name);
 
-        /* open output file */
-        hdrf = genb_fopen_tmp(fname);
+        /* open the output header file */
+        res = output_open(fname, &hdrc);
         free(fname);
-        if (hdrf == NULL) {
+        if (res != 0 ) {
                 return NULL;
         }
 
         /* tool preface */
-        output_tool_preface(hdrf);
+        output_tool_preface(hdrc);
 
         /* binding preface */
-        output_method_cdata(hdrf,
+        output_method_cdata(hdrc,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_PREFACE);
 
         /* header guard */
-        fprintf(hdrf, "\n#ifndef %s_%s_h\n", DLPFX, name);
-        fprintf(hdrf, "#define %s_%s_h\n\n", DLPFX, name);
+        outputf(hdrc,
+                "\n#ifndef %s_%s_h\n", DLPFX, name);
+        outputf(hdrc,
+                "#define %s_%s_h\n\n", DLPFX, name);
 
-        return hdrf;
+        return hdrc;
 }
 
-static int close_header(struct ir *ir,
-                        FILE *hdrf,
-                        const char *name)
+static int close_header(struct ir *ir, struct opctx *hdrc)
 {
-        char *fname;
-        int fnamel;
-
-        fnamel = strlen(name) + 4;
-        fname = malloc(fnamel);
-        snprintf(fname, fnamel, "%s.h", name);
-
-        fprintf(hdrf, "\n#endif\n");
+        /* close header guard */
+        outputf(hdrc,
+                "\n#endif\n");
 
         /* binding postface */
-        output_method_cdata(hdrf,
+        output_method_cdata(hdrc,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_POSTFACE);
 
-        genb_fclose_tmp(hdrf, fname);
-        free(fname);
+        output_close(hdrc);
 
         return 0;
 }
@@ -116,10 +112,10 @@ static int
 output_private_header(struct ir *ir)
 {
         int idx;
-        FILE *privf;
+        struct opctx *privc;
 
         /* open header */
-        privf = open_header(ir, "private");
+        privc = open_header(ir, "private");
 
         for (idx = 0; idx < ir->entryc; idx++) {
                 struct ir_entry *interfacee;
@@ -138,24 +134,26 @@ output_private_header(struct ir *ir)
 
                 switch (interfacee->type) {
                 case IR_ENTRY_TYPE_INTERFACE:
-                        fprintf(privf,
+                        outputf(privc,
                                 "/* Private data for %s interface */\n",
                                 interfacee->name);
                         break;
 
                 case IR_ENTRY_TYPE_DICTIONARY:
-                        fprintf(privf,
+                        outputf(privc,
                                 "/* Private data for %s dictionary */\n",
                                 interfacee->name);
                         break;
                 }
 
-                fprintf(privf, "typedef struct {\n");
+                outputf(privc,
+                        "typedef struct {\n");
 
                 /* find parent entry and include in private */
                 inherite = ir_inherit_entry(ir, interfacee);
                 if (inherite != NULL) {
-                        fprintf(privf, "\t%s_private_t parent;\n",
+                        outputf(privc,
+                                "\t%s_private_t parent;\n",
                                 inherite->class_name);
                 }
 
@@ -165,11 +163,11 @@ output_private_header(struct ir *ir)
                         NULL,
                         GENBIND_NODE_TYPE_PRIVATE);
                 while (priv_node != NULL) {
-                        fprintf(privf, "\t");
+                        outputc(privc, '\t');
 
-                        output_ctype(privf, priv_node, true);
+                        output_ctype(privc, priv_node, true);
 
-                        fprintf(privf, ";\n");
+                        outputf(privc, ";\n");
 
                         priv_node = genbind_node_find_type(
                                 genbind_node_getnode(interfacee->class),
@@ -177,11 +175,12 @@ output_private_header(struct ir *ir)
                                 GENBIND_NODE_TYPE_PRIVATE);
                 }
 
-                fprintf(privf, "} __attribute__((aligned)) %s_private_t;\n\n", interfacee->class_name);
-
+                outputf(privc,
+                        "} __attribute__((aligned)) %s_private_t;\n\n",
+                        interfacee->class_name);
         }
 
-        close_header(ir, privf, "private");
+        close_header(ir, privc);
 
         return 0;
 }
@@ -193,10 +192,10 @@ static int
 output_prototype_header(struct ir *ir)
 {
         int idx;
-        FILE *protof;
+        struct opctx *protoc;
 
         /* open header */
-        protof = open_header(ir, "prototype");
+        protoc = open_header(ir, "prototype");
 
         for (idx = 0; idx < ir->entryc; idx++) {
                 struct ir_entry *entry;
@@ -205,16 +204,16 @@ output_prototype_header(struct ir *ir)
 
                 switch (entry->type) {
                 case IR_ENTRY_TYPE_INTERFACE:
-                        output_interface_declaration(protof, entry);
+                        output_interface_declaration(protoc, entry);
                         break;
 
                 case IR_ENTRY_TYPE_DICTIONARY:
-                        output_dictionary_declaration(protof, entry);
+                        output_dictionary_declaration(protoc, entry);
                         break;
                 }
         }
 
-        close_header(ir, protof, "prototype");
+        close_header(ir, protoc);
 
         return 0;
 }
@@ -271,12 +270,12 @@ output_makefile(struct ir *ir)
 static int
 output_binding_header(struct ir *ir)
 {
-        FILE *bindf;
+        struct opctx *bindc;
 
         /* open header */
-        bindf = open_header(ir, "binding");
+        bindc = open_header(ir, "binding");
 
-        fprintf(bindf,
+        outputf(bindc,
                 "#define _MAGIC(S) (\"%s\" S)\n"
                 "#define MAGIC(S) _MAGIC(#S)\n"
                 "#define PROTO_MAGIC MAGIC(PROTOTYPES)\n"
@@ -291,7 +290,7 @@ output_binding_header(struct ir *ir)
                 MAGICPFX);
 
         /* declaration of constant string values */
-        fprintf(bindf,
+        outputf(bindc,
                 "/* Constant strings */\n"
                 "extern const char *%s_error_fmt_argument;\n"
                 "extern const char *%s_error_fmt_bool_type;\n"
@@ -301,14 +300,14 @@ output_binding_header(struct ir *ir)
                 "\n",
                 DLPFX, DLPFX, DLPFX, DLPFX, DLPFX);
 
-        fprintf(bindf,
+        outputf(bindc,
                 "duk_bool_t %s_instanceof(duk_context *ctx, duk_idx_t index, const char *klass);\n",
                 DLPFX);
 
-        fprintf(bindf,
+        outputf(bindc,
                 "duk_ret_t %s_create_prototypes(duk_context *ctx);\n", DLPFX);
 
-        close_header(ir, bindf, "binding");
+        close_header(ir, bindc);
 
         return 0;
 }
@@ -324,54 +323,55 @@ static int
 output_binding_src(struct ir *ir)
 {
         int idx;
-        FILE *bindf;
         struct ir_entry *pglobale = NULL;
         char *proto_name;
+        struct opctx *bindc;
+        int res;
 
-        /* open output file */
-        bindf = genb_fopen_tmp("binding.c");
-        if (bindf == NULL) {
+        /* open the output binding file */
+        res = output_open("binding.c", &bindc);
+        if (res != 0 ) {
                 return -1;
         }
 
         /* tool preface */
-        output_tool_preface(bindf);
+        output_tool_preface(bindc);
 
         /* binding preface */
-        output_method_cdata(bindf,
+        output_method_cdata(bindc,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_PREFACE);
 
         /* tool prologue */
-        output_tool_prologue(bindf);
+        output_tool_prologue(bindc);
 
         /* binding prologue */
-        output_method_cdata(bindf,
+        output_method_cdata(bindc,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_PROLOGUE);
 
-        fprintf(bindf, "\n");
+        outputc(bindc, '\n');
 
-        fprintf(bindf,
+        outputf(bindc,
                 "/* Error format strings */\n"
                 "const char *%s_error_fmt_argument =\"%%d argument required, but ony %%d present.\";\n"
                 "const char *%s_error_fmt_bool_type =\"argument %%d (%%s) requires a bool\";\n"
                 "const char *%s_error_fmt_number_type =\"argument %%d (%%s) requires a number\";\n",
                 DLPFX, DLPFX, DLPFX);
 
-        fprintf(bindf, "\n");
+        outputf(bindc, "\n");
 
-        fprintf(bindf,
+        outputf(bindc,
                 "/* Magic identifiers */\n"
                 "const char *%s_magic_string_private =\"%sPRIVATE\";\n"
                 "const char *%s_magic_string_prototypes =\"%sPROTOTYPES\";\n",
                 DLPFX, MAGICPFX, DLPFX, MAGICPFX);
 
-        fprintf(bindf, "\n");
+        outputf(bindc, "\n");
 
 
         /* instanceof helper */
-        fprintf(bindf,
+        outputf(bindc,
                 "duk_bool_t\n"
                 "%s_instanceof(duk_context *ctx, duk_idx_t _idx, const char *klass)\n"
                 "{\n"
@@ -406,7 +406,7 @@ output_binding_src(struct ir *ir)
                 DLPFX, DLPFX);
 
         /* prototype creation helper function */
-        fprintf(bindf,
+        outputf(bindc,
                 "static duk_ret_t\n"
                 "%s_to_string(duk_context *ctx)\n"
                 "{\n"
@@ -431,10 +431,10 @@ output_binding_src(struct ir *ir)
                 DLPFX,
                 MAGICPFX);
 
-        fprintf(bindf,
+        outputf(bindc,
                 "static duk_ret_t %s_create_prototype(duk_context *ctx,\n",
                 DLPFX);
-        fprintf(bindf,
+        outputf(bindc,
                 "\t\t\t\t\tduk_safe_call_function genproto,\n"
                 "\t\t\t\t\tconst char *proto_name,\n"
                 "\t\t\t\t\tconst char *klass_name)\n"
@@ -460,10 +460,10 @@ output_binding_src(struct ir *ir)
                 DLPFX);
 
         /* generate prototype creation */
-        fprintf(bindf,
+        outputf(bindc,
                 "duk_ret_t %s_create_prototypes(duk_context *ctx)\n", DLPFX);
 
-        fprintf(bindf, "{\n");
+        outputf(bindc, "{\n");
 
         for (idx = 0; idx < ir->entryc; idx++) {
                 struct ir_entry *interfacee;
@@ -489,7 +489,7 @@ output_binding_src(struct ir *ir)
                 }
                 proto_name = get_prototype_name(interfacee->name);
 
-                fprintf(bindf,
+                outputf(bindc,
                         "\t%s_create_prototype(ctx, %s_%s___proto, \"%s\", \"%s\");\n",
                         DLPFX,
                         DLPFX,
@@ -501,10 +501,10 @@ output_binding_src(struct ir *ir)
         }
 
         if (pglobale != NULL) {
-                fprintf(bindf, "\n\t/* Global object prototype is last */\n");
+                outputf(bindc, "\n\t/* Global object prototype is last */\n");
 
                 proto_name = get_prototype_name(pglobale->name);
-                fprintf(bindf,
+                outputf(bindc,
                         "\t%s_create_prototype(ctx, %s_%s___proto, \"%s\", \"%s\");\n",
                         DLPFX,
                         DLPFX,
@@ -514,16 +514,16 @@ output_binding_src(struct ir *ir)
                 free(proto_name);
         }
 
-        fprintf(bindf, "\n\treturn DUK_ERR_NONE;\n");
+        outputf(bindc, "\n\treturn DUK_ERR_NONE;\n");
 
-        fprintf(bindf, "}\n");
+        outputf(bindc, "}\n");
 
         /* binding postface */
-        output_method_cdata(bindf,
+        output_method_cdata(bindc,
                             ir->binding_node,
                             GENBIND_METHOD_TYPE_POSTFACE);
 
-        genb_fclose_tmp(bindf, "binding.c");
+        output_close(bindc);
 
         return 0;
 }

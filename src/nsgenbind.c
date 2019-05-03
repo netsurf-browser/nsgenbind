@@ -18,6 +18,7 @@
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
 #include "ir.h"
+#include "output.h"
 #include "jsapi-libdom.h"
 #include "duk-libdom.h"
 

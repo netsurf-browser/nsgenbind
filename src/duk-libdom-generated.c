@@ -26,12 +26,13 @@
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
 #include "ir.h"
+#include "output.h"
 #include "duk-libdom.h"
 
 static int
-output_generated_attribute_user_getter(FILE* outf,
-                                  struct ir_entry *interfacee,
-                                  struct ir_attribute_entry *atributee)
+output_generated_attribute_user_getter(struct opctx *outc,
+                                       struct ir_entry *interfacee,
+                                       struct ir_attribute_entry *atributee)
 {
         UNUSED(interfacee);
 
@@ -45,7 +46,8 @@ output_generated_attribute_user_getter(FILE* outf,
                     (atributee->name[1] != 'n')) {
                         return -1; /* not onxxx */
                 }
-                fprintf(outf,
+
+                outputf(outc,
                         "\tdom_event_target *et = (dom_event_target *)(((node_private_t *)priv)->node);\n"
                         "\tdom_string *name;\n"
                         "\tdom_exception exc;\n\n"
@@ -71,7 +73,7 @@ output_generated_attribute_user_getter(FILE* outf,
 
 /* exported function documented in duk-libdom.h */
 int
-output_generated_attribute_getter(FILE* outf,
+output_generated_attribute_getter(struct opctx *outc,
                                   struct ir_entry *interfacee,
                                   struct ir_attribute_entry *atributee)
 {
@@ -84,16 +86,16 @@ output_generated_attribute_getter(FILE* outf,
 
         switch (atributee->typev[0].base) {
         case WEBIDL_TYPE_STRING:
-                fprintf(outf,
+                outputf(outc,
                         "\tdom_exception exc;\n"
                         "\tdom_string *str;\n"
                         "\n");
-                fprintf(outf,
+                outputf(outc,
                         "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &str);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
-                fprintf(outf,
+                outputf(outc,
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
                         "\t}\n"
@@ -105,11 +107,13 @@ output_generated_attribute_getter(FILE* outf,
                         "\t\tdom_string_unref(str);\n"
                         "\t} else {\n");
                 if (atributee->typev[0].nullable) {
-                        fprintf(outf, "\t\tduk_push_null(ctx);\n");
+                        outputf(outc,
+                                "\t\tduk_push_null(ctx);\n");
                 } else {
-                        fprintf(outf, "\t\tduk_push_lstring(ctx, NULL, 0);\n");
+                        outputf(outc,
+                                "\t\tduk_push_lstring(ctx, NULL, 0);\n");
                 }
-                fprintf(outf,
+                outputf(outc,
                         "\t}\n"
                         "\n"
                         "\treturn 1;\n");
@@ -117,19 +121,21 @@ output_generated_attribute_getter(FILE* outf,
 
         case WEBIDL_TYPE_LONG:
                 if (atributee->typev[0].modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
-                        fprintf(outf, "\tdom_ulong l;\n");
+                        outputf(outc,
+                                "\tdom_ulong l;\n");
                 } else {
-                        fprintf(outf, "\tdom_long l;\n");
+                        outputf(outc,
+                                "\tdom_long l;\n");
                 }
-                fprintf(outf,
+                outputf(outc,
                         "\tdom_exception exc;\n"
                         "\n");
-                fprintf(outf,
+                outputf(outc,
                         "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &l);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
-                fprintf(outf,
+                outputf(outc,
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
                         "\t}\n"
@@ -141,19 +147,21 @@ output_generated_attribute_getter(FILE* outf,
 
         case WEBIDL_TYPE_SHORT:
                 if (atributee->typev[0].modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
-                        fprintf(outf, "\tdom_ushort s;\n");
+                        outputf(outc,
+                                "\tdom_ushort s;\n");
                 } else {
-                        fprintf(outf, "\tdom_short s;\n");
+                        outputf(outc,
+                                "\tdom_short s;\n");
                 }
-                fprintf(outf,
+                outputf(outc,
                         "\tdom_exception exc;\n"
                         "\n");
-                fprintf(outf,
+                outputf(outc,
                         "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &s);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
-                fprintf(outf,
+                outputf(outc,
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
                         "\t}\n"
@@ -164,16 +172,16 @@ output_generated_attribute_getter(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_BOOL:
-                fprintf(outf,
+                outputf(outc,
                         "\tdom_exception exc;\n"
                         "\tbool b;\n"
                         "\n");
-                fprintf(outf,
+                outputf(outc,
                         "\texc = dom_%s_get_%s((struct dom_%s *)((node_private_t*)priv)->node, &b);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
-                fprintf(outf,
+                outputf(outc,
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
                         "\t}\n"
@@ -184,7 +192,7 @@ output_generated_attribute_getter(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_USER:
-                res = output_generated_attribute_user_getter(outf,
+                res = output_generated_attribute_user_getter(outc,
                                                              interfacee,
                                                              atributee);
                 break;
@@ -205,7 +213,7 @@ output_generated_attribute_getter(FILE* outf,
 }
 
 static int
-output_generated_attribute_user_setter(FILE* outf,
+output_generated_attribute_user_setter(struct opctx *outc,
                                        struct ir_entry *interfacee,
                                        struct ir_attribute_entry *atributee)
 {
@@ -222,7 +230,7 @@ output_generated_attribute_user_setter(FILE* outf,
                         return -1; /* not onxxx */
                 }
 
-                fprintf(outf,
+                outputf(outc,
                         "\t/* handlerfn */\n"
                         "\tduk_push_this(ctx);\n"
                         "\t/* handlerfn this */\n"
@@ -251,7 +259,7 @@ output_generated_attribute_user_setter(FILE* outf,
 
 /* exported function documented in duk-libdom.h */
 int
-output_generated_attribute_setter(FILE* outf,
+output_generated_attribute_setter(struct opctx *outc,
                                   struct ir_entry *interfacee,
                                   struct ir_attribute_entry *atributee)
 {
@@ -264,14 +272,14 @@ output_generated_attribute_setter(FILE* outf,
 
         switch (atributee->typev[0].base) {
         case WEBIDL_TYPE_STRING:
-                fprintf(outf,
+                outputf(outc,
                         "\tdom_exception exc;\n"
                         "\tdom_string *str;\n"
                         "\tduk_size_t slen;\n"
                         "\tconst char *s;\n");
                 if ((atributee->treatnullas != NULL) &&
                     (strcmp(atributee->treatnullas, "EmptyString") == 0)) {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tif (duk_is_null(ctx, 0)) {\n"
                                 "\t\ts = \"\";\n"
                                 "\t\tslen = 0;\n"
@@ -279,22 +287,22 @@ output_generated_attribute_setter(FILE* outf,
                                 "\t\ts = duk_safe_to_lstring(ctx, 0, &slen);\n"
                                 "\t}\n");
                 } else {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\ts = duk_safe_to_lstring(ctx, 0, &slen);\n");
                 }
-                fprintf(outf,
+                outputf(outc,
                         "\n"
                         "\texc = dom_string_create((const uint8_t *)s, slen, &str);\n"
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
                         "\t}\n"
                         "\n");
-                fprintf(outf,
+                outputf(outc,
                         "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, str);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
-                fprintf(outf,
+                outputf(outc,
                         "\tdom_string_unref(str);\n"
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
@@ -305,26 +313,26 @@ output_generated_attribute_setter(FILE* outf,
 
         case WEBIDL_TYPE_LONG:
                 if (atributee->typev[0].modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tdom_exception exc;\n"
                                 "\tdom_ulong l;\n"
                                 "\n"
                                 "\tl = duk_get_uint(ctx, 0);\n"
                                 "\n");
                 } else {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tdom_exception exc;\n"
                                 "\tdom_long l;\n"
                                 "\n"
                                 "\tl = duk_get_int(ctx, 0);\n"
                                 "\n");
                 }
-                fprintf(outf,
+                outputf(outc,
                         "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, l);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
-                fprintf(outf,
+                outputf(outc,
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
                         "\t}\n"
@@ -334,26 +342,26 @@ output_generated_attribute_setter(FILE* outf,
 
         case WEBIDL_TYPE_SHORT:
                 if (atributee->typev[0].modifier == WEBIDL_TYPE_MODIFIER_UNSIGNED) {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tdom_exception exc;\n"
                                 "\tdom_ushort s;\n"
                                 "\n"
                                 "\ts = duk_get_uint(ctx, 0);\n"
                                 "\n");
                 } else {
-                        fprintf(outf,
+                        outputf(outc,
                                 "\tdom_exception exc;\n"
                                 "\tdom_short s;\n"
                                 "\n"
                                 "\ts = duk_get_int(ctx, 0);\n"
                                 "\n");
                 }
-                fprintf(outf,
+                outputf(outc,
                         "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, s);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
-                fprintf(outf,
+                outputf(outc,
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
                         "\t}\n"
@@ -362,18 +370,18 @@ output_generated_attribute_setter(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_BOOL:
-                fprintf(outf,
+                outputf(outc,
                         "\tdom_exception exc;\n"
                         "\tbool b;\n"
                         "\n"
                         "\tb = duk_get_boolean(ctx, 0);\n"
                         "\n");
-                fprintf(outf,
+                outputf(outc,
                         "\texc = dom_%s_set_%s((struct dom_%s *)((node_private_t*)priv)->node, b);\n",
                         interfacee->class_name,
                         atributee->property_name,
                         interfacee->class_name);
-                fprintf(outf,
+                outputf(outc,
                         "\tif (exc != DOM_NO_ERR) {\n"
                         "\t\treturn 0;\n"
                         "\t}\n"
@@ -382,7 +390,7 @@ output_generated_attribute_setter(FILE* outf,
                 break;
 
         case WEBIDL_TYPE_USER:
-                res = output_generated_attribute_user_setter(outf,
+                res = output_generated_attribute_user_setter(outc,
                                                              interfacee,
                                                              atributee);
                 break;

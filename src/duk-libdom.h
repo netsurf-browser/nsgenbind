@@ -16,13 +16,11 @@ int duk_libdom_output(struct ir *ir);
 
 /**
  * generate a source file to implement an interface using duk and libdom.
+ *
+ * \param ir The intermediate representation of the binding tree.
+ * \param interfacee The interface entry to output within the ir.
  */
 int output_interface(struct ir *ir, struct ir_entry *interfacee);
-
-/**
- * generate a declaration to implement a dictionary using duk and libdom.
- */
-int output_interface_declaration(FILE* outf, struct ir_entry *interfacee);
 
 /**
  * generate a source file to implement a dictionary using duk and libdom.
@@ -32,17 +30,22 @@ int output_dictionary(struct ir *ir, struct ir_entry *dictionarye);
 /**
  * generate a declaration to implement a dictionary using duk and libdom.
  */
-int output_dictionary_declaration(FILE* outf, struct ir_entry *dictionarye);
+int output_interface_declaration(struct opctx *outc, struct ir_entry *interfacee);
+
+/**
+ * generate a declaration to implement a dictionary using duk and libdom.
+ */
+int output_dictionary_declaration(struct opctx *outc, struct ir_entry *dictionarye);
 
 /**
  * generate preface block for nsgenbind
  */
-int output_tool_preface(FILE* outf);
+int output_tool_preface(struct opctx *outc);
 
 /**
  * generate preface block for nsgenbind
  */
-int output_tool_prologue(FILE* outf);
+int output_tool_prologue(struct opctx *outc);
 
 /**
  * output character data of node of given type.
@@ -54,7 +57,7 @@ int output_tool_prologue(FILE* outf);
  * \param nodetype the type of child node to search for.
  * \return The number of nodes written or 0 for none.
  */
-int output_cdata(FILE* outf, struct genbind_node *node, enum genbind_node_type nodetype);
+int output_cdata(struct opctx *outc, struct genbind_node *node, enum genbind_node_type nodetype);
 
 
 /**
@@ -67,7 +70,7 @@ int output_cdata(FILE* outf, struct genbind_node *node, enum genbind_node_type n
  * \param nodetype the type of child node to search for.
  * \return The number of nodes written or 0 for none.
  */
-int output_ccode(FILE* outf, struct genbind_node *node);
+int output_ccode(struct opctx *outc, struct genbind_node *node);
 
 /**
  * output character data of method node of given type.
@@ -79,7 +82,7 @@ int output_ccode(FILE* outf, struct genbind_node *node);
  * \param nodetype the type of child node to search for.
  * \return The number of nodes written or 0 for none.
  */
-int output_method_cdata(FILE* outf, struct genbind_node *node, enum genbind_method_type sel_method_type);
+int output_method_cdata(struct opctx *outc, struct genbind_node *node, enum genbind_method_type sel_method_type);
 
 /**
  * output a C variable type
@@ -94,7 +97,7 @@ int output_method_cdata(FILE* outf, struct genbind_node *node, enum genbind_meth
  * \param identifier If the indentifier should be output.
  * \return 0 on success.
  */
-int output_ctype(FILE *outf, struct genbind_node *node, bool identifier);
+int output_ctype(struct opctx *outc, struct genbind_node *node, bool identifier);
 
 /**
  * Generate a C name from an IDL name.
@@ -114,12 +117,12 @@ char *gen_idl2c_name(const char *idlname);
 /**
  * Generate class property setter for a single attribute.
  */
-int output_generated_attribute_setter(FILE* outf, struct ir_entry *interfacee, struct ir_attribute_entry *atributee);
+int output_generated_attribute_setter(struct opctx *outc, struct ir_entry *interfacee, struct ir_attribute_entry *atributee);
 
 /**
  * Generate class property getter for a single attribute.
  */
-int output_generated_attribute_getter(FILE* outf, struct ir_entry *interfacee, struct ir_attribute_entry *atributee);
+int output_generated_attribute_getter(struct opctx *outc, struct ir_entry *interfacee, struct ir_attribute_entry *atributee);
 
 
 #endif

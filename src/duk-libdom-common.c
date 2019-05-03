@@ -20,6 +20,7 @@
 #include "nsgenbind-ast.h"
 #include "webidl-ast.h"
 #include "ir.h"
+#include "output.h"
 #include "duk-libdom.h"
 
 #define NSGENBIND_PREFACE                                               \
@@ -28,18 +29,18 @@
     " * nsgenbind is published under the MIT Licence.\n"                \
     " * nsgenbind is similar to a compiler is a purely transformative tool which\n" \
     " * explicitly makes no copyright claim on this generated output\n" \
-    " */"
+    " */\n"
 
 /* exported interface documented in duk-libdom.h */
-int output_tool_preface(FILE* outf)
+int output_tool_preface(struct opctx *outc)
 {
-        fprintf(outf, "%s\n", NSGENBIND_PREFACE);
+        outputf(outc, "%s", NSGENBIND_PREFACE);
 
         return 0;
 }
 
 /* exported interface documented in duk-libdom.h */
-int output_cdata(FILE* outf,
+int output_cdata(struct opctx *outc,
                  struct genbind_node *node,
                  enum genbind_node_type nodetype)
 {
@@ -51,15 +52,16 @@ int output_cdata(FILE* outf,
                         genbind_node_getnode(node),
                         NULL, nodetype));
         if (cdata != NULL) {
-                fprintf(outf, "%s", cdata);
+                outputf(outc, "%s", cdata);
                 res = 1;
         }
         return res;
 }
 
 /* exported interface documented in duk-libdom.h */
-int output_ccode(FILE* outf, struct genbind_node *node)
+int output_ccode(struct opctx *outc, struct genbind_node *node)
 {
+        int res;
         int *line;
         char *filename;
 
@@ -74,27 +76,31 @@ int output_ccode(FILE* outf, struct genbind_node *node)
                         NULL, GENBIND_NODE_TYPE_FILE));
 
         if ((line != NULL) && (filename != NULL)) {
-                fprintf(outf, "/* #line %d \"%s\" */\n", *line, filename);
+                outputf(outc, "#line %d \"%s\"\n", (*line) + 1, filename);
+                res = output_cdata(outc, node, GENBIND_NODE_TYPE_CDATA);
+                output_line(outc);
+        } else {
+                res = output_cdata(outc, node, GENBIND_NODE_TYPE_CDATA);
         }
 
-        return output_cdata(outf, node, GENBIND_NODE_TYPE_CDATA);
+        return res;
 }
 
 /* exported interface documented in duk-libdom.h */
-int output_tool_prologue(FILE* outf)
+int output_tool_prologue(struct opctx *outc)
 {
         char *fpath;
 
         fpath = genb_fpath("binding.h");
-        fprintf(outf, "\n#include \"%s\"\n", fpath);
+        outputf(outc, "\n#include \"%s\"\n", fpath);
         free(fpath);
 
         fpath = genb_fpath("private.h");
-        fprintf(outf, "#include \"%s\"\n", fpath);
+        outputf(outc, "#include \"%s\"\n", fpath);
         free(fpath);
 
         fpath = genb_fpath("prototype.h");
-        fprintf(outf, "#include \"%s\"\n", fpath);
+        outputf(outc, "#include \"%s\"\n", fpath);
         free(fpath);
 
         return 0;
@@ -102,7 +108,7 @@ int output_tool_prologue(FILE* outf)
 
 
 /* exported interface documented in duk-libdom.h */
-int output_ctype(FILE *outf, struct genbind_node *node, bool identifier)
+int output_ctype(struct opctx *outc, struct genbind_node *node, bool identifier)
 {
         const char *type_cdata = NULL;
         struct genbind_node *typename_node;
@@ -113,7 +119,7 @@ int output_ctype(FILE *outf, struct genbind_node *node, bool identifier)
         while (typename_node != NULL) {
                 type_cdata = genbind_node_gettext(typename_node);
 
-                fprintf(outf, "%s", type_cdata);
+                outputf(outc, "%s", type_cdata);
 
                 typename_node = genbind_node_find_type(
                         genbind_node_getnode(node),
@@ -122,25 +128,25 @@ int output_ctype(FILE *outf, struct genbind_node *node, bool identifier)
 
                 /* separate all but the last entry with spaces */
                 if (typename_node != NULL) {
-                        fputc(' ', outf);
+                        outputc(outc, ' ');
                 }
         }
 
         if (identifier) {
-            if ((type_cdata != NULL) &&
-                (type_cdata[0] != '*') &&
-                (type_cdata[0] != ' ')) {
-                fputc(' ', outf);
-            }
+                if ((type_cdata != NULL) &&
+                    (type_cdata[0] != '*') &&
+                    (type_cdata[0] != ' ')) {
+                        outputc(outc, ' ');
+                }
 
-            output_cdata(outf, node, GENBIND_NODE_TYPE_IDENT);
+                output_cdata(outc, node, GENBIND_NODE_TYPE_IDENT);
         }
 
         return 0;
 }
 
 /* exported interface documented in duk-libdom.h */
-int output_method_cdata(FILE* outf,
+int output_method_cdata(struct opctx *outc,
                         struct genbind_node *node,
                         enum genbind_method_type sel_method_type)
 {
@@ -160,7 +166,7 @@ int output_method_cdata(FILE* outf,
                                 GENBIND_NODE_TYPE_METHOD_TYPE));
                 if ((method_type != NULL) &&
                     (*method_type == sel_method_type)) {
-                        output_cdata(outf, method, GENBIND_NODE_TYPE_CDATA);
+                        output_cdata(outc, method, GENBIND_NODE_TYPE_CDATA);
                 }
 
                 method = genbind_node_find_type(genbind_node_getnode(node),
