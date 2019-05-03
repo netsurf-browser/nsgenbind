@@ -36,14 +36,15 @@ output_generated_attribute_user_getter(FILE* outf,
         UNUSED(interfacee);
 
         if ((atributee->typev[0].name != NULL) &&
-            strcmp(atributee->typev[0].name, "EventHandler") == 0) {
+            strlen(atributee->typev[0].name) >= 12 &&
+            strcmp(atributee->typev[0].name + strlen(atributee->typev[0].name) - 12,
+                   "EventHandler") == 0) {
 
                 /* this can generate for onxxx event handlers */
                 if ((atributee->name[0] != 'o') ||
                     (atributee->name[1] != 'n')) {
                         return -1; /* not onxxx */
                 }
-
                 fprintf(outf,
                         "\tdom_event_target *et = (dom_event_target *)(((node_private_t *)priv)->node);\n"
                         "\tdom_string *name;\n"
@@ -211,7 +212,9 @@ output_generated_attribute_user_setter(FILE* outf,
         UNUSED(interfacee);
 
         if ((atributee->typev[0].name != NULL) &&
-            strcmp(atributee->typev[0].name, "EventHandler") == 0) {
+            strlen(atributee->typev[0].name) >= 12 &&
+            strcmp(atributee->typev[0].name + strlen(atributee->typev[0].name) - 12,
+                   "EventHandler") == 0) {
 
                 /* this can generate for onxxx event handlers */
                 if ((atributee->name[0] != 'o') ||
