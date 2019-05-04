@@ -29,6 +29,16 @@
 #define MAGICPFX "\\xFF\\xFFNETSURF_DUKTAPE_"
 
 /**
+ * \todo Constructors
+ * \todo dukky_inject_not_ctr as binding.c function
+ * \todo instanceof needs cleaning/generalising
+ * \todo large text sections
+ * \todo operations with elipsis need parameter checking love
+ * \todo parameter type checking probably should do instanceof on user objects
+ * \todo tool should generate warning for interfaces with empty private structs for the entire inheritance chain
+ */
+
+/**
  * generate a duktape prototype name
  */
 static char *get_prototype_name(const char *interface_name)
