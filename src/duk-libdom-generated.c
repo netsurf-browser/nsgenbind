@@ -47,8 +47,14 @@ output_generated_attribute_user_getter(struct opctx *outc,
                         return -1; /* not onxxx */
                 }
 
+                if (interfacee->u.interface.primary_global) {
+                        outputf(outc,
+                                "\tdom_event_target *et = NULL;\n");
+                } else {
+                        outputf(outc,
+                                "\tdom_event_target *et = (dom_event_target *)(((node_private_t *)priv)->node);\n");
+                }
                 outputf(outc,
-                        "\tdom_event_target *et = (dom_event_target *)(((node_private_t *)priv)->node);\n"
                         "\tdom_string *name;\n"
                         "\tdom_exception exc;\n\n"
                         "\texc = dom_string_create((const uint8_t *)\"%s\", %ld, &name);\n"
@@ -230,6 +236,14 @@ output_generated_attribute_user_setter(struct opctx *outc,
                         return -1; /* not onxxx */
                 }
 
+                if (interfacee->u.interface.primary_global) {
+                        outputf(outc,
+                                "\tdom_element *et = NULL;\n");
+                } else {
+                        outputf(outc,
+                                "\tdom_element *et = (dom_element *)(((node_private_t *)priv)->node);\n");
+                }
+
                 outputf(outc,
                         "\t/* handlerfn */\n"
                         "\tduk_push_this(ctx);\n"
@@ -242,8 +256,7 @@ output_generated_attribute_user_setter(struct opctx *outc,
                         "\t/* handlerfn this handlers %s handlerfn */\n"
                         "\tduk_put_prop(ctx, -3);\n"
                         "\t/* handlerfn this handlers */\n"
-                        "\tdukky_register_event_listener_for(ctx,\n"
-                        "\t\t(dom_element *)((node_private_t *)priv)->node,\n"
+                        "\tdukky_register_event_listener_for(ctx, et,\n"
                         "\t\tcorestring_dom_%s, false);\n"
                         "\treturn 0;\n",
                         atributee->name + 2,
