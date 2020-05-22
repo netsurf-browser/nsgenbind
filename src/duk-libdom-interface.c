@@ -417,12 +417,28 @@ output_interface_constructor(struct opctx *outc, struct ir_entry *interfacee)
         outputf(outc,
                 "\t%s_%s___init(ctx, priv",
                 DLPFX, interfacee->class_name);
+
         for (init_argc = 1;
              init_argc <= interfacee->class_init_argc;
              init_argc++) {
-                outputf(outc,
-                        ", duk_get_pointer(ctx, %d)",
-                        init_argc);
+		switch (interfacee->class_init_argt[init_argc-1]) {
+		case IR_INIT_ARG_BOOL:
+			outputf(outc,
+				", duk_get_bool(ctx, %d)",
+				init_argc);
+			break;
+		case IR_INIT_ARG_UNSIGNED:
+		case IR_INIT_ARG_INT:
+			outputf(outc,
+				", duk_get_int(ctx, %d)",
+				init_argc);
+			break;
+		case IR_INIT_ARG_POINTER:
+			outputf(outc,
+				", duk_get_pointer(ctx, %d)",
+				init_argc);
+			break;
+		}
         }
         outputf(outc,
                 ");\n");
@@ -557,6 +573,46 @@ output_interface_inherit_init(struct opctx *outc,
         return 0;
 }
 
+static enum ir_init_argtype
+guess_argtype_from(struct genbind_node *param_node)
+{
+        const char *type_cdata = NULL;
+        struct genbind_node *typename_node;
+	bool unsigned_ = false;
+	bool int_ = false;
+	bool bool_ = false;
+
+        typename_node = genbind_node_find_type(genbind_node_getnode(param_node),
+                                               NULL,
+                                               GENBIND_NODE_TYPE_NAME);
+        while (typename_node != NULL) {
+                type_cdata = genbind_node_gettext(typename_node);
+		if (strcmp(type_cdata, "unsigned") == 0) {
+			unsigned_ = true;
+		} else if (strcmp(type_cdata, "int") == 0) {
+			int_ = true;
+		} else if (strcmp(type_cdata, "bool") == 0) {
+			bool_ = true;
+		}
+                typename_node = genbind_node_find_type(
+                        genbind_node_getnode(param_node),
+                        typename_node,
+                        GENBIND_NODE_TYPE_NAME);
+	}
+
+	if (type_cdata[0] == '*') {
+		return IR_INIT_ARG_POINTER;
+	} else if (unsigned_) {
+		return IR_INIT_ARG_UNSIGNED;
+	} else if (int_) {
+		return IR_INIT_ARG_INT;
+	} else if (bool_) {
+		return IR_INIT_ARG_BOOL;
+	}
+
+	/* If we have no better idea do this */
+	return IR_INIT_ARG_POINTER;
+}
 
 static int
 output_interface_init_declaration(struct opctx *outc,
@@ -575,6 +631,7 @@ output_interface_init_declaration(struct opctx *outc,
 
         /* count the number of arguments on the initializer */
         interfacee->class_init_argc = 0;
+	interfacee->class_init_argt = NULL;
 
         /* output the paramters on the method (if any) */
         param_node = genbind_node_find_type(
@@ -582,6 +639,10 @@ output_interface_init_declaration(struct opctx *outc,
                 NULL, GENBIND_NODE_TYPE_PARAMETER);
         while (param_node != NULL) {
                 interfacee->class_init_argc++;
+		interfacee->class_init_argt = realloc(interfacee->class_init_argt,
+						      interfacee->class_init_argc * sizeof(enum ir_init_argtype));
+		interfacee->class_init_argt[interfacee->class_init_argc - 1] =
+			guess_argtype_from(param_node);
                 outputf(outc, ", ");
 
                 output_ctype(outc, param_node, true);

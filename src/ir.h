@@ -123,6 +123,13 @@ enum ir_entry_type {
         IR_ENTRY_TYPE_DICTIONARY,
 };
 
+enum ir_init_argtype {
+	IR_INIT_ARG_POINTER,
+	IR_INIT_ARG_UNSIGNED,
+	IR_INIT_ARG_INT,
+	IR_INIT_ARG_BOOL,
+};
+
 /** top level entry info common to interfaces and dictionaries */
 struct ir_entry {
         const char *name; /** IDL name */
@@ -158,6 +165,7 @@ struct ir_entry {
         int class_init_argc; /**< The number of parameters on the class
                               * initializer.
                               */
+	enum ir_init_argtype *class_init_argt; /**< The types of the initialiser parameters */
 };
 
 /** intermediate representation of WebIDL and binding data */
