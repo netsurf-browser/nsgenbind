@@ -1056,9 +1056,8 @@ output_interface_overloaded_operation(struct opctx *outc,
         output_get_method_private(outc, interfacee->class_name,
                                   interfacee->u.interface.primary_global);
 
-        cdatac = output_cdata(outc,
-                              operatione->method,
-                              GENBIND_NODE_TYPE_CDATA);
+        cdatac = output_ccode(outc,
+                              operatione->method);
 
         if (cdatac == 0) {
                 /* no implementation so generate default */
