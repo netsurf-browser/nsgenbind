@@ -166,7 +166,7 @@ int output_method_cdata(struct opctx *outc,
                                 GENBIND_NODE_TYPE_METHOD_TYPE));
                 if ((method_type != NULL) &&
                     (*method_type == sel_method_type)) {
-                        output_cdata(outc, method, GENBIND_NODE_TYPE_CDATA);
+                        output_ccode(outc, method);
                 }
 
                 method = genbind_node_find_type(genbind_node_getnode(node),
