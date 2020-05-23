@@ -383,7 +383,6 @@ InterfaceMembers:
                  *
                  * @todo need to consider qualifer/stringifier compatibility
                  */
-                struct webidl_node *member_node;
                 struct webidl_node *ident_node;
                 struct webidl_node *list_node;
 
@@ -415,18 +414,7 @@ InterfaceMembers:
                         /* add extended attributes to parameter list */
                         webidl_node_add(list_node, $2);
 
-                        /* has an arguemnt list so can be polymorphic */
-                        member_node = webidl_node_find_type_ident(
-                                              $1,
-                                              webidl_node_gettype($3),
-                                              webidl_node_gettext(ident_node));
-                        if (member_node == NULL) {
-                                /* not a member with that ident already present */
-                                $$ = webidl_node_prepend($1, $3);
-                        } else {
-                                webidl_node_add(member_node, list_node);
-                                $$ = $1; /* updated existing node do not add new one */
-                        }
+                        $$ = webidl_node_prepend($1, $3);
                 }
         }
         ;
