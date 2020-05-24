@@ -2,14 +2,14 @@
 #
 # Makefile for nsgenbind
 #
-# Copyright 2013-2015 Vincent Sanders <vince@netsurf-browser.org>
+# Copyright 2013-2020 Vincent Sanders <vince@netsurf-browser.org>
 
 # Define the component name
 COMPONENT := nsgenbind
 # And the component type
 COMPONENT_TYPE := binary
 # Component version
-COMPONENT_VERSION := 0.7
+COMPONENT_VERSION := 0.8
 
 # Tooling
 PREFIX ?= /opt/netsurf
