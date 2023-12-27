@@ -9,7 +9,7 @@ COMPONENT := nsgenbind
 # And the component type
 COMPONENT_TYPE := binary
 # Component version
-COMPONENT_VERSION := 0.8
+COMPONENT_VERSION := 0.9
 
 # Tooling
 PREFIX ?= /opt/netsurf
